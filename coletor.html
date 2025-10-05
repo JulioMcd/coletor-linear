@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coletor Linear Sistemas</title>
+    <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .app {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #007bff;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        
+        textarea {
+            font-family: monospace;
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        input:focus, textarea:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        
+        .btn-small {
+            width: auto;
+            padding: 6px 12px;
+            font-size: 12px;
+            margin: 2px;
+            display: inline-block;
+        }
+        
+        .btn-blue {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-green {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-red {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-orange {
+            background: #fd7e14;
+            color: white;
+        }
+        
+        .btn-purple {
+            background: #6f42c1;
+            color: white;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .camera {
+            width: 100%;
+            height: 250px;
+            background: #f8f9fa;
+            border: 2px dashed #007bff;
+            border-radius: 6px;
+            display: none;
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .camera video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+        
+        .scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 80px;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            background: rgba(0, 255, 0, 0.1);
+            pointer-events: none;
+        }
+        
+        .scanner-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff00, transparent);
+            animation: scan 2s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 76px; }
+        }
+        
+        .lista {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 10px;
+            background: #f8f9fa;
+            margin-bottom: 15px;
+        }
+        
+        .item {
+            background: white;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+            font-size: 14px;
+            position: relative;
+        }
+        
+        .item-actions {
+            margin-top: 8px;
+            text-align: right;
+        }
+        
+        .produto-info {
+            color: #28a745;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        
+        .contador {
+            text-align: center;
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .msg {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        .msg.sucesso {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .msg.erro {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .arquivo-config {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        
+        .arquivo-config input {
+            flex: 1;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 300px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .modal h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .modal-buttons button {
+            flex: 1;
+        }
+        
+        .info-box {
+            background: #d1ecf1;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            border-left: 4px solid #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <h1>📱 Coletor Linear</h1>
+            <p>Sistema para Linear Sistemas</p>
+        </div>
+        
+        <div class="content">
+            <div class="info-box" id="produtosInfo" style="display:none;">
+                📦 <span id="totalProdutos">0</span> produtos carregados na base<br>
+                <small>💡 Dica: Pode digitar códigos sem zeros à esquerda (ex: 62 em vez de 0000000000062)</small>
+            </div>
+            
+            <div class="group">
+                <label>📥 Importar Base de Produtos (Excel):</label>
+                <input type="file" id="arquivoExcel" accept=".xlsx,.xls" onchange="importarProdutos()" style="margin-bottom: 10px;">
+                <button class="btn btn-purple" onclick="limparBaseProdutos()" style="margin-bottom: 15px;">
+                    🗑️ Limpar Base de Produtos
+                </button>
+            </div>
+            
+            <div class="group">
+                <button id="btnCamera" class="btn btn-blue" onclick="toggleScanner()">
+                    📷 Iniciar Scanner
+                </button>
+                <div id="camera" class="camera">
+                    <video id="video" autoplay playsinline></video>
+                    <div class="scanner-overlay">
+                        <div class="scanner-line"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="group">
+                <label for="codigo">Código de Barras:</label>
+                <input type="text" id="codigo" placeholder="Digite ou escaneie o código (ex: 62 ou 0000000000062)">
+                <div id="produtoEncontrado" class="produto-info" style="display:none;"></div>
+            </div>
+            
+            <div class="group">
+                <label for="quantidade">Quantidade:</label>
+                <input type="number" id="quantidade" value="1" step="0.001" placeholder="Ex: 1, 2.5, 10.75">
+            </div>
+            
+            <button class="btn btn-green" onclick="adicionar()">
+                ➕ Adicionar Item
+            </button>
+            
+            <div id="mensagem" class="msg"></div>
+            
+            <div class="contador">
+                Total: <span id="total">0</span> itens
+            </div>
+            
+            <div id="itens" class="lista">
+                <p style="text-align: center; color: #666;">Nenhum item ainda</p>
+            </div>
+            
+            <div class="group">
+                <label for="nomeArquivo">Nome do arquivo:</label>
+                <input type="text" id="nomeArquivo" placeholder="Ex: inventario, coleta_loja1" value="">
+            </div>
+            
+            <button id="btnBaixarTxt" class="btn btn-blue" onclick="baixarTxt()" disabled>
+                📄 Baixar TXT
+            </button>
+            
+            <button id="btnBaixarExcel" class="btn btn-green" onclick="baixarExcel()" disabled>
+                📊 Baixar Excel
+            </button>
+            
+            <button class="btn btn-red" onclick="limpar()">
+                🗑️ Limpar Tudo
+            </button>
+        </div>
+    </div>
+
+    <div id="modalEdicao" class="modal">
+        <div class="modal-content">
+            <h3>📝 Editar Item</h3>
+            <div class="group">
+                <label for="editQuantidade">Nova quantidade:</label>
+                <input type="number" id="editQuantidade" step="0.001" placeholder="Digite a nova quantidade">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-green" onclick="salvarEdicao()">✅ Salvar</button>
+                <button class="btn btn-red" onclick="fecharModal()">❌ Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dados = [];
+        let scannerAtivo = false;
+        let codeReader = null;
+        let itemEditando = -1;
+        
+        // Base de produtos
+        let baseProdutos = {};
+        
+        // Função para carregar a base de produtos do localStorage
+        function carregarBaseProdutos() {
+            const baseSalva = localStorage.getItem('baseProdutos');
+            
+            if (baseSalva) {
+                try {
+                    baseProdutos = JSON.parse(baseSalva);
+                    const contador = Object.keys(baseProdutos).filter(k => baseProdutos[k].codigoOriginal).length;
+                    document.getElementById('totalProdutos').textContent = contador;
+                    document.getElementById('produtosInfo').style.display = 'block';
+                    console.log('Base de produtos carregada do localStorage:', contador, 'produtos');
+                } catch (e) {
+                    console.error('Erro ao carregar base de produtos:', e);
+                    baseProdutos = {};
+                }
+            } else {
+                console.log('Nenhuma base de produtos encontrada. Importe um arquivo Excel.');
+            }
+        }
+        
+        // Função para salvar base de produtos no localStorage
+        function salvarBaseProdutos() {
+            try {
+                localStorage.setItem('baseProdutos', JSON.stringify(baseProdutos));
+                console.log('Base de produtos salva com sucesso!');
+            } catch (e) {
+                console.error('Erro ao salvar base de produtos:', e);
+                alert('Erro ao salvar base de produtos. O arquivo pode ser muito grande.');
+            }
+        }
+        
+        // Função para importar produtos do Excel
+        async function importarProdutos() {
+            const arquivo = document.getElementById('arquivoExcel').files[0];
+            
+            if (!arquivo) {
+                mostrarMensagem('Selecione um arquivo Excel!', 'erro');
+                return;
+            }
+            
+            try {
+                const dados = await arquivo.arrayBuffer();
+                const workbook = XLSX.read(dados, { type: 'array' });
+                const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
+                const linhas = XLSX.utils.sheet_to_json(primeiraAba, { header: 1 });
+                
+                // Limpar base atual
+                baseProdutos = {};
+                let contador = 0;
+                let erros = 0;
+                
+                // Processar cada linha (pulando o cabeçalho se houver)
+                linhas.forEach((linha, index) => {
+                    // Pular linhas vazias
+                    if (!linha || linha.length === 0) return;
+                    
+                    // Tentar identificar se é cabeçalho
+                    if (index === 0) {
+                        const primeiraColuna = String(linha[0]).toLowerCase();
+                        if (primeiraColuna.includes('cód') || primeiraColuna.includes('codigo')) {
+                            return; // Pular linha de cabeçalho
+                        }
+                    }
+                    
+                    const codigoBarras = String(linha[0] || '').trim();
+                    const descricao = String(linha[1] || '').trim();
+                    const um = String(linha[2] || 'UN').trim();
+                    
+                    if (codigoBarras && descricao) {
+                        const produtoInfo = {
+                            descricao: descricao,
+                            um: um,
+                            codigoOriginal: codigoBarras
+                        };
+                        
+                        // Indexar com o código completo
+                        baseProdutos[codigoBarras] = produtoInfo;
+                        
+                        // Indexar também sem os zeros à esquerda (se começar com zeros)
+                        if (codigoBarras.startsWith('0')) {
+                            const codigoSemZeros = codigoBarras.replace(/^0+/, '');
+                            if (codigoSemZeros && codigoSemZeros !== codigoBarras) {
+                                baseProdutos[codigoSemZeros] = produtoInfo;
+                            }
+                        }
+                        
+                        contador++;
+                    } else {
+                        erros++;
+                    }
+                });
+                
+                // Salvar no localStorage
+                salvarBaseProdutos();
+                
+                // Atualizar interface
+                document.getElementById('totalProdutos').textContent = contador;
+                document.getElementById('produtosInfo').style.display = 'block';
+                
+                let mensagem = `✅ ${contador} produtos importados com sucesso!`;
+                if (erros > 0) {
+                    mensagem += ` (${erros} linhas com erro foram ignoradas)`;
+                }
+                
+                mostrarMensagem(mensagem, 'sucesso');
+                
+                // Limpar input
+                document.getElementById('arquivoExcel').value = '';
+                
+            } catch (e) {
+                console.error('Erro ao importar produtos:', e);
+                mostrarMensagem('Erro ao processar arquivo Excel: ' + e.message, 'erro');
+            }
+        }
+        
+        // Função para limpar base de produtos
+        function limparBaseProdutos() {
+            if (Object.keys(baseProdutos).length === 0) {
+                mostrarMensagem('Não há produtos na base!', 'erro');
+                return;
+            }
+            
+            if (confirm('Deseja realmente limpar toda a base de produtos? Esta ação não pode ser desfeita.')) {
+                baseProdutos = {};
+                localStorage.removeItem('baseProdutos');
+                document.getElementById('totalProdutos').textContent = '0';
+                document.getElementById('produtosInfo').style.display = 'none';
+                document.getElementById('produtoEncontrado').style.display = 'none';
+                mostrarMensagem('Base de produtos limpa!', 'sucesso');
+            }
+        }
+        
+        // Função para buscar produto na base
+        function buscarProduto(codigo) {
+            const divProduto = document.getElementById('produtoEncontrado');
+            let produto = null;
+            
+            // Tentar buscar com o código exato
+            produto = baseProdutos[codigo];
+            
+            // Se não encontrou, tentar adicionar zeros à esquerda (até 13 dígitos - padrão EAN-13)
+            if (!produto && /^\d+$/.test(codigo)) {
+                for (let tamanho = codigo.length + 1; tamanho <= 13; tamanho++) {
+                    const codigoComZeros = codigo.padStart(tamanho, '0');
+                    produto = baseProdutos[codigoComZeros];
+                    if (produto) {
+                        console.log(`Produto encontrado com zeros: ${codigoComZeros}`);
+                        break;
+                    }
+                }
+            }
+            
+            // Se não encontrou, tentar remover zeros à esquerda
+            if (!produto && codigo.startsWith('0')) {
+                const codigoSemZeros = codigo.replace(/^0+/, '');
+                produto = baseProdutos[codigoSemZeros];
+                if (produto) {
+                    console.log(`Produto encontrado sem zeros: ${codigoSemZeros}`);
+                }
+            }
+            
+            if (produto) {
+                divProduto.textContent = `✅ ${produto.descricao} (${produto.um})`;
+                divProduto.style.display = 'block';
+                divProduto.style.color = '#28a745';
+                return produto;
+            } else {
+                divProduto.textContent = '⚠️ Produto não encontrado na base';
+                divProduto.style.display = 'block';
+                divProduto.style.color = '#fd7e14';
+                return null;
+            }
+        }
+        
+        // Event listener para buscar produto ao digitar código
+        document.getElementById('codigo').addEventListener('input', function(e) {
+            const codigo = e.target.value.trim();
+            if (codigo.length >= 3) {
+                buscarProduto(codigo);
+            } else {
+                document.getElementById('produtoEncontrado').style.display = 'none';
+            }
+        });
+        
+        // Função para toggle do scanner
+        async function toggleScanner() {
+            const camera = document.getElementById('camera');
+            const video = document.getElementById('video');
+            const btnCamera = document.getElementById('btnCamera');
+            
+            if (!scannerAtivo) {
+                try {
+                    camera.style.display = 'block';
+                    btnCamera.textContent = '⏸️ Parar Scanner';
+                    btnCamera.classList.remove('btn-blue');
+                    btnCamera.classList.add('btn-red');
+                    
+                    codeReader = new ZXing.BrowserMultiFormatReader();
+                    
+                    await codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
+                        if (result) {
+                            const codigo = result.text;
+                            document.getElementById('codigo').value = codigo;
+                            buscarProduto(codigo);
+                            
+                            // Tocar som de bip
+                            const beep = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGmm98OScTgwOUKXh8bllHgU2jdXzzn0vBSh+zPLaizsKFFyw6OyrWBUIQ5zd8sFuJAUuhM/z2Ik2CBlpu+3nnk0MDFCn4fC2Yx0GN5HY88p9LgUle8nx3I4+ChRdsOjrq1gVCEOc3fLBbiQFLoTP89iJNggZabvt555NDA==');
+                            beep.play().catch(() => {});
+                            
+                            scannerAtivo = false;
+                            toggleScanner();
+                        }
+                    });
+                    
+                    scannerAtivo = true;
+                } catch (err) {
+                    alert('Erro ao acessar câmera: ' + err);
+                    camera.style.display = 'none';
+                    btnCamera.textContent = '📷 Iniciar Scanner';
+                    btnCamera.classList.remove('btn-red');
+                    btnCamera.classList.add('btn-blue');
+                }
+            } else {
+                if (codeReader) {
+                    codeReader.reset();
+                }
+                camera.style.display = 'none';
+                btnCamera.textContent = '📷 Iniciar Scanner';
+                btnCamera.classList.remove('btn-red');
+                btnCamera.classList.add('btn-blue');
+                scannerAtivo = false;
+            }
+        }
+        
+        // Função para adicionar item
+        function adicionar() {
+            const codigo = document.getElementById('codigo').value.trim();
+            const quantidade = parseFloat(document.getElementById('quantidade').value);
+            
+            if (!codigo) {
+                mostrarMensagem('Digite um código de barras!', 'erro');
+                return;
+            }
+            
+            if (!quantidade || quantidade <= 0) {
+                mostrarMensagem('Digite uma quantidade válida!', 'erro');
+                return;
+            }
+            
+            const produto = baseProdutos[codigo];
+            const descricao = produto ? produto.descricao : 'Produto não cadastrado';
+            const um = produto ? produto.um : 'UN';
+            const codigoFinal = produto ? produto.codigoOriginal : codigo;
+            
+            dados.push({
+                codigo: codigoFinal,
+                quantidade: quantidade,
+                descricao: descricao,
+                um: um,
+                timestamp: new Date().toLocaleString()
+            });
+            
+            atualizarLista();
+            mostrarMensagem('Item adicionado com sucesso!', 'sucesso');
+            
+            // Limpar campos
+            document.getElementById('codigo').value = '';
+            document.getElementById('quantidade').value = '1';
+            document.getElementById('produtoEncontrado').style.display = 'none';
+            document.getElementById('codigo').focus();
+        }
+        
+        // Função para atualizar lista
+        function atualizarLista() {
+            const container = document.getElementById('itens');
+            const total = document.getElementById('total');
+            const btnBaixarTxt = document.getElementById('btnBaixarTxt');
+            const btnBaixarExcel = document.getElementById('btnBaixarExcel');
+            
+            if (dados.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666;">Nenhum item ainda</p>';
+                total.textContent = '0';
+                btnBaixarTxt.disabled = true;
+                btnBaixarExcel.disabled = true;
+                return;
+            }
+            
+            container.innerHTML = '';
+            dados.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                div.innerHTML = `
+                    <strong>${item.codigo}</strong><br>
+                    ${item.descricao}<br>
+                    Quantidade: <strong>${item.quantidade} ${item.um}</strong><br>
+                    <small style="color: #666;">${item.timestamp}</small>
+                    <div class="item-actions">
+                        <button class="btn btn-small btn-orange" onclick="editarItem(${index})">✏️ Editar</button>
+                        <button class="btn btn-small btn-red" onclick="removerItem(${index})">🗑️ Remover</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            
+            total.textContent = dados.length;
+            btnBaixarTxt.disabled = false;
+            btnBaixarExcel.disabled = false;
+        }
+        
+        // Função para editar item
+        function editarItem(index) {
+            itemEditando = index;
+            document.getElementById('editQuantidade').value = dados[index].quantidade;
+            document.getElementById('modalEdicao').style.display = 'block';
+        }
+        
+        // Função para salvar edição
+        function salvarEdicao() {
+            const novaQtd = parseFloat(document.getElementById('editQuantidade').value);
+            
+            if (!novaQtd || novaQtd <= 0) {
+                alert('Digite uma quantidade válida!');
+                return;
+            }
+            
+            dados[itemEditando].quantidade = novaQtd;
+            dados[itemEditando].timestamp = new Date().toLocaleString();
+            
+            atualizarLista();
+            fecharModal();
+            mostrarMensagem('Item atualizado com sucesso!', 'sucesso');
+        }
+        
+        // Função para fechar modal
+        function fecharModal() {
+            document.getElementById('modalEdicao').style.display = 'none';
+            itemEditando = -1;
+        }
+        
+        // Função para remover item
+        function removerItem(index) {
+            if (confirm('Deseja realmente remover este item?')) {
+                dados.splice(index, 1);
+                atualizarLista();
+                mostrarMensagem('Item removido!', 'sucesso');
+            }
+        }
+        
+        // Função para baixar arquivo TXT
+        function baixarTxt() {
+            if (dados.length === 0) {
+                mostrarMensagem('Não há itens para baixar!', 'erro');
+                return;
+            }
+            
+            let nomeArquivo = document.getElementById('nomeArquivo').value.trim();
+            if (!nomeArquivo) {
+                nomeArquivo = 'coleta_' + new Date().toISOString().slice(0,10);
+            }
+            
+            // Gerar conteúdo do arquivo no formato do coletor
+            let conteudo = '';
+            dados.forEach(item => {
+                // Código de barras: 13 caracteres (preencher com zeros à esquerda)
+                const codigoFormatado = String(item.codigo).padStart(13, '0');
+                
+                // Quantidade: 8 caracteres (multiplicar por 1000 para 3 casas decimais e preencher com zeros à esquerda)
+                // Exemplo: 10.5 vira 10500, depois 00010500
+                const quantidadeInteira = Math.round(item.quantidade * 1000);
+                const quantidadeFormatada = String(quantidadeInteira).padStart(8, '0');
+                
+                // Formato: CODIGO,QUANTIDADE com quebra de linha Windows (CRLF)
+                conteudo += `${codigoFormatado},${quantidadeFormatada}\r\n`;
+            });
+            
+            // Criar e baixar arquivo
+            const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = nomeArquivo + '.txt';
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            mostrarMensagem('Arquivo TXT baixado com sucesso!', 'sucesso');
+        }
+        
+        // Função para baixar arquivo Excel
+        function baixarExcel() {
+            if (dados.length === 0) {
+                mostrarMensagem('Não há itens para baixar!', 'erro');
+                return;
+            }
+            
+            let nomeArquivo = document.getElementById('nomeArquivo').value.trim();
+            if (!nomeArquivo) {
+                nomeArquivo = 'coleta_' + new Date().toISOString().slice(0,10);
+            }
+            
+            // Preparar dados para o Excel no formato do coletor
+            const dadosExcel = dados.map(item => {
+                // Código de barras: 13 caracteres (preencher com zeros à esquerda)
+                const codigoFormatado = String(item.codigo).padStart(13, '0');
+                
+                // Quantidade: 8 caracteres (multiplicar por 1000 para 3 casas decimais e preencher com zeros à esquerda)
+                const quantidadeInteira = Math.round(item.quantidade * 1000);
+                const quantidadeFormatada = String(quantidadeInteira).padStart(8, '0');
+                
+                return {
+                    'Código de Barras': codigoFormatado,
+                    'Quantidade': quantidadeFormatada
+                };
+            });
+            
+            // Criar workbook e worksheet
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(dadosExcel);
+            
+            // Ajustar largura das colunas
+            const colWidths = [
+                { wch: 15 }, // Código
+                { wch: 12 }  // Quantidade
+            ];
+            ws['!cols'] = colWidths;
+            
+            // Adicionar worksheet ao workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Coleta');
+            
+            // Gerar e baixar arquivo
+            XLSX.writeFile(wb, nomeArquivo + '.xlsx');
+            
+            mostrarMensagem('Arquivo Excel baixado com sucesso!', 'sucesso');
+        }
+        
+        // Função para limpar tudo
+        function limpar() {
+            if (dados.length === 0) {
+                mostrarMensagem('Não há itens para limpar!', 'erro');
+                return;
+            }
+            
+            if (confirm('Deseja realmente limpar todos os itens?')) {
+                dados = [];
+                atualizarLista();
+                mostrarMensagem('Lista limpa!', 'sucesso');
+            }
+        }
+        
+        // Função para mostrar mensagem
+        function mostrarMensagem(texto, tipo) {
+            const msg = document.getElementById('mensagem');
+            msg.textContent = texto;
+            msg.className = 'msg ' + tipo;
+            msg.style.display = 'block';
+            
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Fechar modal ao clicar fora
+        window.onclick = function(event) {
+            const modal = document.getElementById('modalEdicao');
+            if (event.target === modal) {
+                fecharModal();
+            }
+        }
+        
+        // Permitir adicionar com Enter
+        document.getElementById('quantidade').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                adicionar();
+            }
+        });
+        
+        document.getElementById('codigo').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('quantidade').focus();
+            }
+        });
+        
+        // Carregar base de produtos ao iniciar
+        carregarBaseProdutos();
+    </script>
+</body>
+</html>
