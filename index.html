@@ -142,6 +142,7 @@
             margin-bottom: 15px;
             position: relative;
             overflow: hidden;
+            transition: border-color 0.3s ease;
         }
         
         .camera video {
@@ -156,12 +157,14 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 200px;
-            height: 80px;
-            border: 2px solid #00ff00;
+            width: 220px;
+            height: 100px;
+            border: 3px solid #00ff00;
             border-radius: 8px;
-            background: rgba(0, 255, 0, 0.1);
+            background: rgba(0, 255, 0, 0.05);
             pointer-events: none;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3),
+                        inset 0 0 20px rgba(0, 255, 0, 0.1);
         }
         
         .scanner-line {
@@ -169,14 +172,15 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 2px;
+            height: 3px;
             background: linear-gradient(90deg, transparent, #00ff00, transparent);
-            animation: scan 2s linear infinite;
+            box-shadow: 0 0 10px #00ff00;
+            animation: scan 1.5s ease-in-out infinite;
         }
         
         @keyframes scan {
-            0% { top: 0; }
-            100% { top: 76px; }
+            0%, 100% { top: 0; opacity: 1; }
+            50% { top: 94px; opacity: 0.5; }
         }
         
         .lista {
@@ -293,6 +297,19 @@
             font-size: 13px;
             border-left: 4px solid #0c5460;
         }
+        
+        .scanner-tip {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -324,6 +341,12 @@
                     <video id="video" autoplay playsinline></video>
                     <div class="scanner-overlay">
                         <div class="scanner-line"></div>
+                    </div>
+                    <div style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                        🎯 Posicione o código na área verde
+                    </div>
+                    <div class="scanner-tip">
+                        💡 Mantenha a distância de 10-15cm do código
                     </div>
                 </div>
             </div>
@@ -386,11 +409,34 @@
         </div>
     </div>
 
+    <div id="modalCompartilhar" class="modal">
+        <div class="modal-content">
+            <h3>📤 Compartilhar Arquivo</h3>
+            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Arquivo gerado com sucesso! Como deseja compartilhar?</p>
+            <button class="btn btn-green" onclick="compartilharWhatsApp()" style="margin-bottom: 8px;">
+                💬 Enviar por WhatsApp
+            </button>
+            <button class="btn btn-blue" onclick="compartilharEmail()" style="margin-bottom: 8px;">
+                ✉️ Enviar por E-mail
+            </button>
+            <button class="btn btn-orange" onclick="compartilharGeral()" style="margin-bottom: 8px;">
+                📱 Outras opções
+            </button>
+            <button class="btn btn-red" onclick="fecharModalCompartilhar()">
+                ❌ Fechar
+            </button>
+        </div>
+    </div>
+
     <script>
         let dados = [];
         let scannerAtivo = false;
         let codeReader = null;
         let itemEditando = -1;
+        let ultimaLeitura = '';
+        let tempoUltimaLeitura = 0;
+        let stream = null;
+        let arquivoGerado = null; // Para armazenar o arquivo TXT gerado
         
         // Base de produtos
         let baseProdutos = {};
@@ -579,7 +625,7 @@
             }
         });
         
-        // Função para toggle do scanner
+        // Função para toggle do scanner OTIMIZADO
         async function toggleScanner() {
             const camera = document.getElementById('camera');
             const video = document.getElementById('video');
@@ -592,40 +638,112 @@
                     btnCamera.classList.remove('btn-blue');
                     btnCamera.classList.add('btn-red');
                     
-                    codeReader = new ZXing.BrowserMultiFormatReader();
+                    // Configurações otimizadas para a câmera
+                    const constraints = {
+                        video: {
+                            facingMode: 'environment', // Câmera traseira
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 },
+                            focusMode: { ideal: 'continuous' },
+                            zoom: { ideal: 1.0 }
+                        }
+                    };
                     
-                    await codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
+                    // Obter stream de vídeo
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    video.srcObject = stream;
+                    
+                    // Aplicar configurações avançadas se disponíveis
+                    const track = stream.getVideoTracks()[0];
+                    const capabilities = track.getCapabilities();
+                    const settings = {};
+                    
+                    if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+                        settings.focusMode = 'continuous';
+                    }
+                    if (capabilities.torch) {
+                        // Podemos adicionar controle de lanterna se necessário
+                    }
+                    
+                    if (Object.keys(settings).length > 0) {
+                        await track.applyConstraints({ advanced: [settings] });
+                    }
+                    
+                    // Criar leitor com configurações otimizadas
+                    const hints = new Map();
+                    hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+                    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+                        ZXing.BarcodeFormat.EAN_13,
+                        ZXing.BarcodeFormat.EAN_8,
+                        ZXing.BarcodeFormat.CODE_128,
+                        ZXing.BarcodeFormat.CODE_39,
+                        ZXing.BarcodeFormat.UPC_A,
+                        ZXing.BarcodeFormat.UPC_E
+                    ]);
+                    
+                    codeReader = new ZXing.BrowserMultiFormatReader(hints);
+                    
+                    // Iniciar decodificação com callback otimizado
+                    codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
                         if (result) {
                             const codigo = result.text;
+                            const agora = Date.now();
+                            
+                            // Evitar leituras duplicadas em menos de 1.5 segundos
+                            if (codigo === ultimaLeitura && (agora - tempoUltimaLeitura) < 1500) {
+                                return;
+                            }
+                            
+                            ultimaLeitura = codigo;
+                            tempoUltimaLeitura = agora;
+                            
+                            // Processar código
                             document.getElementById('codigo').value = codigo;
                             buscarProduto(codigo);
                             
-                            // Tocar som de bip
+                            // Feedback visual
+                            camera.style.borderColor = '#28a745';
+                            setTimeout(() => {
+                                camera.style.borderColor = '#007bff';
+                            }, 300);
+                            
+                            // Tocar som de bip mais agradável
                             const beep = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGmm98OScTgwOUKXh8bllHgU2jdXzzn0vBSh+zPLaizsKFFyw6OyrWBUIQ5zd8sFuJAUuhM/z2Ik2CBlpu+3nnk0MDFCn4fC2Yx0GN5HY88p9LgUle8nx3I4+ChRdsOjrq1gVCEOc3fLBbiQFLoTP89iJNggZabvt555NDA==');
+                            beep.volume = 0.3;
                             beep.play().catch(() => {});
                             
-                            scannerAtivo = false;
-                            toggleScanner();
+                            // Vibrar se disponível
+                            if (navigator.vibrate) {
+                                navigator.vibrate(100);
+                            }
                         }
                     });
                     
                     scannerAtivo = true;
                 } catch (err) {
-                    alert('Erro ao acessar câmera: ' + err);
+                    console.error('Erro ao acessar câmera:', err);
+                    alert('Erro ao acessar câmera: ' + err.message + '\n\nDica: Verifique se você deu permissão para usar a câmera.');
                     camera.style.display = 'none';
                     btnCamera.textContent = '📷 Iniciar Scanner';
                     btnCamera.classList.remove('btn-red');
                     btnCamera.classList.add('btn-blue');
                 }
             } else {
+                // Parar scanner
                 if (codeReader) {
                     codeReader.reset();
                 }
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+                video.srcObject = null;
                 camera.style.display = 'none';
                 btnCamera.textContent = '📷 Iniciar Scanner';
                 btnCamera.classList.remove('btn-red');
                 btnCamera.classList.add('btn-blue');
                 scannerAtivo = false;
+                ultimaLeitura = '';
             }
         }
         
@@ -770,16 +888,167 @@
                 conteudo += `${codigoFormatado},${quantidadeFormatada}\r\n`;
             });
             
-            // Criar e baixar arquivo
+            // Criar arquivo blob
             const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8' });
+            
+            // Armazenar para compartilhamento
+            arquivoGerado = {
+                blob: blob,
+                nome: nomeArquivo + '.txt',
+                conteudo: conteudo
+            };
+            
+            // Baixar arquivo
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = nomeArquivo + '.txt';
+            a.download = arquivoGerado.nome;
             a.click();
             window.URL.revokeObjectURL(url);
             
             mostrarMensagem('Arquivo TXT baixado com sucesso!', 'sucesso');
+            
+            // Mostrar modal de compartilhamento
+            setTimeout(() => {
+                document.getElementById('modalCompartilhar').style.display = 'block';
+            }, 500);
+        }
+        
+        // Função para fechar modal de compartilhamento
+        function fecharModalCompartilhar() {
+            document.getElementById('modalCompartilhar').style.display = 'none';
+        }
+        
+        // Função para compartilhar via WhatsApp
+        function compartilharWhatsApp() {
+            if (!arquivoGerado) {
+                alert('Nenhum arquivo foi gerado ainda!');
+                return;
+            }
+            
+            // Criar resumo para enviar no WhatsApp
+            let mensagem = `📦 *Coleta de Produtos - ${arquivoGerado.nome}*\n\n`;
+            mensagem += `Total de itens: ${dados.length}\n\n`;
+            mensagem += `*Resumo:*\n`;
+            
+            dados.forEach((item, index) => {
+                if (index < 10) { // Limitar a 10 primeiros itens para não ficar muito grande
+                    mensagem += `${index + 1}. ${item.codigo} - ${item.descricao}\n`;
+                    mensagem += `   Qtd: ${item.quantidade} ${item.um}\n\n`;
+                }
+            });
+            
+            if (dados.length > 10) {
+                mensagem += `... e mais ${dados.length - 10} itens.\n\n`;
+            }
+            
+            mensagem += `_Arquivo TXT completo em anexo_`;
+            
+            // Tentar usar Web Share API se disponível (funciona melhor no mobile)
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([arquivoGerado.blob], arquivoGerado.nome)] })) {
+                const file = new File([arquivoGerado.blob], arquivoGerado.nome, { type: 'text/plain' });
+                navigator.share({
+                    title: 'Coleta de Produtos',
+                    text: mensagem,
+                    files: [file]
+                }).then(() => {
+                    fecharModalCompartilhar();
+                }).catch(err => {
+                    console.log('Erro ao compartilhar:', err);
+                    // Fallback: abrir WhatsApp Web sem arquivo
+                    compartilharWhatsAppTexto(mensagem);
+                });
+            } else {
+                // Fallback: abrir WhatsApp Web com apenas o texto
+                compartilharWhatsAppTexto(mensagem);
+            }
+        }
+        
+        // Função auxiliar para compartilhar apenas texto no WhatsApp
+        function compartilharWhatsAppTexto(mensagem) {
+            const mensagemCodificada = encodeURIComponent(mensagem);
+            const urlWhatsApp = `https://wa.me/?text=${mensagemCodificada}`;
+            window.open(urlWhatsApp, '_blank');
+            fecharModalCompartilhar();
+            
+            alert('💡 O arquivo TXT não pode ser anexado automaticamente via WhatsApp Web.\n\nO resumo foi enviado. Você pode anexar o arquivo manualmente se necessário.');
+        }
+        
+        // Função para compartilhar via Email
+        function compartilharEmail() {
+            if (!arquivoGerado) {
+                alert('Nenhum arquivo foi gerado ainda!');
+                return;
+            }
+            
+            // Criar corpo do email
+            let corpo = `Coleta de Produtos - ${arquivoGerado.nome}\n\n`;
+            corpo += `Total de itens: ${dados.length}\n\n`;
+            corpo += `Resumo:\n`;
+            
+            dados.forEach((item, index) => {
+                if (index < 20) {
+                    corpo += `${index + 1}. ${item.codigo} - ${item.descricao} - Qtd: ${item.quantidade} ${item.um}\n`;
+                }
+            });
+            
+            if (dados.length > 20) {
+                corpo += `... e mais ${dados.length - 20} itens.\n\n`;
+            }
+            
+            corpo += `\n\nArquivo TXT completo em anexo (baixe e anexe manualmente).\n`;
+            
+            const assunto = encodeURIComponent(`Coleta de Produtos - ${arquivoGerado.nome}`);
+            const corpoEmail = encodeURIComponent(corpo);
+            
+            // Tentar usar Web Share API primeiro
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([arquivoGerado.blob], arquivoGerado.nome)] })) {
+                const file = new File([arquivoGerado.blob], arquivoGerado.nome, { type: 'text/plain' });
+                navigator.share({
+                    title: assunto,
+                    text: corpo,
+                    files: [file]
+                }).then(() => {
+                    fecharModalCompartilhar();
+                }).catch(err => {
+                    console.log('Erro ao compartilhar:', err);
+                    // Fallback: mailto
+                    window.location.href = `mailto:?subject=${assunto}&body=${corpoEmail}`;
+                    fecharModalCompartilhar();
+                    alert('💡 O arquivo TXT foi baixado. Por favor, anexe-o manualmente ao email.');
+                });
+            } else {
+                // Fallback: usar mailto (não suporta anexos)
+                window.location.href = `mailto:?subject=${assunto}&body=${corpoEmail}`;
+                fecharModalCompartilhar();
+                alert('💡 O arquivo TXT foi baixado. Por favor, anexe-o manualmente ao email.');
+            }
+        }
+        
+        // Função para compartilhar de forma geral (usa Web Share API)
+        function compartilharGeral() {
+            if (!arquivoGerado) {
+                alert('Nenhum arquivo foi gerado ainda!');
+                return;
+            }
+            
+            if (navigator.share) {
+                const file = new File([arquivoGerado.blob], arquivoGerado.nome, { type: 'text/plain' });
+                
+                navigator.share({
+                    title: 'Coleta de Produtos',
+                    text: `Arquivo de coleta com ${dados.length} itens`,
+                    files: [file]
+                }).then(() => {
+                    fecharModalCompartilhar();
+                }).catch(err => {
+                    if (err.name !== 'AbortError') {
+                        alert('Erro ao compartilhar: ' + err.message);
+                    }
+                });
+            } else {
+                alert('Seu navegador não suporta compartilhamento direto.\n\nUse as opções de WhatsApp ou E-mail, ou baixe o arquivo e compartilhe manualmente.');
+            }
         }
         
         // Função para baixar arquivo Excel
