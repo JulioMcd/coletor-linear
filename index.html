@@ -382,7 +382,7 @@
             </div>
             
             <button id="btnBaixarTxt" class="btn btn-blue" onclick="baixarTxt()" disabled>
-                📄 Baixar TXT
+                📤 Compartilhar TXT
             </button>
             
             <button id="btnBaixarExcel" class="btn btn-green" onclick="baixarExcel()" disabled>
@@ -412,18 +412,15 @@
     <div id="modalCompartilhar" class="modal">
         <div class="modal-content">
             <h3>📤 Compartilhar Arquivo</h3>
-            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Arquivo gerado com sucesso! Como deseja compartilhar?</p>
+            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Escolha como deseja enviar o arquivo:</p>
             <button class="btn btn-green" onclick="compartilharWhatsApp()" style="margin-bottom: 8px;">
                 💬 Enviar por WhatsApp
             </button>
             <button class="btn btn-blue" onclick="compartilharEmail()" style="margin-bottom: 8px;">
                 ✉️ Enviar por E-mail
             </button>
-            <button class="btn btn-orange" onclick="compartilharGeral()" style="margin-bottom: 8px;">
-                📱 Outras opções
-            </button>
             <button class="btn btn-red" onclick="fecharModalCompartilhar()">
-                ❌ Fechar
+                ❌ Cancelar
             </button>
         </div>
     </div>
@@ -861,10 +858,10 @@
             }
         }
         
-        // Função para baixar arquivo TXT
+        // Função para preparar e compartilhar arquivo TXT
         function baixarTxt() {
             if (dados.length === 0) {
-                mostrarMensagem('Não há itens para baixar!', 'erro');
+                mostrarMensagem('Não há itens para compartilhar!', 'erro');
                 return;
             }
             
@@ -880,7 +877,6 @@
                 const codigoFormatado = String(item.codigo).padStart(13, '0');
                 
                 // Quantidade: 8 caracteres (multiplicar por 1000 para 3 casas decimais e preencher com zeros à esquerda)
-                // Exemplo: 10.5 vira 10500, depois 00010500
                 const quantidadeInteira = Math.round(item.quantidade * 1000);
                 const quantidadeFormatada = String(quantidadeInteira).padStart(8, '0');
                 
@@ -898,20 +894,8 @@
                 conteudo: conteudo
             };
             
-            // Baixar arquivo
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = arquivoGerado.nome;
-            a.click();
-            window.URL.revokeObjectURL(url);
-            
-            mostrarMensagem('Arquivo TXT baixado com sucesso!', 'sucesso');
-            
             // Mostrar modal de compartilhamento
-            setTimeout(() => {
-                document.getElementById('modalCompartilhar').style.display = 'block';
-            }, 500);
+            document.getElementById('modalCompartilhar').style.display = 'block';
         }
         
         // Função para fechar modal de compartilhamento
@@ -926,52 +910,51 @@
                 return;
             }
             
-            // Criar resumo para enviar no WhatsApp
-            let mensagem = `📦 *Coleta de Produtos - ${arquivoGerado.nome}*\n\n`;
-            mensagem += `Total de itens: ${dados.length}\n\n`;
-            mensagem += `*Resumo:*\n`;
+            const file = new File([arquivoGerado.blob], arquivoGerado.nome, { type: 'text/plain' });
             
-            dados.forEach((item, index) => {
-                if (index < 10) { // Limitar a 10 primeiros itens para não ficar muito grande
-                    mensagem += `${index + 1}. ${item.codigo} - ${item.descricao}\n`;
-                    mensagem += `   Qtd: ${item.quantidade} ${item.um}\n\n`;
-                }
-            });
-            
-            if (dados.length > 10) {
-                mensagem += `... e mais ${dados.length - 10} itens.\n\n`;
-            }
-            
-            mensagem += `_Arquivo TXT completo em anexo_`;
-            
-            // Tentar usar Web Share API se disponível (funciona melhor no mobile)
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([arquivoGerado.blob], arquivoGerado.nome)] })) {
-                const file = new File([arquivoGerado.blob], arquivoGerado.nome, { type: 'text/plain' });
+            // Tentar usar Web Share API (funciona melhor no mobile)
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                 navigator.share({
                     title: 'Coleta de Produtos',
-                    text: mensagem,
+                    text: `Arquivo de coleta: ${arquivoGerado.nome}\nTotal de itens: ${dados.length}`,
                     files: [file]
                 }).then(() => {
                     fecharModalCompartilhar();
+                    mostrarMensagem('Arquivo compartilhado com sucesso!', 'sucesso');
                 }).catch(err => {
-                    console.log('Erro ao compartilhar:', err);
-                    // Fallback: abrir WhatsApp Web sem arquivo
-                    compartilharWhatsAppTexto(mensagem);
+                    if (err.name !== 'AbortError') {
+                        console.log('Erro ao compartilhar:', err);
+                        // Fallback: baixar arquivo e abrir WhatsApp
+                        baixarArquivoManual();
+                        abrirWhatsAppComMensagem();
+                    }
                 });
             } else {
-                // Fallback: abrir WhatsApp Web com apenas o texto
-                compartilharWhatsAppTexto(mensagem);
+                // Fallback para desktop ou navegadores antigos
+                baixarArquivoManual();
+                abrirWhatsAppComMensagem();
             }
         }
         
-        // Função auxiliar para compartilhar apenas texto no WhatsApp
-        function compartilharWhatsAppTexto(mensagem) {
+        // Função auxiliar para baixar arquivo manualmente
+        function baixarArquivoManual() {
+            const url = window.URL.createObjectURL(arquivoGerado.blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = arquivoGerado.nome;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // Função auxiliar para abrir WhatsApp com mensagem
+        function abrirWhatsAppComMensagem() {
+            const mensagem = `📦 *Coleta de Produtos*\n\nArquivo: ${arquivoGerado.nome}\nTotal de itens: ${dados.length}\n\n_Arquivo TXT foi baixado, anexe-o manualmente_`;
             const mensagemCodificada = encodeURIComponent(mensagem);
             const urlWhatsApp = `https://wa.me/?text=${mensagemCodificada}`;
             window.open(urlWhatsApp, '_blank');
             fecharModalCompartilhar();
             
-            alert('💡 O arquivo TXT não pode ser anexado automaticamente via WhatsApp Web.\n\nO resumo foi enviado. Você pode anexar o arquivo manualmente se necessário.');
+            alert('💡 O arquivo foi baixado!\n\nPor favor, anexe o arquivo manualmente no WhatsApp.');
         }
         
         // Função para compartilhar via Email
@@ -981,74 +964,41 @@
                 return;
             }
             
-            // Criar corpo do email
-            let corpo = `Coleta de Produtos - ${arquivoGerado.nome}\n\n`;
-            corpo += `Total de itens: ${dados.length}\n\n`;
-            corpo += `Resumo:\n`;
-            
-            dados.forEach((item, index) => {
-                if (index < 20) {
-                    corpo += `${index + 1}. ${item.codigo} - ${item.descricao} - Qtd: ${item.quantidade} ${item.um}\n`;
-                }
-            });
-            
-            if (dados.length > 20) {
-                corpo += `... e mais ${dados.length - 20} itens.\n\n`;
-            }
-            
-            corpo += `\n\nArquivo TXT completo em anexo (baixe e anexe manualmente).\n`;
-            
-            const assunto = encodeURIComponent(`Coleta de Produtos - ${arquivoGerado.nome}`);
-            const corpoEmail = encodeURIComponent(corpo);
+            const file = new File([arquivoGerado.blob], arquivoGerado.nome, { type: 'text/plain' });
             
             // Tentar usar Web Share API primeiro
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([arquivoGerado.blob], arquivoGerado.nome)] })) {
-                const file = new File([arquivoGerado.blob], arquivoGerado.nome, { type: 'text/plain' });
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
                 navigator.share({
-                    title: assunto,
-                    text: corpo,
+                    title: `Coleta de Produtos - ${arquivoGerado.nome}`,
+                    text: `Segue arquivo de coleta com ${dados.length} itens.`,
                     files: [file]
                 }).then(() => {
                     fecharModalCompartilhar();
-                }).catch(err => {
-                    console.log('Erro ao compartilhar:', err);
-                    // Fallback: mailto
-                    window.location.href = `mailto:?subject=${assunto}&body=${corpoEmail}`;
-                    fecharModalCompartilhar();
-                    alert('💡 O arquivo TXT foi baixado. Por favor, anexe-o manualmente ao email.');
-                });
-            } else {
-                // Fallback: usar mailto (não suporta anexos)
-                window.location.href = `mailto:?subject=${assunto}&body=${corpoEmail}`;
-                fecharModalCompartilhar();
-                alert('💡 O arquivo TXT foi baixado. Por favor, anexe-o manualmente ao email.');
-            }
-        }
-        
-        // Função para compartilhar de forma geral (usa Web Share API)
-        function compartilharGeral() {
-            if (!arquivoGerado) {
-                alert('Nenhum arquivo foi gerado ainda!');
-                return;
-            }
-            
-            if (navigator.share) {
-                const file = new File([arquivoGerado.blob], arquivoGerado.nome, { type: 'text/plain' });
-                
-                navigator.share({
-                    title: 'Coleta de Produtos',
-                    text: `Arquivo de coleta com ${dados.length} itens`,
-                    files: [file]
-                }).then(() => {
-                    fecharModalCompartilhar();
+                    mostrarMensagem('Arquivo compartilhado com sucesso!', 'sucesso');
                 }).catch(err => {
                     if (err.name !== 'AbortError') {
-                        alert('Erro ao compartilhar: ' + err.message);
+                        console.log('Erro ao compartilhar:', err);
+                        // Fallback: baixar e abrir email
+                        baixarArquivoManual();
+                        abrirEmailComMensagem();
                     }
                 });
             } else {
-                alert('Seu navegador não suporta compartilhamento direto.\n\nUse as opções de WhatsApp ou E-mail, ou baixe o arquivo e compartilhe manualmente.');
+                // Fallback: baixar arquivo e abrir cliente de email
+                baixarArquivoManual();
+                abrirEmailComMensagem();
             }
+        }
+        
+        // Função auxiliar para abrir email
+        function abrirEmailComMensagem() {
+            const assunto = encodeURIComponent(`Coleta de Produtos - ${arquivoGerado.nome}`);
+            const corpo = encodeURIComponent(`Segue em anexo o arquivo de coleta.\n\nTotal de itens: ${dados.length}\nArquivo: ${arquivoGerado.nome}\n\nO arquivo foi baixado, por favor anexe-o manualmente.`);
+            
+            window.location.href = `mailto:?subject=${assunto}&body=${corpo}`;
+            fecharModalCompartilhar();
+            
+            alert('💡 O arquivo foi baixado!\n\nPor favor, anexe o arquivo manualmente no email.');
         }
         
         // Função para baixar arquivo Excel
@@ -1126,9 +1076,15 @@
         
         // Fechar modal ao clicar fora
         window.onclick = function(event) {
-            const modal = document.getElementById('modalEdicao');
-            if (event.target === modal) {
+            const modalEdicao = document.getElementById('modalEdicao');
+            const modalCompartilhar = document.getElementById('modalCompartilhar');
+            
+            if (event.target === modalEdicao) {
                 fecharModal();
+            }
+            
+            if (event.target === modalCompartilhar) {
+                fecharModalCompartilhar();
             }
         }
         
