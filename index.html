@@ -78,7 +78,6 @@
             font-weight: bold;
             cursor: pointer;
             margin-bottom: 10px;
-            transition: all 0.3s;
         }
         
         .btn-small {
@@ -114,32 +113,21 @@
             color: white;
         }
         
-        .btn-whatsapp {
-            background: #25D366;
-            color: white;
-        }
-        
         .btn:hover {
             opacity: 0.9;
-            transform: translateY(-2px);
-        }
-        
-        .btn:active {
-            transform: translateY(0);
         }
         
         .btn:disabled {
             background: #ccc;
             cursor: not-allowed;
-            transform: none;
         }
         
         .camera {
             width: 100%;
-            height: 300px;
-            background: #000;
-            border: 3px solid #007bff;
-            border-radius: 10px;
+            height: 250px;
+            background: #f8f9fa;
+            border: 2px dashed #007bff;
+            border-radius: 6px;
             display: none;
             margin-bottom: 15px;
             position: relative;
@@ -150,6 +138,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            border-radius: 6px;
         }
         
         .scanner-overlay {
@@ -157,11 +146,11 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 250px;
-            height: 100px;
-            border: 3px solid #00ff00;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            width: 200px;
+            height: 80px;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            background: rgba(0, 255, 0, 0.1);
             pointer-events: none;
         }
         
@@ -170,44 +159,14 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
+            height: 2px;
             background: linear-gradient(90deg, transparent, #00ff00, transparent);
-            box-shadow: 0 0 10px #00ff00;
             animation: scan 2s linear infinite;
         }
         
         @keyframes scan {
             0% { top: 0; }
-            100% { top: 97px; }
-        }
-        
-        .scanner-status {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        
-        .scanner-feedback {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 255, 0, 0.3);
-            display: none;
-            animation: flash 0.3s;
-        }
-        
-        @keyframes flash {
-            0%, 100% { opacity: 0; }
-            50% { opacity: 1; }
+            100% { top: 76px; }
         }
         
         .lista {
@@ -228,18 +187,6 @@
             border-left: 4px solid #007bff;
             font-size: 14px;
             position: relative;
-            animation: slideIn 0.3s;
-        }
-        
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
         }
         
         .item-actions {
@@ -251,15 +198,6 @@
             color: #28a745;
             font-weight: bold;
             margin-top: 4px;
-            padding: 8px;
-            background: #d4edda;
-            border-radius: 4px;
-            animation: fadeIn 0.3s;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
         }
         
         .contador {
@@ -277,7 +215,6 @@
             margin-bottom: 15px;
             text-align: center;
             display: none;
-            animation: fadeIn 0.3s;
         }
         
         .msg.sucesso {
@@ -292,6 +229,16 @@
             border: 1px solid #f5c6cb;
         }
         
+        .arquivo-config {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        
+        .arquivo-config input {
+            flex: 1;
+        }
+        
         .modal {
             display: none;
             position: fixed;
@@ -301,7 +248,6 @@
             width: 100%;
             height: 100%;
             background-color: rgba(0,0,0,0.5);
-            animation: fadeIn 0.3s;
         }
         
         .modal-content {
@@ -312,18 +258,6 @@
             width: 90%;
             max-width: 300px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            animation: slideDown 0.3s;
-        }
-        
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
         
         .modal h3 {
@@ -348,17 +282,6 @@
             margin-bottom: 15px;
             font-size: 13px;
             border-left: 4px solid #0c5460;
-        }
-        
-        .btn-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        
-        .btn-group .btn {
-            margin-bottom: 0;
         }
     </style>
 </head>
@@ -392,14 +315,12 @@
                     <div class="scanner-overlay">
                         <div class="scanner-line"></div>
                     </div>
-                    <div id="scannerFeedback" class="scanner-feedback"></div>
-                    <div class="scanner-status">🎯 Aponte para o código de barras</div>
                 </div>
             </div>
             
             <div class="group">
                 <label for="codigo">Código de Barras:</label>
-                <input type="text" id="codigo" placeholder="Digite ou escaneie o código (ex: 62 ou 0000000000062)">
+                <input type="text" id="codigo" inputmode="numeric" placeholder="Digite ou escaneie o código (ex: 62 ou 0000000000062)">
                 <div id="produtoEncontrado" class="produto-info" style="display:none;"></div>
             </div>
             
@@ -431,19 +352,6 @@
                 📄 Baixar TXT
             </button>
             
-            <div class="btn-group">
-                <button id="btnWhatsApp" class="btn btn-whatsapp" onclick="compartilharWhatsApp()" disabled>
-                    📱 WhatsApp
-                </button>
-                <button id="btnEmail" class="btn btn-orange" onclick="compartilharEmail()" disabled>
-                    📧 Email
-                </button>
-            </div>
-            
-            <button id="btnCompartilhar" class="btn btn-purple" onclick="compartilharArquivo()" disabled style="display:none;">
-                📤 Compartilhar
-            </button>
-            
             <button id="btnBaixarExcel" class="btn btn-green" onclick="baixarExcel()" disabled>
                 📊 Baixar Excel
             </button>
@@ -473,49 +381,11 @@
         let scannerAtivo = false;
         let codeReader = null;
         let itemEditando = -1;
+        
+        // Base de produtos
         let baseProdutos = {};
         
-        // Verificar suporte a Web Share API
-        const suportaCompartilhamento = navigator.share !== undefined;
-        if (suportaCompartilhamento) {
-            document.getElementById('btnCompartilhar').style.display = 'block';
-        }
-        
-        // Função para vibrar (feedback tátil)
-        function vibrar(duracao = 100) {
-            if (navigator.vibrate) {
-                navigator.vibrate(duracao);
-            }
-        }
-        
-        // Função melhorada para tocar som de beep
-        function tocarBeep() {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
-            
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.2);
-        }
-        
-        // Função para feedback visual do scanner
-        function feedbackScanner() {
-            const feedback = document.getElementById('scannerFeedback');
-            feedback.style.display = 'block';
-            setTimeout(() => {
-                feedback.style.display = 'none';
-            }, 300);
-        }
-        
+        // Função para carregar a base de produtos do localStorage
         function carregarBaseProdutos() {
             const baseSalva = localStorage.getItem('baseProdutos');
             
@@ -525,14 +395,17 @@
                     const contador = Object.keys(baseProdutos).filter(k => baseProdutos[k].codigoOriginal).length;
                     document.getElementById('totalProdutos').textContent = contador;
                     document.getElementById('produtosInfo').style.display = 'block';
-                    console.log('Base de produtos carregada:', contador, 'produtos');
+                    console.log('Base de produtos carregada do localStorage:', contador, 'produtos');
                 } catch (e) {
                     console.error('Erro ao carregar base de produtos:', e);
                     baseProdutos = {};
                 }
+            } else {
+                console.log('Nenhuma base de produtos encontrada. Importe um arquivo Excel.');
             }
         }
         
+        // Função para salvar base de produtos no localStorage
         function salvarBaseProdutos() {
             try {
                 localStorage.setItem('baseProdutos', JSON.stringify(baseProdutos));
@@ -543,6 +416,7 @@
             }
         }
         
+        // Função para importar produtos do Excel
         async function importarProdutos() {
             const arquivo = document.getElementById('arquivoExcel').files[0];
             
@@ -557,17 +431,21 @@
                 const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
                 const linhas = XLSX.utils.sheet_to_json(primeiraAba, { header: 1 });
                 
+                // Limpar base atual
                 baseProdutos = {};
                 let contador = 0;
                 let erros = 0;
                 
+                // Processar cada linha (pulando o cabeçalho se houver)
                 linhas.forEach((linha, index) => {
+                    // Pular linhas vazias
                     if (!linha || linha.length === 0) return;
                     
+                    // Tentar identificar se é cabeçalho
                     if (index === 0) {
                         const primeiraColuna = String(linha[0]).toLowerCase();
                         if (primeiraColuna.includes('cód') || primeiraColuna.includes('codigo')) {
-                            return;
+                            return; // Pular linha de cabeçalho
                         }
                     }
                     
@@ -582,8 +460,10 @@
                             codigoOriginal: codigoBarras
                         };
                         
+                        // Indexar com o código completo
                         baseProdutos[codigoBarras] = produtoInfo;
                         
+                        // Indexar também sem os zeros à esquerda (se começar com zeros)
                         if (codigoBarras.startsWith('0')) {
                             const codigoSemZeros = codigoBarras.replace(/^0+/, '');
                             if (codigoSemZeros && codigoSemZeros !== codigoBarras) {
@@ -597,8 +477,10 @@
                     }
                 });
                 
+                // Salvar no localStorage
                 salvarBaseProdutos();
                 
+                // Atualizar interface
                 document.getElementById('totalProdutos').textContent = contador;
                 document.getElementById('produtosInfo').style.display = 'block';
                 
@@ -608,8 +490,8 @@
                 }
                 
                 mostrarMensagem(mensagem, 'sucesso');
-                vibrar(200);
                 
+                // Limpar input
                 document.getElementById('arquivoExcel').value = '';
                 
             } catch (e) {
@@ -618,6 +500,7 @@
             }
         }
         
+        // Função para limpar base de produtos
         function limparBaseProdutos() {
             if (Object.keys(baseProdutos).length === 0) {
                 mostrarMensagem('Não há produtos na base!', 'erro');
@@ -634,23 +517,33 @@
             }
         }
         
+        // Função para buscar produto na base
         function buscarProduto(codigo) {
             const divProduto = document.getElementById('produtoEncontrado');
             let produto = null;
             
+            // Tentar buscar com o código exato
             produto = baseProdutos[codigo];
             
+            // Se não encontrou, tentar adicionar zeros à esquerda (até 13 dígitos - padrão EAN-13)
             if (!produto && /^\d+$/.test(codigo)) {
                 for (let tamanho = codigo.length + 1; tamanho <= 13; tamanho++) {
                     const codigoComZeros = codigo.padStart(tamanho, '0');
                     produto = baseProdutos[codigoComZeros];
-                    if (produto) break;
+                    if (produto) {
+                        console.log(`Produto encontrado com zeros: ${codigoComZeros}`);
+                        break;
+                    }
                 }
             }
             
+            // Se não encontrou, tentar remover zeros à esquerda
             if (!produto && codigo.startsWith('0')) {
                 const codigoSemZeros = codigo.replace(/^0+/, '');
                 produto = baseProdutos[codigoSemZeros];
+                if (produto) {
+                    console.log(`Produto encontrado sem zeros: ${codigoSemZeros}`);
+                }
             }
             
             if (produto) {
@@ -666,6 +559,7 @@
             }
         }
         
+        // Event listener para buscar produto ao digitar código
         document.getElementById('codigo').addEventListener('input', function(e) {
             const codigo = e.target.value.trim();
             if (codigo.length >= 3) {
@@ -675,6 +569,7 @@
             }
         });
         
+        // Função para toggle do scanner
         async function toggleScanner() {
             const camera = document.getElementById('camera');
             const video = document.getElementById('video');
@@ -689,35 +584,24 @@
                     
                     codeReader = new ZXing.BrowserMultiFormatReader();
                     
-                    const constraints = {
-                        video: {
-                            facingMode: 'environment',
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
-                        }
-                    };
-                    
-                    await codeReader.decodeFromConstraints(constraints, 'video', (result, err) => {
+                    await codeReader.decodeFromVideoDevice(null, 'video', (result, err) => {
                         if (result) {
                             const codigo = result.text;
                             document.getElementById('codigo').value = codigo;
                             buscarProduto(codigo);
                             
-                            feedbackScanner();
-                            tocarBeep();
-                            vibrar(200);
+                            // Tocar som de bip
+                            const beep = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIGmm98OScTgwOUKXh8bllHgU2jdXzzn0vBSh+zPLaizsKFFyw6OyrWBUIQ5zd8sFuJAUuhM/z2Ik2CBlpu+3nnk0MDFCn4fC2Yx0GN5HY88p9LgUle8nx3I4+ChRdsOjrq1gVCEOc3fLBbiQFLoTP89iJNggZabvt555NDA==');
+                            beep.play().catch(() => {});
                             
-                            setTimeout(() => {
-                                if (scannerAtivo) {
-                                    document.getElementById('quantidade').focus();
-                                }
-                            }, 500);
+                            scannerAtivo = false;
+                            toggleScanner();
                         }
                     });
                     
                     scannerAtivo = true;
                 } catch (err) {
-                    alert('Erro ao acessar câmera: ' + err.message);
+                    alert('Erro ao acessar câmera: ' + err);
                     camera.style.display = 'none';
                     btnCamera.textContent = '📷 Iniciar Scanner';
                     btnCamera.classList.remove('btn-red');
@@ -735,6 +619,7 @@
             }
         }
         
+        // Função para adicionar item
         function adicionar() {
             const codigo = document.getElementById('codigo').value.trim();
             const quantidade = parseFloat(document.getElementById('quantidade').value);
@@ -764,31 +649,26 @@
             
             atualizarLista();
             mostrarMensagem('Item adicionado com sucesso!', 'sucesso');
-            vibrar(100);
             
+            // Limpar campos
             document.getElementById('codigo').value = '';
             document.getElementById('quantidade').value = '1';
             document.getElementById('produtoEncontrado').style.display = 'none';
             document.getElementById('codigo').focus();
         }
         
+        // Função para atualizar lista
         function atualizarLista() {
             const container = document.getElementById('itens');
             const total = document.getElementById('total');
             const btnBaixarTxt = document.getElementById('btnBaixarTxt');
             const btnBaixarExcel = document.getElementById('btnBaixarExcel');
-            const btnWhatsApp = document.getElementById('btnWhatsApp');
-            const btnEmail = document.getElementById('btnEmail');
-            const btnCompartilhar = document.getElementById('btnCompartilhar');
             
             if (dados.length === 0) {
                 container.innerHTML = '<p style="text-align: center; color: #666;">Nenhum item ainda</p>';
                 total.textContent = '0';
                 btnBaixarTxt.disabled = true;
                 btnBaixarExcel.disabled = true;
-                btnWhatsApp.disabled = true;
-                btnEmail.disabled = true;
-                btnCompartilhar.disabled = true;
                 return;
             }
             
@@ -812,17 +692,16 @@
             total.textContent = dados.length;
             btnBaixarTxt.disabled = false;
             btnBaixarExcel.disabled = false;
-            btnWhatsApp.disabled = false;
-            btnEmail.disabled = false;
-            btnCompartilhar.disabled = false;
         }
         
+        // Função para editar item
         function editarItem(index) {
             itemEditando = index;
             document.getElementById('editQuantidade').value = dados[index].quantidade;
             document.getElementById('modalEdicao').style.display = 'block';
         }
         
+        // Função para salvar edição
         function salvarEdicao() {
             const novaQtd = parseFloat(document.getElementById('editQuantidade').value);
             
@@ -837,34 +716,24 @@
             atualizarLista();
             fecharModal();
             mostrarMensagem('Item atualizado com sucesso!', 'sucesso');
-            vibrar(100);
         }
         
+        // Função para fechar modal
         function fecharModal() {
             document.getElementById('modalEdicao').style.display = 'none';
             itemEditando = -1;
         }
         
+        // Função para remover item
         function removerItem(index) {
             if (confirm('Deseja realmente remover este item?')) {
                 dados.splice(index, 1);
                 atualizarLista();
                 mostrarMensagem('Item removido!', 'sucesso');
-                vibrar(100);
             }
         }
         
-        function gerarConteudoTxt() {
-            let conteudo = '';
-            dados.forEach(item => {
-                const codigoFormatado = String(item.codigo).padStart(13, '0');
-                const quantidadeInteira = Math.round(item.quantidade * 1000);
-                const quantidadeFormatada = String(quantidadeInteira).padStart(8, '0');
-                conteudo += `${codigoFormatado},${quantidadeFormatada}\r\n`;
-            });
-            return conteudo;
-        }
-        
+        // Função para baixar arquivo TXT
         function baixarTxt() {
             if (dados.length === 0) {
                 mostrarMensagem('Não há itens para baixar!', 'erro');
@@ -876,7 +745,22 @@
                 nomeArquivo = 'coleta_' + new Date().toISOString().slice(0,10);
             }
             
-            const conteudo = gerarConteudoTxt();
+            // Gerar conteúdo do arquivo no formato do coletor
+            let conteudo = '';
+            dados.forEach(item => {
+                // Código de barras: 13 caracteres (preencher com zeros à esquerda)
+                const codigoFormatado = String(item.codigo).padStart(13, '0');
+                
+                // Quantidade: 8 caracteres (multiplicar por 1000 para 3 casas decimais e preencher com zeros à esquerda)
+                // Exemplo: 10.5 vira 10500, depois 00010500
+                const quantidadeInteira = Math.round(item.quantidade * 1000);
+                const quantidadeFormatada = String(quantidadeInteira).padStart(8, '0');
+                
+                // Formato: CODIGO,QUANTIDADE com quebra de linha Windows (CRLF)
+                conteudo += `${codigoFormatado},${quantidadeFormatada}\r\n`;
+            });
+            
+            // Criar e baixar arquivo
             const blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -886,113 +770,9 @@
             window.URL.revokeObjectURL(url);
             
             mostrarMensagem('Arquivo TXT baixado com sucesso!', 'sucesso');
-            vibrar(100);
         }
         
-        async function compartilharWhatsApp() {
-            if (dados.length === 0) {
-                mostrarMensagem('Não há itens para compartilhar!', 'erro');
-                return;
-            }
-            
-            let nomeArquivo = document.getElementById('nomeArquivo').value.trim();
-            if (!nomeArquivo) {
-                nomeArquivo = 'coleta_' + new Date().toISOString().slice(0,10);
-            }
-            
-            const conteudo = gerarConteudoTxt();
-            
-            let mensagem = `📦 *Coleta - ${nomeArquivo}*\n\n`;
-            mensagem += `Total de itens: ${dados.length}\n\n`;
-            mensagem += `*Resumo:*\n`;
-            dados.slice(0, 10).forEach(item => {
-                mensagem += `• ${item.codigo} - ${item.descricao}: ${item.quantidade} ${item.um}\n`;
-            });
-            
-            if (dados.length > 10) {
-                mensagem += `\n... e mais ${dados.length - 10} itens`;
-            }
-            
-            const mensagemEncoded = encodeURIComponent(mensagem);
-            
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            const whatsappUrl = isMobile 
-                ? `whatsapp://send?text=${mensagemEncoded}`
-                : `https://web.whatsapp.com/send?text=${mensagemEncoded}`;
-            
-            window.open(whatsappUrl, '_blank');
-            
-            mostrarMensagem('Abrindo WhatsApp... O arquivo completo pode ser baixado e enviado manualmente.', 'sucesso');
-        }
-        
-        function compartilharEmail() {
-            if (dados.length === 0) {
-                mostrarMensagem('Não há itens para enviar!', 'erro');
-                return;
-            }
-            
-            let nomeArquivo = document.getElementById('nomeArquivo').value.trim();
-            if (!nomeArquivo) {
-                nomeArquivo = 'coleta_' + new Date().toISOString().slice(0,10);
-            }
-            
-            let corpo = `Coleta - ${nomeArquivo}%0D%0A%0D%0A`;
-            corpo += `Total de itens: ${dados.length}%0D%0A%0D%0A`;
-            corpo += `Resumo:%0D%0A`;
-            
-            dados.slice(0, 20).forEach(item => {
-                corpo += `${item.codigo} - ${item.descricao}: ${item.quantidade} ${item.um}%0D%0A`;
-            });
-            
-            if (dados.length > 20) {
-                corpo += `%0D%0A... e mais ${dados.length - 20} itens`;
-            }
-            
-            corpo += `%0D%0A%0D%0APara o arquivo completo, baixe o TXT no aplicativo.`;
-            
-            const mailtoLink = `mailto:?subject=Coleta - ${encodeURIComponent(nomeArquivo)}&body=${corpo}`;
-            window.location.href = mailtoLink;
-            
-            mostrarMensagem('Abrindo cliente de email...', 'sucesso');
-        }
-        
-        async function compartilharArquivo() {
-            if (dados.length === 0) {
-                mostrarMensagem('Não há itens para compartilhar!', 'erro');
-                return;
-            }
-            
-            if (!navigator.share) {
-                mostrarMensagem('Seu navegador não suporta compartilhamento de arquivos', 'erro');
-                return;
-            }
-            
-            try {
-                let nomeArquivo = document.getElementById('nomeArquivo').value.trim();
-                if (!nomeArquivo) {
-                    nomeArquivo = 'coleta_' + new Date().toISOString().slice(0,10);
-                }
-                
-                const conteudo = gerarConteudoTxt();
-                const blob = new Blob([conteudo], { type: 'text/plain' });
-                const file = new File([blob], nomeArquivo + '.txt', { type: 'text/plain' });
-                
-                await navigator.share({
-                    files: [file],
-                    title: 'Coleta Linear',
-                    text: `Arquivo de coleta: ${nomeArquivo}`
-                });
-                
-                mostrarMensagem('Arquivo compartilhado com sucesso!', 'sucesso');
-                vibrar(100);
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    console.error('Erro ao compartilhar:', err);
-                    mostrarMensagem('Erro ao compartilhar arquivo', 'erro');
-                }
-            }
-        }
-        
+        // Função para baixar arquivo Excel
         function baixarExcel() {
             if (dados.length === 0) {
                 mostrarMensagem('Não há itens para baixar!', 'erro');
@@ -1004,8 +784,12 @@
                 nomeArquivo = 'coleta_' + new Date().toISOString().slice(0,10);
             }
             
+            // Preparar dados para o Excel no formato do coletor
             const dadosExcel = dados.map(item => {
+                // Código de barras: 13 caracteres (preencher com zeros à esquerda)
                 const codigoFormatado = String(item.codigo).padStart(13, '0');
+                
+                // Quantidade: 8 caracteres (multiplicar por 1000 para 3 casas decimais e preencher com zeros à esquerda)
                 const quantidadeInteira = Math.round(item.quantidade * 1000);
                 const quantidadeFormatada = String(quantidadeInteira).padStart(8, '0');
                 
@@ -1015,22 +799,27 @@
                 };
             });
             
+            // Criar workbook e worksheet
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.json_to_sheet(dadosExcel);
             
+            // Ajustar largura das colunas
             const colWidths = [
-                { wch: 15 },
-                { wch: 12 }
+                { wch: 15 }, // Código
+                { wch: 12 }  // Quantidade
             ];
             ws['!cols'] = colWidths;
             
+            // Adicionar worksheet ao workbook
             XLSX.utils.book_append_sheet(wb, ws, 'Coleta');
+            
+            // Gerar e baixar arquivo
             XLSX.writeFile(wb, nomeArquivo + '.xlsx');
             
             mostrarMensagem('Arquivo Excel baixado com sucesso!', 'sucesso');
-            vibrar(100);
         }
         
+        // Função para limpar tudo
         function limpar() {
             if (dados.length === 0) {
                 mostrarMensagem('Não há itens para limpar!', 'erro');
@@ -1044,6 +833,7 @@
             }
         }
         
+        // Função para mostrar mensagem
         function mostrarMensagem(texto, tipo) {
             const msg = document.getElementById('mensagem');
             msg.textContent = texto;
@@ -1055,6 +845,7 @@
             }, 3000);
         }
         
+        // Fechar modal ao clicar fora
         window.onclick = function(event) {
             const modal = document.getElementById('modalEdicao');
             if (event.target === modal) {
@@ -1062,6 +853,7 @@
             }
         }
         
+        // Permitir adicionar com Enter
         document.getElementById('quantidade').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 adicionar();
@@ -1074,6 +866,7 @@
             }
         });
         
+        // Carregar base de produtos ao iniciar
         carregarBaseProdutos();
     </script>
 </body>
