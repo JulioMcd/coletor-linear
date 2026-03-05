@@ -1,1 +1,0 @@
-# coletor-linear
