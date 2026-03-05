@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coletor de Cargas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap');
+:root {
+  --bg:#080e1a; --panel:#0f1824; --panel2:#151f2e; --border:#1a3050;
+  --blue:#00b4d8; --blue2:#0077b6; --blue-glow:rgba(0,180,216,.12);
+  --green:#06d6a0; --green2:#047857; --green-glow:rgba(6,214,160,.12);
+  --red:#ef476f; --yellow:#ffd166; --orange:#fb8500;
+  --text:#dde6f0; --muted:#4a6080;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(0,180,216,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(0,180,216,.025) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;z-index:0;}
+
+.app{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:16px;}
+
+/* ── HEADER ─────────────────────────────── */
+header{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 20px;
+  background:linear-gradient(135deg,#0d1a2a,#111f30);
+  border:1px solid var(--border);border-radius:12px;margin-bottom:16px;
+}
+.logo{
+  width:44px;height:44px;border-radius:10px;
+  background:linear-gradient(135deg,var(--blue2),var(--blue));
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+  box-shadow:0 0 16px rgba(0,180,216,.3);
+}
+header h1{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--blue);letter-spacing:1.5px;}
+header p{font-size:11px;color:var(--muted);margin-top:3px;}
+
+/* ── CARD ────────────────────────────────── */
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:14px;}
+.sec-title{
+  font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted);
+  letter-spacing:2.5px;text-transform:uppercase;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.sec-title::before{content:'';width:3px;height:13px;border-radius:2px;background:var(--border);}
+.sec-title.blue::before{background:var(--blue);}
+.sec-title.green::before{background:var(--green);}
+
+/* ── IMPORT BLOCKS ───────────────────────── */
+.import-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:520px){.import-grid{grid-template-columns:1fr;}}
+
+.import-block{
+  border-radius:10px;padding:16px;cursor:pointer;
+  border:2px dashed var(--border);background:var(--panel2);
+  transition:all .2s;display:flex;align-items:center;gap:14px;
+}
+.import-block:hover{transform:translateY(-2px);}
+.import-block.venda:hover{border-color:var(--blue);background:var(--blue-glow);}
+.import-block.compra:hover{border-color:var(--green);background:var(--green-glow);}
+.import-block.loaded.venda{border:2px solid var(--blue);background:var(--blue-glow);}
+.import-block.loaded.compra{border:2px solid var(--green);background:var(--green-glow);}
+.import-block input{display:none;}
+.ib-icon{font-size:26px;flex-shrink:0;}
+.ib-label{font-family:var(--mono);font-size:12px;font-weight:700;}
+.ib-label.venda{color:var(--blue);}
+.ib-label.compra{color:var(--green);}
+.ib-sub{font-size:10px;color:var(--muted);margin-top:3px;}
+.ib-ok{font-size:10px;font-weight:700;font-family:var(--mono);margin-top:4px;display:none;}
+.ib-ok.venda{color:var(--blue);}
+.ib-ok.compra{color:var(--green);}
+.import-block.loaded .ib-ok{display:block;}
+
+.update-btn{
+  display:flex;align-items:center;gap:6px;margin-top:12px;
+  font-size:10px;color:var(--muted);font-family:var(--mono);cursor:pointer;
+  border:1px solid var(--border);border-radius:6px;padding:7px 12px;
+  background:var(--panel2);width:fit-content;transition:all .2s;
+}
+.update-btn:hover{border-color:var(--blue);color:var(--blue);}
+.update-btn input{display:none;}
+
+/* ── CARGAS LIST ─────────────────────────── */
+#cargasList{display:flex;flex-direction:column;gap:8px;}
+.empty-state{text-align:center;padding:36px;color:var(--muted);}
+.empty-state .ei{font-size:40px;margin-bottom:10px;}
+.empty-state p{font-size:11px;font-family:var(--mono);}
+
+.carga-item{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:13px 16px;border-radius:9px;cursor:pointer;
+  background:var(--panel2);border:1px solid var(--border);transition:all .2s;
+}
+.carga-item:hover{transform:translateX(3px);}
+.carga-item.sep:hover,.carga-item.sep.active{border-color:var(--blue);background:var(--blue-glow);}
+.carga-item.rec:hover,.carga-item.rec.active{border-color:var(--green);background:var(--green-glow);}
+.ci-left{display:flex;align-items:center;gap:12px;}
+.ci-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.ci-dot.sep{background:var(--blue);box-shadow:0 0 8px var(--blue);}
+.ci-dot.rec{background:var(--green);box-shadow:0 0 8px var(--green);}
+.ci-num{font-family:var(--mono);font-size:13px;font-weight:700;}
+.ci-num.sep{color:var(--blue);}
+.ci-num.rec{color:var(--green);}
+.ci-info{font-size:11px;color:var(--muted);margin-top:2px;}
+.ci-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+
+.chip{font-size:9px;font-family:var(--mono);font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:1px;}
+.chip-sep{background:rgba(0,180,216,.15);color:var(--blue);border:1px solid rgba(0,180,216,.4);}
+.chip-rec{background:rgba(6,214,160,.15);color:var(--green);border:1px solid rgba(6,214,160,.4);}
+.badge{font-size:9px;font-family:var(--mono);font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:1px;}
+.b-open{background:rgba(255,209,102,.12);color:var(--yellow);border:1px solid rgba(255,209,102,.4);}
+.b-done{background:rgba(6,214,160,.12);color:var(--green);border:1px solid rgba(6,214,160,.4);}
+.b-div{background:rgba(239,71,111,.12);color:var(--red);border:1px solid rgba(239,71,111,.4);}
+
+/* ── COLETOR PANEL ───────────────────────── */
+#coletorPanel{display:none;}
+
+.carga-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-radius:12px;margin-bottom:14px;
+}
+.carga-header.sep{background:linear-gradient(135deg,var(--blue2),#0099bb);}
+.carga-header.rec{background:linear-gradient(135deg,var(--green2),#059669);}
+.ch-title{font-family:var(--mono);font-size:15px;font-weight:700;color:#fff;}
+.ch-sub{font-size:11px;color:rgba(255,255,255,.7);margin-top:3px;}
+.ch-badge{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);
+  font-size:9px;font-family:var(--mono);font-weight:700;padding:4px 11px;border-radius:20px;letter-spacing:1px;}
+
+/* ── STATS ───────────────────────────────── */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.stat{background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:11px 14px;text-align:center;}
+.stat .n{font-family:var(--mono);font-size:22px;font-weight:700;}
+.stat .l{font-size:10px;color:var(--muted);margin-top:2px;letter-spacing:.5px;}
+.stat.c1 .n{color:var(--blue);}
+.stat.c2 .n{color:var(--green);}
+.stat.c3 .n{color:var(--yellow);}
+
+/* ── PROGRESS ────────────────────────────── */
+.prog-wrap{background:var(--panel2);border:1px solid var(--border);border-radius:6px;height:7px;overflow:hidden;margin-bottom:14px;}
+.prog-bar{height:100%;border-radius:6px;transition:width .4s ease;width:0%;}
+.prog-bar.sep{background:linear-gradient(90deg,var(--blue2),var(--blue));}
+.prog-bar.rec{background:linear-gradient(90deg,var(--green2),var(--green));}
+
+/* ── SCAN / FILTER ───────────────────────── */
+.scan-row{display:flex;gap:8px;margin-bottom:10px;}
+.scan-inp{
+  flex:1;background:var(--panel2);border:2px solid var(--border);
+  border-radius:8px;padding:11px 15px;color:var(--text);
+  font-family:var(--mono);font-size:13px;outline:none;transition:border-color .2s;
+}
+.scan-inp:focus{border-color:var(--blue);}
+.scan-inp::placeholder{color:var(--muted);}
+.filter-inp{
+  width:100%;background:var(--panel2);border:1px solid var(--border);
+  border-radius:8px;padding:8px 14px;color:var(--text);
+  font-family:var(--sans);font-size:13px;outline:none;transition:border-color .2s;margin-bottom:12px;
+}
+.filter-inp:focus{border-color:var(--blue);}
+.filter-inp::placeholder{color:var(--muted);}
+
+/* ── BUTTONS ─────────────────────────────── */
+.btn{padding:10px 16px;border-radius:8px;border:none;cursor:pointer;
+  font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:1px;transition:all .2s;}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-blue:hover{background:var(--blue2);transform:translateY(-1px);}
+.btn-green{background:var(--green);color:#07111f;}
+.btn-green:hover{opacity:.85;transform:translateY(-1px);}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue);}
+.action-bar{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+
+/* ── TABLE ───────────────────────────────── */
+.tbl-wrap{overflow-y:auto;max-height:390px;border-radius:9px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{
+  background:#0a1220;padding:9px 12px;text-align:left;
+  font-family:var(--mono);font-size:9px;font-weight:700;color:var(--blue);
+  letter-spacing:1.5px;text-transform:uppercase;
+  position:sticky;top:0;z-index:2;border-bottom:1px solid var(--border);
+}
+tbody tr{border-bottom:1px solid rgba(26,48,80,.6);transition:background .12s;}
+tbody tr:hover{background:rgba(0,180,216,.04);}
+tbody td{padding:8px 12px;vertical-align:middle;}
+.qty-inp{
+  width:72px;background:var(--panel2);border:1px solid var(--border);
+  border-radius:6px;padding:5px 8px;color:var(--text);
+  font-family:var(--mono);font-size:12px;text-align:center;outline:none;transition:border-color .2s;
+}
+.qty-inp:focus{border-color:var(--blue);}
+.row-ok td:first-child{border-left:3px solid var(--green);}
+.row-ok{background:rgba(6,214,160,.04);}
+.row-partial td:first-child{border-left:3px solid var(--yellow);}
+.row-partial{background:rgba(255,209,102,.03);}
+
+/* ── MODAL ───────────────────────────────── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:26px;max-width:420px;width:92%;}
+.modal h3{font-family:var(--mono);font-size:13px;margin-bottom:8px;}
+.modal p{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.65;}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end;}
+
+/* ── TOAST ───────────────────────────────── */
+#toast{
+  position:fixed;bottom:20px;right:20px;
+  padding:11px 18px;border-radius:8px;
+  font-family:var(--mono);font-size:12px;font-weight:700;
+  transform:translateY(80px);opacity:0;transition:all .3s;
+  z-index:999;pointer-events:none;
+}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.ok{background:var(--green);color:#07111f;}
+#toast.warn{background:var(--yellow);color:#07111f;}
+#toast.err{background:var(--red);color:#fff;}
+
+@keyframes flash{0%{background:rgba(0,180,216,.2);}100%{background:transparent;}}
+.hl{animation:flash .5s ease;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- HEADER -->
+<header>
+  <div class="logo">📦</div>
+  <div>
+    <h1>COLETOR DE CARGAS</h1>
+    <p>Separação de pedidos de venda &nbsp;·&nbsp; Recebimento de ordens de compra</p>
+  </div>
+</header>
+
+<!-- IMPORTAR -->
+<div class="card">
+  <div class="sec-title blue">IMPORTAR CSV</div>
+  <div class="import-grid">
+
+    <!-- VENDA -->
+    <div class="import-block venda" id="blkVenda" onclick="document.getElementById('csvVenda').click()">
+      <input type="file" id="csvVenda" accept=".csv" onchange="loadCSV(this,'venda')">
+      <div class="ib-icon">📋</div>
+      <div>
+        <div class="ib-label venda">PEDIDO DE VENDA</div>
+        <div class="ib-sub">Gera carga de separação</div>
+        <div class="ib-ok venda" id="okVenda"></div>
+      </div>
+    </div>
+
+    <!-- COMPRA -->
+    <div class="import-block compra" id="blkCompra" onclick="document.getElementById('csvCompra').click()">
+      <input type="file" id="csvCompra" accept=".csv" onchange="loadCSV(this,'compra')">
+      <div class="ib-icon">🚚</div>
+      <div>
+        <div class="ib-label compra">ORDEM DE COMPRA</div>
+        <div class="ib-sub">Gera carga de recebimento</div>
+        <div class="ib-ok compra" id="okCompra"></div>
+      </div>
+    </div>
+
+  </div>
+  <label class="update-btn">
+    <input type="file" id="fileXLS" accept=".xlsx,.xls" onchange="loadProdutos(this)">
+    🔄 <span id="xlsStatus">Atualizar cadastro de produtos</span>
+  </label>
+</div>
+
+<!-- CARGAS -->
+<div class="card">
+  <div class="sec-title blue">CARGAS</div>
+  <div id="emptyState" class="empty-state">
+    <div class="ei">🚛</div>
+    <p>Importe um CSV para criar uma carga</p>
+  </div>
+  <div id="cargasList"></div>
+</div>
+
+<!-- COLETOR -->
+<div id="coletorPanel">
+
+  <div class="carga-header sep" id="cargaHeader">
+    <div>
+      <div class="ch-title" id="chNome">CARGA #000000</div>
+      <div class="ch-sub" id="chInfo">—</div>
+    </div>
+    <div class="ch-badge" id="chBadge">EM ABERTO</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat c1"><div class="n" id="stTotal">0</div><div class="l">ITENS NA CARGA</div></div>
+    <div class="stat c2"><div class="n" id="stConf">0</div><div class="l" id="stLbl">SEPARADOS</div></div>
+    <div class="stat c3"><div class="n" id="stPend">0</div><div class="l">PENDENTES</div></div>
+  </div>
+
+  <div class="prog-wrap"><div class="prog-bar sep" id="progBar"></div></div>
+
+  <div class="scan-row">
+    <input class="scan-inp" id="scanInp" placeholder="📷  Código de barras ou código interno..." onkeydown="if(event.key==='Enter')doScan()">
+    <button class="btn btn-blue" onclick="doScan()">SCAN</button>
+  </div>
+  <input class="filter-inp" id="filterInp" placeholder="🔍  Filtrar produto na carga..." oninput="doFilter()">
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:70px">CÓDIGO</th>
+          <th>DESCRIÇÃO</th>
+          <th style="width:50px">UN</th>
+          <th style="width:85px">PEDIDO</th>
+          <th style="width:105px" id="thQtd">SEPARADO</th>
+          <th style="width:42px"></th>
+        </tr>
+      </thead>
+      <tbody id="tblBody"></tbody>
+    </table>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-green" onclick="fecharCarga()">✔ FECHAR CARGA</button>
+    <button class="btn btn-ghost" onclick="exportDiv()">⬇ EXPORTAR DIVERGÊNCIAS</button>
+    <button class="btn btn-ghost" onclick="voltar()">← VOLTAR</button>
+  </div>
+</div>
+
+</div><!-- .app -->
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="mTitle">Fechar Carga</h3>
+    <p id="mMsg"></p>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">CANCELAR</button>
+      <button class="btn btn-green" id="mOk">CONFIRMAR</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="produtos.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+// DADOS PRÉ-CARREGADOS
+// ═══════════════════════════════════════════════
+let produtos = (typeof PRODUTOS_CADASTRO !== "undefined") ? PRODUTOS_CADASTRO : [];
+
+// ═══════════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════════
+let cargas = [];
+let activeIdx = -1;
+let filterTxt = '';
+
+// ═══════════════════════════════════════════════
+// ATUALIZAR PRODUTOS
+// ═══════════════════════════════════════════════
+function loadProdutos(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const wb = XLSX.read(e.target.result, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json(ws, {defval:''});
+    produtos = data.map(r => ({
+      codigo: String(r['CÓDIGO']||r['CODIGO']||'').replace(/\.0$/,'').trim(),
+      descricao: String(r['DESCRIÇÃO DO PRODUTO']||r['PRODUTOS']||'').trim(),
+      un: String(r['UN']||'').trim(),
+      barras: String(r['COD. BARRAS']||r['BARRAS']||'').replace(/\.0$/,'').trim(),
+      saldo: parseFloat(r['SALDO ESTOQUE']||r['SALDO']||0)||0
+    }));
+    document.getElementById('xlsStatus').textContent = `✓ ${produtos.length} produtos carregados`;
+    toast(`✓ ${produtos.length} produtos atualizados`,'ok');
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ═══════════════════════════════════════════════
+// IMPORTAR CSV
+// ═══════════════════════════════════════════════
+function loadCSV(input, tipo) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split('\n');
+    const carga = tipo === 'venda' ? parseVenda(lines) : parseCompra(lines);
+    if (!carga || !carga.items.length) {
+      toast('Formato não reconhecido — verifique o arquivo','err');
+      input.value = ''; return;
+    }
+    if (cargas.find(c => c.pedido === carga.pedido && c.tipo === carga.tipo)) {
+      toast('⚠ Essa carga já foi importada!','warn');
+      input.value = ''; return;
+    }
+    cargas.push(carga);
+    // feedback visual no bloco
+    const blkId = tipo === 'venda' ? 'blkVenda' : 'blkCompra';
+    const okId  = tipo === 'venda' ? 'okVenda'  : 'okCompra';
+    document.getElementById(blkId).classList.add('loaded');
+    document.getElementById(okId).textContent = `✓ #${carga.pedido} — ${carga.items.length} itens`;
+    setTimeout(() => {
+      document.getElementById(blkId).classList.remove('loaded');
+      document.getElementById(okId).textContent = '';
+      input.value = '';
+    }, 3000);
+    document.getElementById('emptyState').style.display = 'none';
+    renderCargas();
+    const label = tipo === 'venda' ? 'Separação' : 'Recebimento';
+    toast(`✓ Carga de ${label} #${carga.pedido} criada — ${carga.items.length} itens`,'ok');
+  };
+  reader.readAsText(file, 'latin1');
+}
+
+// ═══════════════════════════════════════════════
+// PARSE PEDIDO DE VENDA
+// ═══════════════════════════════════════════════
+function parseVenda(lines) {
+  let pedido='', origem='', items=[];
+  for (const line of lines) {
+    const cols = line.split(';');
+    const flat = cols.join(' ');
+    if (!pedido) { const m=flat.match(/\b(\d{6})\b/); if(m) pedido=m[1]; }
+    if (/FANTASIA:/i.test(flat)) {
+      const idx=cols.findIndex(c=>/FANTASIA:/i.test(c));
+      for(let i=idx+1;i<cols.length;i++) if(cols[i].trim()){origem=cols[i].trim();break;}
+    }
+    const code=cols[0]?cols[0].trim():'';
+    if(!/^\d{1,6}$/.test(code)||code==='0') continue;
+    let desc='',un='',qtd=0,descOk=false;
+    for(let i=1;i<cols.length;i++){
+      const v=cols[i].trim();
+      if(!descOk&&v.length>4&&/[A-ZÁÉÍÓÚÃÂÊÔ]/.test(v)&&i>=5){desc=v;descOk=true;}
+      if(['FD','UN','CX','PC','KG','LT','PT','SC','BD','GF','BL','RL','FR','DZ','PR','CT'].includes(v)) un=v;
+      if(!qtd&&descOk&&i>10){const n=parseFloat(v.replace(',','.'));if(n>0&&n<100000) qtd=n;}
+    }
+    if(desc&&qtd>0) items.push({codigo:code,descricao:desc,un,qtdPedida:qtd,qtdFeita:0});
+  }
+  if(!pedido) pedido=Date.now().toString().slice(-6);
+  return {pedido,tipo:'venda',origem,items,status:'aberto'};
+}
+
+// ═══════════════════════════════════════════════
+// PARSE ORDEM DE COMPRA
+// ═══════════════════════════════════════════════
+function parseCompra(lines) {
+  let pedido='', origem='', items=[];
+  const seen=new Set();
+  let inItems=false;
+  for (const line of lines) {
+    const cols=line.split(';');
+    const flat=cols.join(' ');
+    if(!pedido){const m=flat.match(/\b(\d{6})\b/);if(m) pedido=m[1];}
+    if(/FORNECEDOR:/i.test(flat)&&!origem){
+      const idx=cols.findIndex(c=>/FORNECEDOR:/i.test(c));
+      for(let i=idx+1;i<cols.length;i++) if(cols[i].trim()){origem=cols[i].trim();break;}
+    }
+    if(/^ITEM/.test(cols[0].trim())){inItems=true;continue;}
+    if(!inItems) continue;
+    const num=cols[0].trim();
+    if(!/^\d+$/.test(num)||num==='0') continue;
+    if(seen.has(num)) continue;
+    seen.add(num);
+    // desc: col 5
+    let desc='';
+    for(let i=4;i<Math.min(cols.length,20);i++){
+      const v=cols[i].trim();
+      if(v.length>3&&/[A-ZÁÉÍÓÚ]/.test(v)){desc=v;break;}
+    }
+    // codigo interno: col 23
+    let codigo=cols[23]?cols[23].trim():'';
+    if(!codigo||!/^\d+$/.test(codigo)){
+      for(let i=15;i<Math.min(cols.length,28);i++){
+        if(/^\d{2,6}$/.test(cols[i].trim())){codigo=cols[i].trim();break;}
+      }
+    }
+    // UN: col 34
+    const UN_LIST=['FD','UN','CX','PC','KG','LT','PT','SC','BD','GF','BL','RL','FR','DZ','PR','CT'];
+    let un=cols[34]?cols[34].trim():'';
+    if(!UN_LIST.includes(un)) un='UN';
+    // QTDE: col 37 (formato "1.000,00")
+    let qtd=0;
+    const qRaw=cols[37]?cols[37].trim():'';
+    qtd=parseFloat(qRaw.replace(/\./g,'').replace(',','.'))||0;
+    if(!qtd){
+      for(let i=35;i<Math.min(cols.length,42);i++){
+        const n=parseFloat(cols[i].trim().replace(/\./g,'').replace(',','.'));
+        if(n>0&&n<1000000){qtd=n;break;}
+      }
+    }
+    if(!desc||!qtd) continue;
+    // tenta cruzar com cadastro pelo código
+    const prod=produtos.find(p=>p.codigo===codigo);
+    items.push({
+      codigo:codigo||num,
+      descricao:prod?prod.descricao:desc,
+      un:prod?prod.un:un,
+      qtdPedida:qtd,
+      qtdFeita:0
+    });
+  }
+  if(!pedido) pedido=Date.now().toString().slice(-6);
+  return {pedido,tipo:'compra',origem,items,status:'aberto'};
+}
+
+// ═══════════════════════════════════════════════
+// RENDER LISTA DE CARGAS
+// ═══════════════════════════════════════════════
+function renderCargas() {
+  const el=document.getElementById('cargasList');
+  if(!cargas.length){document.getElementById('emptyState').style.display='block';el.innerHTML='';return;}
+  document.getElementById('emptyState').style.display='none';
+  el.innerHTML=cargas.map((c,i)=>{
+    const isSep=c.tipo==='venda';
+    const cls=isSep?'sep':'rec';
+    const done=c.items.filter(it=>it.qtdFeita>=it.qtdPedida&&it.qtdFeita>0).length;
+    const sb=c.status==='concluido'?'b-done':c.status==='divergencia'?'b-div':'b-open';
+    const sl=c.status==='concluido'?'CONCLUÍDO':c.status==='divergencia'?'DIVERGÊNCIA':'EM ABERTO';
+    const icon=isSep?'📋':'🚚';
+    const label=isSep?'SEPARAÇÃO':'RECEBIMENTO';
+    const chipCls=isSep?'chip-sep':'chip-rec';
+    const ac=activeIdx===i?` active`:'';
+    return `<div class="carga-item ${cls}${ac}" onclick="abrirCarga(${i})">
+      <div class="ci-left">
+        <div class="ci-dot ${cls}"></div>
+        <div>
+          <div class="ci-num ${cls}">${icon} CARGA #${c.pedido}</div>
+          <div class="ci-info">${c.origem||'—'} &nbsp;·&nbsp; ${c.items.length} itens &nbsp;·&nbsp; ${done} ${isSep?'separados':'recebidos'}</div>
+        </div>
+      </div>
+      <div class="ci-right">
+        <span class="chip ${chipCls}">${label}</span>
+        <span class="badge ${sb}">${sl}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+// ABRIR CARGA
+// ═══════════════════════════════════════════════
+function abrirCarga(idx) {
+  activeIdx=idx;
+  const c=cargas[idx];
+  const isSep=c.tipo==='venda';
+  renderCargas();
+  document.getElementById('chNome').textContent=`CARGA #${c.pedido}`;
+  document.getElementById('chInfo').textContent=c.origem||'—';
+  document.getElementById('cargaHeader').className=`carga-header ${isSep?'sep':'rec'}`;
+  document.getElementById('progBar').className=`prog-bar ${isSep?'sep':'rec'}`;
+  document.getElementById('thQtd').textContent=isSep?'SEPARADO':'RECEBIDO';
+  document.getElementById('stLbl').textContent=isSep?'SEPARADOS':'RECEBIDOS';
+  const b=document.getElementById('chBadge');
+  b.textContent=c.status==='concluido'?'CONCLUÍDO':c.status==='divergencia'?'DIVERGÊNCIA':'EM ABERTO';
+  document.getElementById('filterInp').value='';
+  filterTxt='';
+  document.getElementById('coletorPanel').style.display='block';
+  renderTabela();
+  atualizaStats();
+  document.getElementById('scanInp').focus();
+  document.getElementById('coletorPanel').scrollIntoView({behavior:'smooth'});
+}
+
+function voltar(){
+  document.getElementById('coletorPanel').style.display='none';
+  activeIdx=-1;
+  renderCargas();
+}
+
+// ═══════════════════════════════════════════════
+// TABELA
+// ═══════════════════════════════════════════════
+function renderTabela() {
+  const c=cargas[activeIdx]; if(!c) return;
+  const q=filterTxt.toLowerCase();
+  const rows=c.items.filter(it=>!q||it.descricao.toLowerCase().includes(q)||it.codigo.includes(q));
+  document.getElementById('tblBody').innerHTML=rows.map(it=>{
+    const ri=c.items.indexOf(it);
+    const ok=it.qtdFeita>=it.qtdPedida&&it.qtdFeita>0;
+    const partial=it.qtdFeita>0&&it.qtdFeita<it.qtdPedida;
+    return `<tr class="${ok?'row-ok':partial?'row-partial':''}" id="row-${ri}">
+      <td><span style="font-family:var(--mono);color:var(--blue);font-size:11px">${it.codigo}</span></td>
+      <td style="font-size:12px">${it.descricao}</td>
+      <td style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted)">${it.un}</td>
+      <td style="text-align:center;font-family:var(--mono);font-weight:700;color:var(--yellow)">${it.qtdPedida}</td>
+      <td><input class="qty-inp" type="number" min="0" value="${it.qtdFeita||''}" placeholder="0"
+        onchange="setQty(${ri},this.value)" onclick="this.select()"></td>
+      <td style="text-align:center;font-size:16px">${ok?'✅':partial?'⚠️':'⬜'}</td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="6" style="text-align:center;padding:28px;color:var(--muted);font-family:var(--mono)">Nenhum produto encontrado</td></tr>`;
+}
+
+function doFilter(){filterTxt=document.getElementById('filterInp').value;renderTabela();}
+
+// ═══════════════════════════════════════════════
+// SCAN
+// ═══════════════════════════════════════════════
+function doScan() {
+  const val=document.getElementById('scanInp').value.trim();
+  if(!val||activeIdx<0) return;
+  const c=cargas[activeIdx];
+  const prod=produtos.find(p=>p.barras===val);
+  const look=prod?prod.codigo:val;
+  const idx=c.items.findIndex(it=>it.codigo===look||it.codigo===val);
+  document.getElementById('scanInp').value='';
+  if(idx<0){toast('⚠ Produto não encontrado na carga','warn');return;}
+  document.getElementById('filterInp').value=c.items[idx].descricao.substring(0,20);
+  filterTxt=c.items[idx].descricao.substring(0,20).toLowerCase();
+  renderTabela();
+  const row=document.getElementById(`row-${idx}`);
+  if(row){
+    row.classList.add('hl');
+    const qi=row.querySelector('.qty-inp');
+    if(qi){qi.focus();qi.select();}
+    setTimeout(()=>row.classList.remove('hl'),600);
+    row.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+}
+
+// ═══════════════════════════════════════════════
+// QUANTIDADE
+// ═══════════════════════════════════════════════
+function setQty(ri,val){
+  cargas[activeIdx].items[ri].qtdFeita=parseFloat(val)||0;
+  renderTabela();
+  atualizaStats();
+}
+
+function atualizaStats(){
+  const c=cargas[activeIdx]; if(!c) return;
+  const total=c.items.length;
+  const conf=c.items.filter(it=>it.qtdFeita>=it.qtdPedida&&it.qtdFeita>0).length;
+  document.getElementById('stTotal').textContent=total;
+  document.getElementById('stConf').textContent=conf;
+  document.getElementById('stPend').textContent=total-conf;
+  document.getElementById('progBar').style.width=(total?Math.round(conf/total*100):0)+'%';
+}
+
+// ═══════════════════════════════════════════════
+// FECHAR CARGA
+// ═══════════════════════════════════════════════
+function fecharCarga(){
+  const c=cargas[activeIdx];
+  const isSep=c.tipo==='venda';
+  const div=c.items.filter(it=>it.qtdFeita<it.qtdPedida);
+  document.getElementById('mTitle').textContent=`Fechar CARGA #${c.pedido}`;
+  document.getElementById('mMsg').textContent=div.length===0
+    ?`Todos os ${c.items.length} itens foram ${isSep?'separados':'recebidos'}. Fechar como CONCLUÍDA?`
+    :`${div.length} item(s) com quantidade inferior ao pedido. Fechar como DIVERGÊNCIA?`;
+  document.getElementById('mOk').onclick=()=>{
+    c.status=div.length===0?'concluido':'divergencia';
+    const b=document.getElementById('chBadge');
+    b.textContent=c.status==='concluido'?'CONCLUÍDO':'DIVERGÊNCIA';
+    closeModal();
+    renderCargas();
+    if(div.length>0){toast(`⚠ ${div.length} divergência(s) — exportando...`,'warn');exportDiv();}
+    else toast('✓ Carga CONCLUÍDA com sucesso!','ok');
+  };
+  document.getElementById('modal').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════
+// EXPORTAR DIVERGÊNCIAS
+// ═══════════════════════════════════════════════
+function exportDiv(){
+  const c=cargas[activeIdx]; if(!c) return;
+  const isSep=c.tipo==='venda';
+  const div=c.items.filter(it=>it.qtdFeita<it.qtdPedida);
+  if(!div.length){toast('Sem divergências para exportar','warn');return;}
+  const wb=XLSX.utils.book_new();
+  const wsData=[
+    [`RELATÓRIO DE DIVERGÊNCIAS — ${isSep?'SEPARAÇÃO':'RECEBIMENTO'} — CARGA #${c.pedido}`],
+    [isSep?'Cliente:':'Fornecedor:', c.origem||''],
+    ['Data:', new Date().toLocaleDateString('pt-BR')],
+    [],
+    ['CÓDIGO','DESCRIÇÃO','UN','QTD PEDIDA',isSep?'QTD SEPARADA':'QTD RECEBIDA','DIFERENÇA']
+  ];
+  div.forEach(it=>wsData.push([it.codigo,it.descricao,it.un,it.qtdPedida,it.qtdFeita||0,it.qtdPedida-(it.qtdFeita||0)]));
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols']=[{wch:10},{wch:46},{wch:6},{wch:12},{wch:14},{wch:12}];
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}}];
+  XLSX.utils.book_append_sheet(wb,ws,'Divergências');
+  XLSX.writeFile(wb,`DIVERGENCIAS_CARGA_${c.pedido}.xlsx`);
+  toast(`⬇ DIVERGENCIAS_CARGA_${c.pedido}.xlsx exportado`,'ok');
+}
+
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+function toast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`show ${type}`;
+  setTimeout(()=>t.className='',3500);
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+</script>
+</body>
+</html>
