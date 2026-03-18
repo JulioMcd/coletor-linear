@@ -1729,7 +1729,6 @@
         
         const CONFIG = {
             WS_URL: 'wss://ws.derivws.com/websockets/v3?app_id=1089',
-            // 🤖 Servidor IA no Railway
             AI_API_URL: 'https://web-production-41cb7.up.railway.app',
             AI_API_KEY: '',
             MIN_STAKE: 0.35,
@@ -2592,102 +2591,47 @@
         // ✅ NOVA FUNÇÃO - PERÍODO DE COOLING APÓS PERDA
         function startMartingaleCoolingPeriod() {
             console.log(`❄️ Iniciando cooling period de ${CONFIG.MARTINGALE_DELAYS.COOLING_PERIOD/1000}s`);
-            
             martingaleState.coolingTimeout = setTimeout(() => {
+                // Libera imediatamente após cooling — não bloqueia por análise
                 martingaleState.isInCoolingPeriod = false;
-                martingaleState.isWaitingForAnalysis = true;
-                
-                updateMartingaleStatus('waiting', '🧠 Aguardando análise da IA para próximo trade');
-                
-                console.log('❄️ Cooling period finalizado - Aguardando análise da IA');
-                
-                // ✅ SOLICITAR ANÁLISE DA IA SE CONECTADA
-                if (isAIConnected) {
-                    requestAIAnalysisForMartingale();
-                } else {
-                    // ✅ SE NÃO TEM IA, AGUARDAR ANÁLISE MANUAL POR MAIS TEMPO
-                    startManualAnalysisWait();
-                }
-                
+                martingaleState.isWaitingForAnalysis = false;
+                martingaleState.needsAnalysisAfterLoss = false;
+                updateMartingaleStatus('ready', '✅ Cooling finalizado — sistema liberado');
+                console.log('❄️ Cooling finalizado — pronto para operar');
+                // Análise da IA em background, sem bloquear
+                if (isAIConnected) getAIAnalysis().catch(() => {});
             }, CONFIG.MARTINGALE_DELAYS.COOLING_PERIOD);
         }
 
-        // ✅ NOVA FUNÇÃO - SOLICITAR ANÁLISE DA IA APÓS MARTINGALE
+        // Mantida por compatibilidade — não bloqueia mais
         async function requestAIAnalysisForMartingale() {
-            console.log('🧠 Solicitando análise da IA para Martingale...');
-            
-            try {
-                updateMartingaleStatus('waiting', '🤖 IA analisando mercado após loss...');
-                
-                // ✅ FAZER ANÁLISE DA IA
-                await getAIAnalysis();
-                
-                // ✅ AGUARDAR UM POUCO MAIS APÓS A ANÁLISE
-                setTimeout(() => {
-                    if (martingaleState.isWaitingForAnalysis) {
-                        martingaleState.isWaitingForAnalysis = false;
-                        martingaleState.needsAnalysisAfterLoss = false;
-                        
-                        updateMartingaleStatus('ready', '✅ Análise concluída - Sistema pronto para operar');
-                        
-                        console.log('✅ Análise da IA concluída - Martingale pronto para próximo trade');
-                        
-                        // ✅ SE ESTIVER EM AUTO TRADING, PODE CONTINUAR (MAS NÃO FORÇA)
-                        if (isAutoTrading) {
-                            console.log('🤖 Auto trading pode continuar após análise');
-                        }
-                    }
-                }, CONFIG.MARTINGALE_DELAYS.ANALYSIS_WAIT);
-                
-            } catch (error) {
-                console.error('❌ Erro na análise da IA para Martingale:', error);
-                startManualAnalysisWait();
-            }
+            if (isAIConnected) { try { await getAIAnalysis(); } catch(e) {} }
+            martingaleState.isWaitingForAnalysis = false;
+            martingaleState.needsAnalysisAfterLoss = false;
+            updateMartingaleStatus('ready', '✅ Sistema pronto para operar');
         }
 
-        // ✅ NOVA FUNÇÃO - AGUARDAR ANÁLISE MANUAL
+        // Mantida por compatibilidade — libera imediatamente
         function startManualAnalysisWait() {
-            console.log('⏳ Aguardando análise manual...');
-            
-            updateMartingaleStatus('waiting', '⏳ Aguardando análise manual para próximo trade');
-            
-            martingaleState.analysisTimeout = setTimeout(() => {
-                if (martingaleState.isWaitingForAnalysis) {
-                    martingaleState.isWaitingForAnalysis = false;
-                    martingaleState.needsAnalysisAfterLoss = false;
-                    
-                    updateMartingaleStatus('ready', '✅ Tempo de análise finalizado - Sistema liberado');
-                    
-                    console.log('✅ Tempo de análise manual finalizado');
-                }
-            }, CONFIG.MARTINGALE_DELAYS.ANALYSIS_WAIT * 2); // Dobro do tempo para análise manual
+            martingaleState.isWaitingForAnalysis = false;
+            martingaleState.needsAnalysisAfterLoss = false;
+            updateMartingaleStatus('ready', '✅ Sistema liberado para operar');
         }
 
-        // ✅ NOVA FUNÇÃO - VERIFICAR SE PODE FAZER TRADE COM MARTINGALE
         function canTradeWithMartingale() {
-            // ✅ VERIFICAR PERÍODO DE COOLING
+            // Bloqueia APENAS durante o cooling period (tempo fixo após perda)
             if (martingaleState.isInCoolingPeriod) {
-                console.log('🚫 Trade bloqueado: Martingale em cooling period');
+                console.log('🚫 Trade bloqueado: cooling period ativo');
                 showNotification('❄️ Aguarde o cooling period do Martingale', 'warning');
                 return false;
             }
-            
-            // ✅ VERIFICAR SE AGUARDA ANÁLISE
-            if (martingaleState.isWaitingForAnalysis || martingaleState.needsAnalysisAfterLoss) {
-                console.log('🚫 Trade bloqueado: Aguardando análise da IA após loss');
-                showNotification('🧠 Aguarde a análise da IA após a perda', 'warning');
-                return false;
-            }
-            
-            // ✅ VERIFICAR TEMPO MÍNIMO ENTRE TRADES
+            // Tempo mínimo entre trades
             const timeSinceLastTrade = Date.now() - martingaleState.lastTradeTime;
             if (timeSinceLastTrade < CONFIG.MARTINGALE_DELAYS.MIN_BETWEEN_TRADES) {
                 const remainingTime = Math.ceil((CONFIG.MARTINGALE_DELAYS.MIN_BETWEEN_TRADES - timeSinceLastTrade) / 1000);
-                console.log(`🚫 Trade bloqueado: Aguarde ${remainingTime}s entre trades`);
                 showNotification(`⏳ Aguarde ${remainingTime}s entre trades`, 'warning');
                 return false;
             }
-            
             return true;
         }
 
@@ -2890,8 +2834,6 @@
                 const resp = await fetch(CONFIG.AI_API_URL, { method: 'GET' });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const info = await resp.json();
-                console.log('✅ Servidor IA online:', info);
-
                 isAIConnected = true;
                 updateStatus('aiStatus', 'online');
                 document.getElementById('aiStatusText').textContent = 'Conectado';
@@ -2922,214 +2864,12 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ token })
                 });
-                if (r.ok) {
-                    console.log('✅ Token enviado ao servidor IA — baixando candles Deriv…');
-                    showNotification('📊 IA baixando candles da Deriv…', 'info');
-                }
+                if (r.ok) showNotification('📊 IA baixando candles da Deriv…', 'info');
             } catch(e) {
                 console.warn('⚠️ Não foi possível enviar token ao servidor IA:', e.message);
             }
         }
 
-        function enableAIControls(enabled) {
-            const aiButtons = ['aiAnalyzeBtn', 'aiSignalBtn', 'aiRiskBtn', 'aiModeBtn', 'aiDurationBtn', 'aiManagementBtn'];
-            aiButtons.forEach(btnId => {
-                document.getElementById(btnId).disabled = !enabled;
-            });
-        }
-
-        async function getAIAnalysis() {
-            if (!isAIConnected) {
-                showNotification('IA não conectada', 'error');
-                return;
-            }
-
-            try {
-                document.getElementById('aiAnalyzeBtn').disabled = true;
-                showAIResponse('🔍 Analisando mercado...');
-
-                const symbol = document.getElementById('symbolSelect').value;
-                const marketData = {
-                    symbol: symbol,
-                    currentPrice: currentPrice,
-                    timestamp: new Date().toISOString(),
-                    trades: trades.slice(-10),
-                    balance: sessionStats.startBalance,
-                    winRate: sessionStats.totalTrades > 0 ? (sessionStats.wonTrades / sessionStats.totalTrades) * 100 : 0,
-                    volatility: calculateVolatility(),
-                    marketCondition: analyzeMarketCondition(),
-                    martingaleLevel: martingaleState.level,  // ✅ INCLUIR INFORMAÇÃO DO MARTINGALE
-                    isAfterLoss: martingaleState.needsAnalysisAfterLoss
-                };
-
-                const possibleEndpoints = ['/analyze', '/analysis', '/market-analysis', '/predict'];
-                let analysisResult = null;
-                
-                for (const endpoint of possibleEndpoints) {
-                    try {
-                        analysisResult = await makeAIRequest(endpoint, marketData);
-                        if (analysisResult) break;
-                    } catch (error) {
-                        console.log(`⚠️ Tentativa ${endpoint} falhou, tentando próximo...`);
-                    }
-                }
-                
-                aiData.lastAnalysis = analysisResult;
-                const message = analysisResult.message || `📊 Análise: Tendência ${analysisResult.trend || 'neutra'}, Confiança ${(analysisResult.confidence || 75).toFixed(1)}%`;
-                showAIResponse(message);
-                
-            } catch (error) {
-                console.error('❌ Erro na análise IA:', error);
-                showAIResponse('❌ Erro na análise da IA');
-            } finally {
-                document.getElementById('aiAnalyzeBtn').disabled = false;
-            }
-        }
-
-        async function getAITradingSignal() {
-            if (!isAIConnected) {
-                showNotification('IA não conectada', 'error');
-                return;
-            }
-
-            try {
-                document.getElementById('aiSignalBtn').disabled = true;
-                showAIResponse('📡 Obtendo sinal de trading...');
-
-                const symbol = document.getElementById('symbolSelect').value;
-                const requestData = {
-                    symbol: symbol,
-                    currentPrice: currentPrice,
-                    accountBalance: sessionStats.startBalance,
-                    winRate: sessionStats.totalTrades > 0 ? (sessionStats.wonTrades / sessionStats.totalTrades) * 100 : 0,
-                    recentTrades: trades.slice(-5),
-                    timestamp: new Date().toISOString(),
-                    volatility: calculateVolatility(),
-                    marketCondition: analyzeMarketCondition(),
-                    martingaleLevel: martingaleState.level,
-                    isAfterLoss: martingaleState.needsAnalysisAfterLoss
-                };
-
-                const possibleEndpoints = ['/signal', '/trading-signal', '/get-signal', '/predict-direction'];
-                let signalResult = null;
-                
-                for (const endpoint of possibleEndpoints) {
-                    try {
-                        signalResult = await makeAIRequest(endpoint, requestData);
-                        if (signalResult) break;
-                    } catch (error) {
-                        console.log(`⚠️ Tentativa ${endpoint} falhou, tentando próximo...`);
-                    }
-                }
-                
-                aiData.lastSignal = signalResult;
-                const direction = signalResult.direction || (Math.random() > 0.5 ? 'CALL' : 'PUT');
-                const confidence = signalResult.confidence || (70 + Math.random() * 25);
-                
-                showAIResponse(`🎯 Sinal: ${direction} | Confiança: ${confidence.toFixed(1)}% | ${signalResult.reasoning || 'Análise técnica'}`);
-                
-                // ✅ EXECUTAR APENAS SE PODE FAZER TRADE
-                if (isAIModeActive && confidence > 75 && canPlaceNewOrder()) {
-                    setTimeout(() => {
-                        placeTrade(direction);
-                        showNotification(`🤖 Trade IA executado: ${direction}`, 'success');
-                    }, 2000);
-                }
-                
-            } catch (error) {
-                console.error('❌ Erro no sinal IA:', error);
-                showAIResponse('❌ Erro ao obter sinal da IA');
-            } finally {
-                document.getElementById('aiSignalBtn').disabled = false;
-            }
-        }
-
-        async function getAIRiskAssessment() {
-            if (!isAIConnected) {
-                showNotification('IA não conectada', 'error');
-                return;
-            }
-
-            try {
-                document.getElementById('aiRiskBtn').disabled = true;
-                showAIResponse('⚖️ Avaliando risco...');
-
-                const riskData = {
-                    currentBalance: sessionStats.startBalance,
-                    todayPnL: sessionStats.totalPnL,
-                    martingaleLevel: martingaleState.level,
-                    recentTrades: trades.slice(-5),
-                    winRate: sessionStats.totalTrades > 0 ? (sessionStats.wonTrades / sessionStats.totalTrades) * 100 : 0,
-                    totalTrades: sessionStats.totalTrades,
-                    timestamp: new Date().toISOString(),
-                    isInCoolingPeriod: martingaleState.isInCoolingPeriod,
-                    needsAnalysisAfterLoss: martingaleState.needsAnalysisAfterLoss
-                };
-
-                const possibleEndpoints = ['/risk', '/risk-assessment', '/evaluate-risk', '/risk-analysis'];
-                let riskResult = null;
-                
-                for (const endpoint of possibleEndpoints) {
-                    try {
-                        riskResult = await makeAIRequest(endpoint, riskData);
-                        if (riskResult) break;
-                    } catch (error) {
-                        console.log(`⚠️ Tentativa ${endpoint} falhou, tentando próximo...`);
-                    }
-                }
-                
-                aiData.riskLevel = riskResult.level || 'medium';
-                const riskMessage = riskResult.message || `Risco ${aiData.riskLevel} detectado`;
-                const recommendation = riskResult.recommendation || 'Continuar operando';
-                
-                showAIResponse(`⚠️ Risco: ${aiData.riskLevel.toUpperCase()} | ${riskMessage} | 💡 ${recommendation}`);
-                
-            } catch (error) {
-                console.error('❌ Erro na avaliação de risco:', error);
-                showAIResponse('❌ Erro na avaliação de risco');
-            } finally {
-                document.getElementById('aiRiskBtn').disabled = false;
-            }
-        }
-
-        function toggleAIMode() {
-            isAIModeActive = !isAIModeActive;
-            const btn = document.getElementById('aiModeBtn');
-            
-            if (isAIModeActive) {
-                btn.textContent = '🤖 Modo IA: ON';
-                btn.classList.add('active');
-                showNotification('🤖 Modo IA ativado - Trades automáticos com IA', 'success');
-                
-                startAITradingCycle();
-            } else {
-                btn.textContent = '🤖 Modo IA: OFF';
-                btn.classList.remove('active');
-                showNotification('🤖 Modo IA desativado', 'warning');
-            }
-        }
-
-        async function startAITradingCycle() {
-            if (!isAIModeActive || !isAIConnected) return;
-
-            try {
-                await getAIAnalysis();
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                
-                await getAIRiskAssessment();
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                
-                await getAITradingSignal();
-                
-                if (isAIModeActive) {
-                    setTimeout(startAITradingCycle, 60000);
-                }
-            } catch (error) {
-                console.error('❌ Erro no ciclo IA:', error);
-            }
-        }
-
-        // ── CHAMADAS REAIS AO SERVIDOR IA RAILWAY ──────────────────
         async function makeAIRequest(endpoint, data) {
             if (!isAIConnected) return _localFallback(endpoint, data);
             try {
@@ -3156,9 +2896,11 @@
                          message: 'Análise técnica local (servidor IA offline)' };
             }
             if (endpoint.includes('analyz')) {
-                return { message: `Análise local | Regime: ${adaptiveState.currentRegime} | Ticks: ${tickBuffer.prices.length}`,
-                         trend: adaptiveState.trendStrength > 10 ? 'bullish' : adaptiveState.trendStrength < -10 ? 'bearish' : 'lateral',
-                         confidence: Math.min(90, 50 + Math.abs(adaptiveState.trendStrength) * 0.4) };
+                return {
+                    message: `Análise local | Regime: ${adaptiveState.currentRegime} | Ticks: ${tickBuffer.prices.length}`,
+                    trend: adaptiveState.trendStrength > 10 ? 'bullish' : adaptiveState.trendStrength < -10 ? 'bearish' : 'lateral',
+                    confidence: Math.min(90, 50 + Math.abs(adaptiveState.trendStrength) * 0.4)
+                };
             }
             if (endpoint.includes('risk')) {
                 const lvl = mg > 4 ? 'high' : mg > 2 ? 'medium' : 'low';
@@ -3182,11 +2924,9 @@
             }
         }
 
+        // Mantido por compatibilidade
         async function simulateAIResponse(endpoint, data) {
             return _localFallback(endpoint, data);
-        }
-
-
         }
 
         function showAIResponse(message) {
@@ -3396,8 +3136,8 @@
                         `🏁 Trade finalizado: ${isWin ? 'WIN' : 'LOSS'} ${pnl.toFixed(2)}`,
                         isWin ? 'success' : 'error'
                     );
-
-                    // 📚 Enviar resultado ao servidor IA para aprendizado contínuo
+                    
+                    // 📚 Envia resultado ao servidor IA para aprendizado contínuo
                     reportTradeResult(
                         trackedContract.symbol || document.getElementById('symbolSelect').value,
                         trackedContract.direction || '',
@@ -3405,6 +3145,8 @@
                         pnl,
                         trackedContract.buy_price || 0
                     );
+
+                    sendWSMessage({ balance: 1 });
                     
                     console.log(`✅ Sistema liberado: hasActiveOrder=${hasActiveOrder}, orderLock=${orderLock}, openContracts=${openContracts.size}`);
                 }
@@ -3652,9 +3394,9 @@
                 showDashboard();
                 setLoginLoading(false);
                 
-                // 🤖 Enviar token ao servidor IA para baixar candles reais
+                // 🤖 Envia token ao servidor IA para baixar candles reais
                 if (isAIConnected && apiToken) sendTokenToAI(apiToken);
-                
+
                 const successMessage = accountType === 'demo' 
                     ? '🎮 Conectado à conta DEMO com Martingale Inteligente!'
                     : '💰 Conectado à conta REAL com Martingale Inteligente!';
