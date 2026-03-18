@@ -891,6 +891,222 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ============================================
+           🏦 GERENCIAMENTO DE BANCA INTELIGENTE
+           ============================================ */
+        .bankroll-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .bankroll-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00ff88, #00d4ff, #8a2be2, #ff6b35, #00ff88);
+            background-size: 200% 100%;
+            animation: bankrollGlow 3s linear infinite;
+        }
+        @keyframes bankrollGlow {
+            0% { background-position: 0% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .bankroll-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .bankroll-header h3 {
+            color: #00ff88;
+            font-size: 1.15rem;
+        }
+        .bankroll-toggle {
+            padding: 8px 16px;
+            background: linear-gradient(45deg, #00ff88, #00cc6a);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .bankroll-toggle:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,255,136,0.4); }
+        .bankroll-toggle.off { background: linear-gradient(45deg, #555, #666); color: #aaa; }
+
+        /* Opportunity Score Gauge */
+        .opportunity-gauge {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .gauge-circle {
+            width: 110px;
+            height: 110px;
+            min-width: 110px;
+            position: relative;
+        }
+        .gauge-circle svg { transform: rotate(-90deg); }
+        .gauge-circle .gauge-bg { fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 10; }
+        .gauge-circle .gauge-fill { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset 0.8s ease, stroke 0.5s ease; }
+        .gauge-value {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.6rem;
+            font-weight: 900;
+            text-align: center;
+        }
+        .gauge-label {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.6;
+            display: block;
+            margin-top: 2px;
+        }
+        .gauge-details { flex: 1; }
+        .gauge-detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.82rem;
+        }
+        .gauge-detail-row:last-child { border-bottom: none; }
+        .gauge-detail-label { opacity: 0.65; }
+        .gauge-detail-val { font-weight: bold; }
+
+        /* Stake Recommendation */
+        .stake-recommendation {
+            background: rgba(0,0,0,0.35);
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-left: 4px solid #00ff88;
+            transition: border-color 0.5s ease;
+        }
+        .stake-rec-icon { font-size: 2.2rem; }
+        .stake-rec-info { flex: 1; }
+        .stake-rec-title { font-size: 1rem; font-weight: bold; margin-bottom: 4px; }
+        .stake-rec-desc { font-size: 0.82rem; opacity: 0.7; }
+        .stake-rec-value {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #00ff88;
+            text-align: right;
+            min-width: 100px;
+        }
+        .stake-rec-pct {
+            font-size: 0.72rem;
+            opacity: 0.6;
+            text-align: right;
+        }
+
+        /* Bankroll Metrics Grid */
+        .bankroll-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .bm-card {
+            background: rgba(0,0,0,0.25);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+        .bm-card .bm-label {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.6;
+            margin-bottom: 4px;
+        }
+        .bm-card .bm-val {
+            font-size: 1.15rem;
+            font-weight: bold;
+        }
+
+        /* Bankroll Rules */
+        .bankroll-rules {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 14px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .br-rule {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.78rem;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.03);
+        }
+        .br-rule .br-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .br-rule .br-dot.green { background: #00ff88; }
+        .br-rule .br-dot.yellow { background: #ffa726; }
+        .br-rule .br-dot.red { background: #ff4757; }
+        .br-rule .br-dot.blue { background: #00d4ff; }
+
+        /* Score History Mini Chart */
+        .score-history-bar {
+            display: flex;
+            gap: 2px;
+            height: 40px;
+            align-items: flex-end;
+            margin-top: 12px;
+            padding: 0 4px;
+        }
+        .score-bar {
+            flex: 1;
+            min-width: 4px;
+            border-radius: 2px 2px 0 0;
+            transition: height 0.3s ease, background 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .opportunity-gauge {
+                flex-direction: column;
+                text-align: center;
+            }
+            .bankroll-rules {
+                grid-template-columns: 1fr;
+            }
+            .stake-recommendation {
+                flex-direction: column;
+                text-align: center;
+            }
+            .stake-rec-value { text-align: center; }
+            .stake-rec-pct { text-align: center; }
+        }
+
     </style>
 </head>
 <body>
@@ -1060,6 +1276,146 @@
                     <div class="dot active" id="dotDrawdown"></div>
                     <span>Drawdown Shield</span>
                 </div>
+            </div>
+        </div>
+
+
+        <!-- ============================================
+             🏦 PAINEL GERENCIAMENTO DE BANCA INTELIGENTE
+             ============================================ -->
+        <div class="bankroll-panel" id="bankrollPanel">
+            <div class="bankroll-header">
+                <h3>🏦 Gerenciamento de Banca Inteligente</h3>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span style="font-size: 0.78rem; opacity: 0.6;" id="bankrollMode">Modo: Kelly Adaptativo</span>
+                    <button class="bankroll-toggle" onclick="toggleBankrollManager()" id="bankrollToggle">
+                        🏦 Banca: ON
+                    </button>
+                </div>
+            </div>
+
+            <!-- Gauge de Oportunidade -->
+            <div class="opportunity-gauge">
+                <div class="gauge-circle">
+                    <svg width="110" height="110" viewBox="0 0 110 110">
+                        <circle class="gauge-bg" cx="55" cy="55" r="45"/>
+                        <circle class="gauge-fill" id="gaugeArc" cx="55" cy="55" r="45"
+                            stroke-dasharray="283" stroke-dashoffset="283" stroke="#00ff88"/>
+                    </svg>
+                    <div class="gauge-value">
+                        <span id="opportunityScore">--</span>
+                        <span class="gauge-label">Score</span>
+                    </div>
+                </div>
+                <div class="gauge-details">
+                    <div class="gauge-detail-row">
+                        <span class="gauge-detail-label">Win Rate Recente (10)</span>
+                        <span class="gauge-detail-val" id="bkWinRate10" style="color:#00ff88;">--</span>
+                    </div>
+                    <div class="gauge-detail-row">
+                        <span class="gauge-detail-label">Tendência P&L</span>
+                        <span class="gauge-detail-val" id="bkPnlTrend" style="color:#00d4ff;">--</span>
+                    </div>
+                    <div class="gauge-detail-row">
+                        <span class="gauge-detail-label">Regime Favorável</span>
+                        <span class="gauge-detail-val" id="bkRegimeFav" style="color:#ffa726;">--</span>
+                    </div>
+                    <div class="gauge-detail-row">
+                        <span class="gauge-detail-label">Sequência Atual</span>
+                        <span class="gauge-detail-val" id="bkStreak" style="color:#e0b0ff;">--</span>
+                    </div>
+                    <div class="gauge-detail-row">
+                        <span class="gauge-detail-label">Volatilidade OK</span>
+                        <span class="gauge-detail-val" id="bkVolOK" style="color:#00d4ff;">--</span>
+                    </div>
+                    <div class="gauge-detail-row">
+                        <span class="gauge-detail-label">Confiança Sinal</span>
+                        <span class="gauge-detail-val" id="bkSignalConf" style="color:#00ff88;">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recomendação de Stake -->
+            <div class="stake-recommendation" id="stakeRecommendation">
+                <div class="stake-rec-icon" id="stakeRecIcon">🎯</div>
+                <div class="stake-rec-info">
+                    <div class="stake-rec-title" id="stakeRecTitle">Aguardando Dados...</div>
+                    <div class="stake-rec-desc" id="stakeRecDesc">O sistema precisa de mais trades para calcular o stake ideal</div>
+                </div>
+                <div>
+                    <div class="stake-rec-value" id="stakeRecValue">$--</div>
+                    <div class="stake-rec-pct" id="stakeRecPct">-- da banca</div>
+                </div>
+            </div>
+
+            <!-- Métricas da Banca -->
+            <div class="bankroll-metrics">
+                <div class="bm-card">
+                    <div class="bm-label">Banca Atual</div>
+                    <div class="bm-val" id="bkBalance" style="color:#00ff88;">$0</div>
+                </div>
+                <div class="bm-card">
+                    <div class="bm-label">% Risco/Trade</div>
+                    <div class="bm-val" id="bkRiskPct" style="color:#ffa726;">--%</div>
+                </div>
+                <div class="bm-card">
+                    <div class="bm-label">Stake Min</div>
+                    <div class="bm-val" id="bkStakeMin" style="color:#00d4ff;">$0.35</div>
+                </div>
+                <div class="bm-card">
+                    <div class="bm-label">Stake Max</div>
+                    <div class="bm-val" id="bkStakeMax" style="color:#ff4757;">$--</div>
+                </div>
+                <div class="bm-card">
+                    <div class="bm-label">Fator Kelly</div>
+                    <div class="bm-val" id="bkKelly" style="color:#e0b0ff;">--</div>
+                </div>
+                <div class="bm-card">
+                    <div class="bm-label">Trades Seguros</div>
+                    <div class="bm-val" id="bkSafeTrades" style="color:#00ff88;">--</div>
+                </div>
+            </div>
+
+            <!-- Regras Ativas -->
+            <div class="bankroll-rules">
+                <div class="br-rule">
+                    <div class="br-dot green" id="brDotScore"></div>
+                    <span>Score &gt; 60 = Stake sobe</span>
+                </div>
+                <div class="br-rule">
+                    <div class="br-dot yellow" id="brDotMedium"></div>
+                    <span>Score 40-60 = Stake normal</span>
+                </div>
+                <div class="br-rule">
+                    <div class="br-dot red" id="brDotLow"></div>
+                    <span>Score &lt; 40 = Stake reduz</span>
+                </div>
+                <div class="br-rule">
+                    <div class="br-dot blue" id="brDotKelly"></div>
+                    <span>Kelly limita exposição</span>
+                </div>
+                <div class="br-rule">
+                    <div class="br-dot green" id="brDotWinUp"></div>
+                    <span>3+ Wins = Boost +30%</span>
+                </div>
+                <div class="br-rule">
+                    <div class="br-dot red" id="brDotLossDown"></div>
+                    <span>2+ Loss = Corte -50%</span>
+                </div>
+                <div class="br-rule">
+                    <div class="br-dot yellow" id="brDotDrawdown"></div>
+                    <span>Drawdown &gt;10% = Proteção</span>
+                </div>
+                <div class="br-rule">
+                    <div class="br-dot blue" id="brDotMax"></div>
+                    <span>Max 5% da banca/trade</span>
+                </div>
+            </div>
+
+            <!-- Histórico de Scores -->
+            <div style="margin-top: 12px;">
+                <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5; margin-bottom: 6px;">Histórico de Oportunidade (últimos 30)</div>
+                <div class="score-history-bar" id="scoreHistoryBar"></div>
             </div>
         </div>
 
@@ -1373,7 +1729,6 @@
         
         const CONFIG = {
             WS_URL: 'wss://ws.derivws.com/websockets/v3?app_id=1089',
-            // 🤖 URL do seu servidor IA — altere se necessário
             // 🤖 Servidor IA no Railway
             AI_API_URL: 'https://web-production-41cb7.up.railway.app',
             AI_API_KEY: '',
@@ -2531,32 +2886,21 @@
 
         async function connectToAI() {
             try {
-                console.log('🤖 Conectando ao servidor IA…');
-
-                // 1. Verificar se servidor está online
+                console.log('🤖 Conectando ao servidor IA Railway…');
                 const resp = await fetch(CONFIG.AI_API_URL, { method: 'GET' });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-
                 const info = await resp.json();
                 console.log('✅ Servidor IA online:', info);
 
                 isAIConnected = true;
                 updateStatus('aiStatus', 'online');
                 document.getElementById('aiStatusText').textContent = 'Conectado';
-
-                const candles = info.candles || {};
-                const totalCandles = Object.values(candles).reduce((a,b) => a+b, 0);
+                const totalCandles = Object.values(info.candles || {}).reduce((a,b) => a+b, 0);
                 document.getElementById('connectionMethod').textContent =
                     `IA online | ${totalCandles} candles | Deriv: ${info.deriv_connected ? '✅' : '⏳'}`;
-
                 enableAIControls(true);
                 showNotification('🤖 IA Real conectada — aprendendo com Deriv!', 'success');
-
-                // 2. Enviar token Deriv ao servidor para baixar candles
-                if (apiToken) {
-                    await sendTokenToAI(apiToken);
-                }
-
+                if (apiToken) await sendTokenToAI(apiToken);
                 return true;
             } catch (error) {
                 console.error('❌ Servidor IA offline:', error);
@@ -2565,13 +2909,12 @@
                 document.getElementById('aiStatusText').textContent = 'Offline';
                 document.getElementById('connectionMethod').textContent =
                     `Servidor IA não encontrado em ${CONFIG.AI_API_URL}`;
-                enableAIControls(true); // habilita com fallback técnico
+                enableAIControls(true);
                 showNotification('⚠️ IA offline — usando análise técnica local', 'warning');
                 return false;
             }
         }
 
-        // Envia token Deriv ao servidor IA para que ele baixe candles reais
         async function sendTokenToAI(token) {
             try {
                 const r = await fetch(`${CONFIG.AI_API_URL}/config`, {
@@ -2786,13 +3129,9 @@
             }
         }
 
-        // ──────────────────────────────────────────────────────────
-        // CHAMADAS REAIS AO SERVIDOR IA
-        // ──────────────────────────────────────────────────────────
+        // ── CHAMADAS REAIS AO SERVIDOR IA RAILWAY ──────────────────
         async function makeAIRequest(endpoint, data) {
-            if (!isAIConnected) {
-                return _localFallback(endpoint, data);
-            }
+            if (!isAIConnected) return _localFallback(endpoint, data);
             try {
                 const resp = await fetch(`${CONFIG.AI_API_URL}${endpoint}`, {
                     method: 'POST',
@@ -2803,44 +3142,32 @@
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 return await resp.json();
             } catch(e) {
-                console.warn(`⚠️ Falha em ${endpoint}:`, e.message, '— usando fallback local');
+                console.warn(`⚠️ Falha em ${endpoint}:`, e.message, '— fallback local');
                 return _localFallback(endpoint, data);
             }
         }
 
-        // Fallback técnico local quando servidor offline
         function _localFallback(endpoint, data) {
-            const prices = tickBuffer.prices;
-            if (endpoint === '/signal' || endpoint.includes('signal')) {
+            const mg = data.martingaleLevel || 0;
+            if (endpoint.includes('signal') || endpoint.includes('predict')) {
                 const signal = getAdaptiveDirection();
-                return {
-                    direction: signal.direction,
-                    confidence: signal.confidence,
-                    method: 'local_technical',
-                    message: 'Análise técnica local (servidor IA offline)',
-                    model_ready: false,
-                };
+                return { direction: signal.direction, confidence: signal.confidence,
+                         method: 'local_technical', model_ready: false,
+                         message: 'Análise técnica local (servidor IA offline)' };
             }
-            if (endpoint === '/analyze' || endpoint.includes('analyz')) {
-                return {
-                    message: `Análise local — ${prices.length} ticks coletados | Regime: ${adaptiveState.currentRegime}`,
-                    trend: adaptiveState.trendStrength > 10 ? 'bullish' : adaptiveState.trendStrength < -10 ? 'bearish' : 'lateral',
-                    confidence: Math.min(90, 50 + Math.abs(adaptiveState.trendStrength) * 0.4),
-                };
+            if (endpoint.includes('analyz')) {
+                return { message: `Análise local | Regime: ${adaptiveState.currentRegime} | Ticks: ${tickBuffer.prices.length}`,
+                         trend: adaptiveState.trendStrength > 10 ? 'bullish' : adaptiveState.trendStrength < -10 ? 'bearish' : 'lateral',
+                         confidence: Math.min(90, 50 + Math.abs(adaptiveState.trendStrength) * 0.4) };
             }
-            if (endpoint === '/risk' || endpoint.includes('risk')) {
-                const mg = data.martingaleLevel || 0;
+            if (endpoint.includes('risk')) {
                 const lvl = mg > 4 ? 'high' : mg > 2 ? 'medium' : 'low';
-                return {
-                    level: lvl,
-                    message: `Risco ${lvl} — MG nível ${mg}`,
-                    recommendation: mg > 4 ? 'Reduzir exposição' : 'Continuar normalmente',
-                };
+                return { level: lvl, message: `Risco ${lvl} — MG nível ${mg}`,
+                         recommendation: mg > 4 ? 'Reduzir exposição' : 'Continuar normalmente' };
             }
             return { message: 'Resposta local', status: 'fallback' };
         }
 
-        // Enviar resultado de trade ao servidor para aprendizado
         async function reportTradeResult(symbol, direction, result, pnl, stake) {
             if (!isAIConnected) return;
             try {
@@ -2855,9 +3182,11 @@
             }
         }
 
-        // Alias mantidos para compatibilidade com o resto do código
         async function simulateAIResponse(endpoint, data) {
             return _localFallback(endpoint, data);
+        }
+
+
         }
 
         function showAIResponse(message) {
@@ -3067,17 +3396,15 @@
                         `🏁 Trade finalizado: ${isWin ? 'WIN' : 'LOSS'} ${pnl.toFixed(2)}`,
                         isWin ? 'success' : 'error'
                     );
-                    
+
                     // 📚 Enviar resultado ao servidor IA para aprendizado contínuo
                     reportTradeResult(
-                        trackedContract.symbol || data['symbol'] || document.getElementById('symbolSelect').value,
+                        trackedContract.symbol || document.getElementById('symbolSelect').value,
                         trackedContract.direction || '',
                         isWin ? 'win' : 'loss',
                         pnl,
                         trackedContract.buy_price || 0
                     );
-                    
-                    sendWSMessage({ balance: 1 });
                     
                     console.log(`✅ Sistema liberado: hasActiveOrder=${hasActiveOrder}, orderLock=${orderLock}, openContracts=${openContracts.size}`);
                 }
@@ -3326,9 +3653,7 @@
                 setLoginLoading(false);
                 
                 // 🤖 Enviar token ao servidor IA para baixar candles reais
-                if (isAIConnected && apiToken) {
-                    sendTokenToAI(apiToken);
-                }
+                if (isAIConnected && apiToken) sendTokenToAI(apiToken);
                 
                 const successMessage = accountType === 'demo' 
                     ? '🎮 Conectado à conta DEMO com Martingale Inteligente!'
@@ -3880,6 +4205,425 @@
         console.log('   🛡️ Sistema anti-loop ROBUSTO');
         console.log('   🎯 Martingale INTELIGENTE que aguarda momento ideal');
         console.log('✅ SISTEMA BLINDADO contra loops de erro + ADAPTATIVO!');
+
+        // ==============================================
+        // 🏦 SISTEMA DE GERENCIAMENTO DE BANCA INTELIGENTE
+        // ==============================================
+
+        const bankrollManager = {
+            enabled: true,
+            
+            // Configurações
+            config: {
+                maxRiskPerTrade: 0.05,     // Máximo 5% da banca por trade
+                baseRiskPct: 0.02,          // Risco base: 2% da banca
+                minStake: 0.35,
+                kellyFraction: 0.25,        // Fração Kelly (conservador = 1/4 Kelly)
+                boostThreshold: 60,         // Score acima disso = aumenta stake
+                normalThreshold: 40,        // Score entre 40-60 = stake normal
+                // Abaixo de 40 = diminui stake
+                maxBoostMultiplier: 2.0,    // Máximo 2x o stake base
+                minReduceMultiplier: 0.25,  // Mínimo 25% do stake base
+                winStreakBoost: 0.3,        // +30% por win streak >= 3
+                lossStreakPenalty: 0.5,     // -50% por loss streak >= 2
+                drawdownProtection: 0.10,  // Ativa proteção com 10% drawdown
+                hardDrawdownLimit: 0.20,   // Corta tudo com 20% drawdown
+            },
+
+            // Estado
+            state: {
+                currentScore: 0,
+                scoreHistory: [],
+                lastStakeRecommendation: 0,
+                currentBalance: 0,
+                peakBalance: 0,
+                drawdown: 0,
+                recentResults: [],      // últimos 20 resultados (true/false)
+                recentPnL: [],          // últimos 20 P&L
+                kellyEdge: 0,
+                kellyOdds: 0.85,        // payout típico Deriv ~85%
+                totalRecommendations: 0,
+            },
+
+            // ===== CALCULAR SCORE DE OPORTUNIDADE (0-100) =====
+            calculateOpportunityScore() {
+                let score = 50; // Base neutra
+                let factors = {};
+
+                // 1. WIN RATE RECENTE (últimos 10 trades) - peso 25
+                const recent10 = this.state.recentResults.slice(-10);
+                if (recent10.length >= 3) {
+                    const wr = recent10.filter(x => x).length / recent10.length;
+                    const wrScore = (wr - 0.5) * 50; // -25 a +25
+                    score += wrScore;
+                    factors.winRate = { value: (wr * 100).toFixed(0) + '%', impact: wrScore.toFixed(1) };
+                }
+
+                // 2. TENDÊNCIA P&L (últimos 5 trades) - peso 15
+                const recentPnL5 = this.state.recentPnL.slice(-5);
+                if (recentPnL5.length >= 2) {
+                    const pnlSum = recentPnL5.reduce((a, b) => a + b, 0);
+                    const pnlTrend = pnlSum > 0 ? Math.min(15, pnlSum * 2) : Math.max(-15, pnlSum * 2);
+                    score += pnlTrend;
+                    factors.pnlTrend = { value: pnlSum >= 0 ? '+$' + pnlSum.toFixed(2) : '-$' + Math.abs(pnlSum).toFixed(2), impact: pnlTrend.toFixed(1) };
+                }
+
+                // 3. REGIME DE MERCADO - peso 15
+                const regime = adaptiveState.currentRegime;
+                const favorableRegimes = { 'trending-up': 12, 'trending-down': 10, 'ranging': 5, 'volatile': -5, 'choppy': -12, 'unknown': -3 };
+                const regimeScore = favorableRegimes[regime] || 0;
+                score += regimeScore;
+                factors.regime = { value: regime, impact: regimeScore };
+
+                // 4. SEQUÊNCIA ATUAL (streak) - peso 15
+                const streak = adaptiveState.lossStreak > 0 ? -adaptiveState.lossStreak : adaptiveState.winStreak;
+                let streakScore = 0;
+                if (streak >= 3) streakScore = 12;
+                else if (streak >= 2) streakScore = 6;
+                else if (streak === 1) streakScore = 2;
+                else if (streak === 0) streakScore = 0;
+                else if (streak <= -3) streakScore = -15;
+                else if (streak <= -2) streakScore = -10;
+                else if (streak === -1) streakScore = -3;
+                score += streakScore;
+                factors.streak = { value: streak >= 0 ? '+' + streak + 'W' : streak + 'L', impact: streakScore };
+
+                // 5. VOLATILIDADE ADEQUADA - peso 10
+                const vol = adaptiveState.realtimeVolatility;
+                let volScore = 0;
+                if (vol > 0 && vol < 0.05) volScore = 5;       // Baixa vol = ok
+                else if (vol >= 0.05 && vol < 0.12) volScore = 8; // Vol moderada = boa
+                else if (vol >= 0.12 && vol < 0.20) volScore = 2; // Vol alta = ok
+                else if (vol >= 0.20) volScore = -8;              // Vol extrema = ruim
+                score += volScore;
+                factors.volatility = { value: (vol * 100).toFixed(2) + '%', impact: volScore };
+
+                // 6. CONFIANÇA DO SINAL - peso 10
+                const confidence = adaptiveState.signalConfidence;
+                if (confidence > 0) {
+                    const confScore = (confidence - 50) * 0.2; // -10 a +10
+                    score += confScore;
+                    factors.confidence = { value: confidence.toFixed(0) + '%', impact: confScore.toFixed(1) };
+                }
+
+                // 7. DRAWDOWN PENALTY - peso 10
+                if (this.state.drawdown > this.config.hardDrawdownLimit * 100) {
+                    score -= 25;
+                    factors.drawdown = { value: this.state.drawdown.toFixed(1) + '%', impact: -25 };
+                } else if (this.state.drawdown > this.config.drawdownProtection * 100) {
+                    const ddPenalty = (this.state.drawdown - this.config.drawdownProtection * 100) * 1.5;
+                    score -= ddPenalty;
+                    factors.drawdown = { value: this.state.drawdown.toFixed(1) + '%', impact: -ddPenalty.toFixed(1) };
+                }
+
+                // Clampar entre 0 e 100
+                score = Math.max(0, Math.min(100, score));
+
+                this.state.currentScore = Math.round(score);
+                this.state.scoreHistory.push(this.state.currentScore);
+                if (this.state.scoreHistory.length > 30) this.state.scoreHistory.shift();
+
+                return { score: this.state.currentScore, factors };
+            },
+
+            // ===== CALCULAR KELLY CRITERION =====
+            calculateKelly() {
+                const results = this.state.recentResults;
+                if (results.length < 5) return 0;
+
+                const wins = results.filter(x => x).length;
+                const winProb = wins / results.length;
+                const lossProb = 1 - winProb;
+                const odds = this.state.kellyOdds; // payout ratio
+
+                // Kelly = (p * b - q) / b
+                // p = prob win, q = prob loss, b = odds
+                const kelly = (winProb * odds - lossProb) / odds;
+                this.state.kellyEdge = kelly;
+
+                // Retornar fração Kelly (conservador)
+                return Math.max(0, kelly * this.config.kellyFraction);
+            },
+
+            // ===== RECOMENDAR STAKE =====
+            recommendStake(balance) {
+                if (!this.enabled || balance <= 0) {
+                    return { stake: martingaleState.baseStake, reason: 'Sistema desativado', multiplier: 1 };
+                }
+
+                this.state.currentBalance = balance;
+                if (balance > this.state.peakBalance) this.state.peakBalance = balance;
+                this.state.drawdown = this.state.peakBalance > 0 
+                    ? ((this.state.peakBalance - balance) / this.state.peakBalance) * 100 
+                    : 0;
+
+                const { score, factors } = this.calculateOpportunityScore();
+                const kellyPct = this.calculateKelly();
+
+                // Base stake como % da banca
+                let riskPct = this.config.baseRiskPct;
+
+                // Ajustar pela oportunidade
+                let multiplier = 1;
+                let reason = '';
+                let icon = '🎯';
+
+                if (score >= 80) {
+                    multiplier = 1.8;
+                    reason = 'Oportunidade Excelente! Stake aumentado';
+                    icon = '🔥';
+                } else if (score >= 70) {
+                    multiplier = 1.5;
+                    reason = 'Boa oportunidade - Stake acima do normal';
+                    icon = '📈';
+                } else if (score >= this.config.boostThreshold) {
+                    multiplier = 1.2;
+                    reason = 'Oportunidade moderada - Leve aumento';
+                    icon = '✅';
+                } else if (score >= this.config.normalThreshold) {
+                    multiplier = 1.0;
+                    reason = 'Condições normais - Stake padrão';
+                    icon = '🎯';
+                } else if (score >= 25) {
+                    multiplier = 0.6;
+                    reason = 'Oportunidade fraca - Stake reduzido';
+                    icon = '⚠️';
+                } else if (score >= 10) {
+                    multiplier = 0.35;
+                    reason = 'Condições ruins - Stake mínimo';
+                    icon = '🛡️';
+                } else {
+                    multiplier = 0;
+                    reason = 'PERIGO! Recomenda NÃO operar';
+                    icon = '🚫';
+                }
+
+                // Win streak boost
+                if (adaptiveState.winStreak >= 3 && multiplier > 0) {
+                    multiplier *= (1 + this.config.winStreakBoost);
+                    reason += ' + Boost Win Streak';
+                }
+
+                // Loss streak penalty
+                if (adaptiveState.lossStreak >= 2 && multiplier > 0) {
+                    multiplier *= (1 - this.config.lossStreakPenalty);
+                    reason += ' + Penalidade Loss';
+                }
+
+                // Kelly override (se Kelly sugere menos, respeitar)
+                if (kellyPct > 0 && kellyPct < riskPct * multiplier) {
+                    riskPct = kellyPct;
+                    reason += ' (Kelly limitou)';
+                } else {
+                    riskPct = riskPct * multiplier;
+                }
+
+                // Drawdown protection
+                if (this.state.drawdown > this.config.hardDrawdownLimit * 100) {
+                    riskPct = 0;
+                    reason = '🛑 BLOQUEADO: Drawdown > ' + (this.config.hardDrawdownLimit * 100) + '%';
+                    icon = '🚫';
+                    multiplier = 0;
+                } else if (this.state.drawdown > this.config.drawdownProtection * 100) {
+                    const ddFactor = 1 - ((this.state.drawdown - this.config.drawdownProtection * 100) / (this.config.hardDrawdownLimit * 100 - this.config.drawdownProtection * 100));
+                    riskPct *= Math.max(0.2, ddFactor);
+                    reason += ' + Proteção Drawdown';
+                }
+
+                // Clampar risco
+                riskPct = Math.max(0, Math.min(this.config.maxRiskPerTrade, riskPct));
+
+                // Calcular stake final
+                let stake = balance * riskPct;
+                stake = Math.max(this.config.minStake, stake);
+                stake = Math.min(balance * this.config.maxRiskPerTrade, stake);
+                stake = parseFloat(stake.toFixed(2));
+
+                this.state.lastStakeRecommendation = stake;
+                this.state.totalRecommendations++;
+
+                return { stake, reason, multiplier, riskPct, score, factors, kellyPct, icon };
+            },
+
+            // ===== REGISTRAR RESULTADO =====
+            registerResult(isWin, pnl) {
+                this.state.recentResults.push(isWin);
+                if (this.state.recentResults.length > 20) this.state.recentResults.shift();
+
+                this.state.recentPnL.push(pnl);
+                if (this.state.recentPnL.length > 20) this.state.recentPnL.shift();
+            },
+
+            // ===== NÚMERO DE TRADES SEGUROS =====
+            safeTrades(balance) {
+                if (this.state.lastStakeRecommendation <= 0) return '--';
+                return Math.floor(balance / this.state.lastStakeRecommendation);
+            }
+        };
+
+        // ===== UI DO GERENCIAMENTO DE BANCA =====
+
+        function updateBankrollUI() {
+            if (!bankrollManager.enabled) return;
+
+            const balance = sessionStats.startBalance + sessionStats.totalPnL;
+            const rec = bankrollManager.recommendStake(balance);
+
+            // Update gauge
+            const gaugeArc = document.getElementById('gaugeArc');
+            const circumference = 283; // 2 * PI * 45
+            const offset = circumference - (rec.score / 100) * circumference;
+            gaugeArc.setAttribute('stroke-dashoffset', offset);
+
+            // Color based on score
+            let gaugeColor;
+            if (rec.score >= 70) gaugeColor = '#00ff88';
+            else if (rec.score >= 50) gaugeColor = '#00d4ff';
+            else if (rec.score >= 30) gaugeColor = '#ffa726';
+            else gaugeColor = '#ff4757';
+            gaugeArc.setAttribute('stroke', gaugeColor);
+
+            document.getElementById('opportunityScore').textContent = rec.score;
+            document.getElementById('opportunityScore').style.color = gaugeColor;
+
+            // Gauge details
+            const recent10 = bankrollManager.state.recentResults.slice(-10);
+            const wr10 = recent10.length >= 3 ? (recent10.filter(x=>x).length / recent10.length * 100).toFixed(0) + '%' : '--';
+            document.getElementById('bkWinRate10').textContent = wr10;
+            
+            const recentPnL5 = bankrollManager.state.recentPnL.slice(-5);
+            const pnlTrend = recentPnL5.length >= 2 ? recentPnL5.reduce((a,b)=>a+b,0) : 0;
+            document.getElementById('bkPnlTrend').textContent = pnlTrend >= 0 ? '+$' + pnlTrend.toFixed(2) : '-$' + Math.abs(pnlTrend).toFixed(2);
+            document.getElementById('bkPnlTrend').style.color = pnlTrend >= 0 ? '#00ff88' : '#ff4757';
+
+            const regime = adaptiveState.currentRegime;
+            const favRegimes = ['trending-up', 'trending-down', 'ranging'];
+            document.getElementById('bkRegimeFav').textContent = favRegimes.includes(regime) ? '✅ Sim' : '❌ Não';
+            document.getElementById('bkRegimeFav').style.color = favRegimes.includes(regime) ? '#00ff88' : '#ff4757';
+
+            const streak = adaptiveState.lossStreak > 0 ? -adaptiveState.lossStreak : adaptiveState.winStreak;
+            document.getElementById('bkStreak').textContent = streak >= 0 ? '+' + streak + ' Wins' : Math.abs(streak) + ' Losses';
+            document.getElementById('bkStreak').style.color = streak >= 0 ? '#00ff88' : '#ff4757';
+
+            const vol = adaptiveState.realtimeVolatility;
+            const volOK = vol > 0 && vol < 0.20;
+            document.getElementById('bkVolOK').textContent = volOK ? '✅ Normal' : '⚠️ Alta';
+            document.getElementById('bkVolOK').style.color = volOK ? '#00ff88' : '#ffa726';
+
+            const conf = adaptiveState.signalConfidence;
+            document.getElementById('bkSignalConf').textContent = conf > 0 ? conf.toFixed(0) + '%' : '--';
+
+            // Stake recommendation
+            const stakeRec = document.getElementById('stakeRecommendation');
+            stakeRec.style.borderLeftColor = gaugeColor;
+            document.getElementById('stakeRecIcon').textContent = rec.icon;
+            document.getElementById('stakeRecTitle').textContent = rec.reason;
+            document.getElementById('stakeRecDesc').textContent = 
+                `Score: ${rec.score}/100 | Kelly: ${(rec.kellyPct * 100).toFixed(1)}% | Mult: ${rec.multiplier.toFixed(2)}x`;
+            document.getElementById('stakeRecValue').textContent = '$' + rec.stake.toFixed(2);
+            document.getElementById('stakeRecValue').style.color = gaugeColor;
+            document.getElementById('stakeRecPct').textContent = balance > 0 ? (rec.riskPct * 100).toFixed(2) + '% da banca' : '--';
+
+            // Metrics
+            document.getElementById('bkBalance').textContent = '$' + balance.toFixed(2);
+            document.getElementById('bkRiskPct').textContent = (rec.riskPct * 100).toFixed(2) + '%';
+            document.getElementById('bkStakeMin').textContent = '$' + bankrollManager.config.minStake.toFixed(2);
+            document.getElementById('bkStakeMax').textContent = '$' + (balance * bankrollManager.config.maxRiskPerTrade).toFixed(2);
+            document.getElementById('bkKelly').textContent = bankrollManager.state.kellyEdge > 0 
+                ? (bankrollManager.state.kellyEdge * 100).toFixed(1) + '%'
+                : 'N/A';
+            document.getElementById('bkSafeTrades').textContent = bankrollManager.safeTrades(balance);
+
+            // Score history bar chart
+            updateScoreHistoryChart();
+        }
+
+        function updateScoreHistoryChart() {
+            const container = document.getElementById('scoreHistoryBar');
+            const history = bankrollManager.state.scoreHistory;
+            
+            // Build bars
+            let barsHTML = '';
+            for (let i = 0; i < 30; i++) {
+                const val = i < history.length ? history[i] : 0;
+                const height = Math.max(2, (val / 100) * 40);
+                let color;
+                if (val >= 70) color = '#00ff88';
+                else if (val >= 50) color = '#00d4ff';
+                else if (val >= 30) color = '#ffa726';
+                else color = '#ff4757';
+                barsHTML += '<div class="score-bar" style="height:' + height + 'px;background:' + color + ';opacity:' + (i < history.length ? 1 : 0.15) + ';"></div>';
+            }
+            container.innerHTML = barsHTML;
+        }
+
+        function toggleBankrollManager() {
+            bankrollManager.enabled = !bankrollManager.enabled;
+            const btn = document.getElementById('bankrollToggle');
+            if (bankrollManager.enabled) {
+                btn.textContent = '🏦 Banca: ON';
+                btn.classList.remove('off');
+                showNotification('🏦 Gerenciamento de Banca ATIVADO', 'success');
+            } else {
+                btn.textContent = '🏦 Banca: OFF';
+                btn.classList.add('off');
+                showNotification('🏦 Gerenciamento de Banca desativado', 'warning');
+            }
+        }
+
+        // ===== INTEGRAR COM O SISTEMA EXISTENTE =====
+
+        // Override da função onTradeResult para alimentar o bankroll manager
+        const _originalOnTradeResult = onTradeResult;
+        onTradeResult = function(isWin, pnl) {
+            // Chamar original
+            _originalOnTradeResult(isWin, pnl);
+            // Alimentar bankroll manager
+            bankrollManager.registerResult(isWin, pnl);
+            // Atualizar UI
+            updateBankrollUI();
+        };
+
+        // Override da função getAdaptiveStake para usar bankroll manager
+        const _originalGetAdaptiveStake = getAdaptiveStake;
+        getAdaptiveStake = function(baseStake) {
+            // Se bankroll manager está ativo, usar sua recomendação
+            if (bankrollManager.enabled) {
+                const balance = sessionStats.startBalance + sessionStats.totalPnL;
+                if (balance > 0) {
+                    const rec = bankrollManager.recommendStake(balance);
+                    if (rec.stake > 0) {
+                        console.log('🏦 Bankroll Manager recomenda: $' + rec.stake.toFixed(2) + ' (Score: ' + rec.score + ', ' + rec.reason + ')');
+                        return rec.stake;
+                    }
+                }
+            }
+            // Fallback para sistema original
+            return _originalGetAdaptiveStake(baseStake);
+        };
+
+        // Atualizar UI periodicamente
+        setInterval(() => {
+            if (bankrollManager.enabled && isConnected) {
+                updateBankrollUI();
+            }
+        }, 5000);
+
+        // Atualizar ao inicializar
+        const _originalInitializeUserData = initializeUserData;
+        initializeUserData = function() {
+            _originalInitializeUserData();
+            setTimeout(updateBankrollUI, 2000);
+        };
+
+        console.log('🏦 GERENCIAMENTO DE BANCA INTELIGENTE carregado!');
+        console.log('   📊 Score de Oportunidade (0-100) baseado em 7 fatores');
+        console.log('   📈 Aumenta stake quando oportunidade é boa (score > 60)');
+        console.log('   📉 Diminui stake quando oportunidade é ruim (score < 40)');
+        console.log('   🎲 Kelly Criterion conservador para sizing');
+        console.log('   🛡️ Proteção contra drawdown automática');
+        console.log('   🔥 Win streak boost e loss streak penalty');
+
     </script>
 </body>
 </html>
