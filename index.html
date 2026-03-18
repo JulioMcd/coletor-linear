@@ -1,3 +1,1927 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🤖 DERIV AI — Sistema Autônomo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
+
+  :root {
+    --bg:       #050811;
+    --bg2:      #090e1c;
+    --panel:    rgba(10,18,40,0.85);
+    --border:   rgba(0,200,255,0.18);
+    --cyan:     #00e5ff;
+    --green:    #00ff88;
+    --red:      #ff3355;
+    --orange:   #ffaa00;
+    --purple:   #9945ff;
+    --white:    #e8f0ff;
+    --dim:      rgba(232,240,255,0.5);
+    --glow-c:   0 0 18px rgba(0,229,255,0.4);
+    --glow-g:   0 0 18px rgba(0,255,136,0.4);
+    --glow-r:   0 0 18px rgba(255,51,85,0.4);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* SCANLINES */
+  body::before {
+    content:'';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none; z-index: 9999;
+  }
+
+  /* GRID BACKGROUND */
+  body::after {
+    content:'';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── LOGIN ── */
+  #loginScreen {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    background: radial-gradient(ellipse at center, rgba(0,30,60,0.98) 0%, rgba(5,8,17,0.99) 100%);
+  }
+
+  .login-box {
+    width: 440px; max-width: 95vw;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: 4px;
+    padding: 40px;
+    backdrop-filter: blur(20px);
+    position: relative;
+    box-shadow: 0 0 60px rgba(0,229,255,0.1), inset 0 1px 0 rgba(0,229,255,0.1);
+  }
+  .login-box::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    animation: scanBar 3s ease-in-out infinite;
+  }
+  @keyframes scanBar { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+  .login-logo {
+    text-align: center; margin-bottom: 30px;
+  }
+  .login-logo h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.8rem; font-weight: 900;
+    color: var(--cyan);
+    text-shadow: var(--glow-c);
+    letter-spacing: 4px;
+  }
+  .login-logo p { color: var(--dim); font-size: 0.8rem; letter-spacing: 2px; margin-top: 4px; }
+
+  .login-field { margin-bottom: 18px; }
+  .login-field label {
+    display: block; font-size: 0.75rem; letter-spacing: 2px;
+    color: var(--cyan); margin-bottom: 6px; text-transform: uppercase;
+  }
+  .login-field input, .login-field select {
+    width: 100%; padding: 12px 14px;
+    background: rgba(0,229,255,0.05);
+    border: 1px solid rgba(0,229,255,0.25);
+    border-radius: 2px;
+    color: var(--white);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .login-field input:focus, .login-field select:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 12px rgba(0,229,255,0.2);
+  }
+  .login-field select option { background: #0a1228; }
+
+  .login-row { display: flex; gap: 12px; }
+  .login-row .login-field { flex: 1; }
+
+  .login-btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,229,255,0.05));
+    border: 1px solid var(--cyan);
+    border-radius: 2px;
+    color: var(--cyan);
+    font-family: 'Orbitron', monospace;
+    font-size: 0.85rem; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 10px;
+  }
+  .login-btn:hover {
+    background: rgba(0,229,255,0.2);
+    box-shadow: var(--glow-c);
+    transform: translateY(-1px);
+  }
+  .login-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  #loginStatus {
+    text-align: center; margin-top: 14px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem; min-height: 20px;
+  }
+
+  /* ── MAIN DASHBOARD ── */
+  #dashboard { display: none; position: relative; z-index: 1; }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 24px;
+    background: rgba(5,12,30,0.95);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 100;
+    flex-wrap: wrap; gap: 10px;
+  }
+  .topbar-brand {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.1rem; font-weight: 900;
+    color: var(--cyan);
+    letter-spacing: 3px;
+    text-shadow: var(--glow-c);
+  }
+  .topbar-status { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .status-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem; letter-spacing: 1px;
+    background: rgba(0,0,0,0.3);
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #555;
+  }
+  .dot.on  { background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 2s infinite; }
+  .dot.warn { background: var(--orange); box-shadow: 0 0 6px var(--orange); }
+  .dot.off  { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  .topbar-balance {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.2rem; font-weight: 700;
+    color: var(--green);
+    text-shadow: var(--glow-g);
+  }
+
+  /* AUTO CONTROL BAR */
+  .autobar {
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 24px;
+    background: rgba(0,30,15,0.6);
+    border-bottom: 1px solid rgba(0,255,136,0.15);
+    flex-wrap: wrap;
+  }
+  .autobar-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem; color: var(--green); letter-spacing: 2px;
+  }
+
+  .auto-btn {
+    padding: 7px 18px;
+    border: 1px solid;
+    border-radius: 2px;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 2px; cursor: pointer;
+    transition: all 0.2s; background: transparent;
+  }
+  .auto-btn.start { border-color: var(--green); color: var(--green); }
+  .auto-btn.start:hover, .auto-btn.start.active {
+    background: rgba(0,255,136,0.15);
+    box-shadow: var(--glow-g);
+  }
+  .auto-btn.stop { border-color: var(--red); color: var(--red); }
+  .auto-btn.stop:hover { background: rgba(255,51,85,0.15); box-shadow: var(--glow-r); }
+  .auto-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  #autoStatusText {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem; color: var(--dim);
+    flex: 1; text-align: right;
+  }
+
+  /* MAIN GRID */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr 300px;
+    grid-template-rows: auto;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 120px);
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    background: var(--bg2);
+    padding: 20px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  /* CENTER PANEL */
+  .center-panel {
+    background: var(--bg);
+    padding: 20px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    background: var(--bg2);
+    padding: 20px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+
+  /* SECTION HEADER */
+  .section-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .section-hdr h3 {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem; letter-spacing: 3px;
+    color: var(--cyan); text-transform: uppercase;
+  }
+  .section-hdr span {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem; color: var(--dim);
+  }
+
+  /* CARD */
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 16px;
+    background: rgba(0,10,25,0.6);
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content:''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0.4;
+  }
+
+  /* BIG NUMBER */
+  .big-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 2rem; font-weight: 900;
+    line-height: 1;
+  }
+  .big-num.green { color: var(--green); text-shadow: var(--glow-g); }
+  .big-num.red   { color: var(--red);   text-shadow: var(--glow-r); }
+  .big-num.cyan  { color: var(--cyan);  text-shadow: var(--glow-c); }
+  .big-num.orange{ color: var(--orange);}
+
+  .label {
+    font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 4px;
+  }
+
+  /* METRICS ROW */
+  .metrics-row { display: flex; gap: 10px; }
+  .metric-box {
+    flex: 1; text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 10px 6px;
+    background: rgba(0,0,0,0.3);
+  }
+  .metric-box .m-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.1rem; font-weight: 700;
+    color: var(--white);
+  }
+  .metric-box .m-lbl {
+    font-size: 0.65rem; letter-spacing: 1px;
+    color: var(--dim); text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* PROGRESS BAR */
+  .prog-wrap { margin: 8px 0; }
+  .prog-label { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .prog-label span { font-size: 0.75rem; color: var(--dim); }
+  .prog-track {
+    height: 4px; background: rgba(255,255,255,0.08);
+    border-radius: 2px; overflow: hidden;
+  }
+  .prog-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 0.5s ease;
+    background: var(--cyan);
+  }
+  .prog-fill.green  { background: var(--green); }
+  .prog-fill.orange { background: var(--orange); }
+  .prog-fill.red    { background: var(--red); }
+
+  /* SIGNAL BOX */
+  #signalBox {
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 20px;
+    text-align: center;
+    background: rgba(0,10,25,0.8);
+    position: relative;
+    overflow: hidden;
+    min-height: 160px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px;
+  }
+  #signalBox.call { border-color: rgba(0,255,136,0.5); box-shadow: 0 0 25px rgba(0,255,136,0.15); }
+  #signalBox.put  { border-color: rgba(255,51,85,0.5); box-shadow: 0 0 25px rgba(255,51,85,0.15); }
+  #signalBox.wait { border-color: rgba(0,229,255,0.3); }
+
+  #signalDir {
+    font-family: 'Orbitron', monospace;
+    font-size: 3rem; font-weight: 900;
+    letter-spacing: 6px;
+  }
+  #signalDir.call { color: var(--green); text-shadow: 0 0 30px rgba(0,255,136,0.6); }
+  #signalDir.put  { color: var(--red);   text-shadow: 0 0 30px rgba(255,51,85,0.6); }
+  #signalDir.wait { color: var(--cyan);  font-size: 1.4rem; }
+
+  #signalConf { font-family: 'Orbitron', monospace; font-size: 1.1rem; color: var(--orange); }
+  #signalMethod { font-size: 0.75rem; color: var(--dim); letter-spacing: 1px; }
+
+  /* ACTIVE TRADE */
+  #activeTrade {
+    display: none;
+    border: 1px solid var(--orange);
+    border-radius: 3px; padding: 16px;
+    background: rgba(255,170,0,0.06);
+    animation: glowPulse 2s ease-in-out infinite;
+  }
+  @keyframes glowPulse { 0%,100%{box-shadow:0 0 10px rgba(255,170,0,0.2)} 50%{box-shadow:0 0 25px rgba(255,170,0,0.4)} }
+
+  .trade-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .trade-dir {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.5rem; font-weight: 900;
+  }
+  .trade-dir.call { color: var(--green); }
+  .trade-dir.put  { color: var(--red); }
+
+  .trade-timer {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1.2rem; color: var(--orange);
+  }
+
+  .trade-info { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .trade-info-item { font-size: 0.8rem; color: var(--dim); }
+  .trade-info-item span { color: var(--white); font-weight: 600; }
+
+  /* CHART CANVAS */
+  #tickCanvas {
+    width: 100%; height: 200px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: rgba(0,0,0,0.4);
+    display: block;
+  }
+
+  /* AI LOG */
+  #aiLog {
+    height: 220px; overflow-y: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  #aiLog::-webkit-scrollbar { width: 4px; }
+  #aiLog::-webkit-scrollbar-track { background: transparent; }
+  #aiLog::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-line { line-height: 1.4; }
+  .log-line.info  { color: var(--cyan); }
+  .log-line.win   { color: var(--green); }
+  .log-line.loss  { color: var(--red); }
+  .log-line.warn  { color: var(--orange); }
+  .log-line.sys   { color: var(--dim); }
+  .log-line.ai    { color: var(--purple); }
+
+  /* TRADE HISTORY */
+  #tradeHistory {
+    max-height: 300px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  #tradeHistory::-webkit-scrollbar { width: 4px; }
+  #tradeHistory::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .trade-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px;
+    border-radius: 2px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.75rem;
+    border: 1px solid transparent;
+  }
+  .trade-row.win  { background: rgba(0,255,136,0.06); border-color: rgba(0,255,136,0.2); }
+  .trade-row.loss { background: rgba(255,51,85,0.06);  border-color: rgba(255,51,85,0.2); }
+  .trade-row.open { background: rgba(255,170,0,0.06);  border-color: rgba(255,170,0,0.2); }
+
+  .tr-dir { font-weight: 700; width: 40px; }
+  .tr-dir.call { color: var(--green); }
+  .tr-dir.put  { color: var(--red); }
+  .tr-result { margin-left: auto; font-weight: 700; }
+  .tr-result.pos { color: var(--green); }
+  .tr-result.neg { color: var(--red); }
+  .tr-result.open { color: var(--orange); }
+  .tr-time { color: var(--dim); width: 60px; text-align: right; }
+
+  /* INDICATORS GRID */
+  .ind-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .ind-item {
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    background: rgba(0,0,0,0.3);
+  }
+  .ind-label { font-size: 0.65rem; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; margin-bottom: 4px; }
+  .ind-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 1rem; font-weight: 700;
+    color: var(--white);
+  }
+
+  /* AI MODEL STATUS */
+  .model-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 0.78rem;
+  }
+  .model-item:last-child { border-bottom: none; }
+  .model-name { font-family: 'Share Tech Mono', monospace; color: var(--dim); }
+  .model-info { display: flex; gap: 8px; align-items: center; }
+  .model-acc { font-family: 'Orbitron', monospace; font-size: 0.8rem; color: var(--cyan); }
+  .model-badge {
+    font-size: 0.6rem; padding: 2px 6px;
+    border-radius: 1px; letter-spacing: 1px;
+  }
+  .model-badge.ready  { background: rgba(0,255,136,0.2); color: var(--green); }
+  .model-badge.learn  { background: rgba(0,229,255,0.2); color: var(--cyan); }
+  .model-badge.wait   { background: rgba(100,100,100,0.2); color: var(--dim); }
+
+  /* REGIME BADGE */
+  .regime-box {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.3);
+  }
+  .regime-icon { font-size: 1.6rem; }
+  .regime-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.9rem; font-weight: 700;
+  }
+  .regime-sub { font-size: 0.7rem; color: var(--dim); margin-top: 2px; }
+
+  /* STRATEGY STATUS */
+  .strat-box {
+    padding: 10px 14px;
+    border-radius: 2px;
+    border-left: 3px solid var(--purple);
+    background: rgba(153,69,255,0.08);
+  }
+  .strat-name { font-size: 0.9rem; font-weight: 600; color: var(--purple); }
+  .strat-desc { font-size: 0.75rem; color: var(--dim); margin-top: 2px; }
+
+  /* BANKROLL GAUGE */
+  .gauge-wrap { text-align: center; padding: 10px 0; }
+  #gaugeSvg { width: 120px; height: 70px; overflow: visible; }
+  .gauge-score {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.8rem; font-weight: 900;
+    color: var(--cyan);
+    text-align: center;
+    line-height: 1;
+  }
+  .gauge-lbl { font-size: 0.7rem; letter-spacing: 2px; color: var(--dim); text-align: center; margin-top: 2px; }
+
+  /* RISK LEVEL */
+  .risk-bar {
+    height: 6px; border-radius: 3px; margin: 6px 0;
+    background: linear-gradient(90deg, var(--green) 0%, var(--orange) 50%, var(--red) 100%);
+    position: relative;
+  }
+  #riskIndicator {
+    position: absolute; top: -3px; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--white);
+    border: 2px solid var(--bg);
+    transform: translateX(-50%);
+    transition: left 0.5s ease;
+  }
+
+  /* NOTIFICATION */
+  #notifArea {
+    position: fixed; bottom: 20px; right: 20px;
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 10000; pointer-events: none;
+    max-width: 300px;
+  }
+  .notif {
+    padding: 10px 16px;
+    border-radius: 3px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    border: 1px solid;
+    backdrop-filter: blur(10px);
+    animation: slideIn 0.3s ease, fadeOut 0.4s ease 3s forwards;
+    pointer-events: none;
+  }
+  .notif.success { background: rgba(0,255,136,0.12); border-color: rgba(0,255,136,0.4); color: var(--green); }
+  .notif.error   { background: rgba(255,51,85,0.12);  border-color: rgba(255,51,85,0.4);  color: var(--red); }
+  .notif.info    { background: rgba(0,229,255,0.12);  border-color: rgba(0,229,255,0.4);  color: var(--cyan); }
+  .notif.warn    { background: rgba(255,170,0,0.12);  border-color: rgba(255,170,0,0.4);  color: var(--orange); }
+  @keyframes slideIn  { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+  @keyframes fadeOut  { to{opacity:0} }
+
+  /* EMERGENCY STOP */
+  #emergencyStop {
+    display: none;
+    padding: 10px 14px;
+    background: rgba(255,51,85,0.15);
+    border: 1px solid var(--red);
+    border-radius: 3px;
+    text-align: center;
+    animation: glowPulseRed 2s infinite;
+  }
+  @keyframes glowPulseRed { 0%,100%{box-shadow:0 0 10px rgba(255,51,85,0.2)} 50%{box-shadow:0 0 25px rgba(255,51,85,0.5)} }
+  .emergency-title { font-family: 'Orbitron', monospace; font-size: 0.85rem; color: var(--red); letter-spacing: 2px; }
+  .emergency-sub { font-size: 0.75rem; color: var(--dim); margin-top: 4px; }
+
+  /* DAILY LIMIT BAR */
+  .daily-wrap { padding: 2px 0; }
+
+  /* LOADING OVERLAY */
+  #loadOverlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(5,8,17,0.92);
+    z-index: 500;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 14px;
+  }
+  #loadOverlay.show { display: flex; }
+  .load-spinner {
+    width: 50px; height: 50px;
+    border: 2px solid rgba(0,229,255,0.2);
+    border-top: 2px solid var(--cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  #loadMsg { font-family: 'Share Tech Mono', monospace; font-size: 0.9rem; color: var(--cyan); }
+
+  /* RESPONSIVE */
+  @media (max-width: 1200px) {
+    .main-grid { grid-template-columns: 280px 1fr; }
+    .right-panel { display: none; }
+  }
+  @media (max-width: 800px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .left-panel { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <h1>DERIV AI</h1>
+      <p>SISTEMA AUTÔNOMO DE TRADING • v3.0</p>
+    </div>
+
+    <div class="login-field">
+      <label>Token Deriv (API)</label>
+      <input type="password" id="loginToken" placeholder="Cole seu token aqui..." />
+    </div>
+
+    <div class="login-row">
+      <div class="login-field">
+        <label>URL Servidor IA</label>
+        <input type="text" id="loginAiUrl" value="https://trading-ai-production.up.railway.app" />
+      </div>
+      <div class="login-field">
+        <label>Tipo Conta</label>
+        <select id="loginAccType">
+          <option value="demo">Demo (Virtual)</option>
+          <option value="real">Real</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="login-row">
+      <div class="login-field">
+        <label>Símbolo</label>
+        <select id="loginSymbol">
+          <option value="R_50">R_50 (Volatility 50)</option>
+          <option value="R_10">R_10</option>
+          <option value="R_25">R_25</option>
+          <option value="R_75">R_75</option>
+          <option value="R_100">R_100</option>
+          <option value="1HZ50V">1HZ50V</option>
+          <option value="1HZ100V">1HZ100V</option>
+        </select>
+      </div>
+      <div class="login-field">
+        <label>Stake Base ($)</label>
+        <input type="number" id="loginStake" value="1" min="0.35" step="0.01" />
+      </div>
+    </div>
+
+    <div class="login-row">
+      <div class="login-field">
+        <label>Duração (s)</label>
+        <select id="loginDuration">
+          <option value="60">60s</option>
+          <option value="120">120s</option>
+          <option value="300">300s</option>
+          <option value="30">30s</option>
+          <option value="15">15s</option>
+        </select>
+      </div>
+      <div class="login-field">
+        <label>Limite Diário ($)</label>
+        <input type="number" id="loginDailyLimit" value="50" min="5" step="1" />
+      </div>
+    </div>
+
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">⚡ INICIAR SISTEMA</button>
+    <div id="loginStatus"></div>
+  </div>
+</div>
+
+<!-- ── LOAD OVERLAY ── -->
+<div id="loadOverlay">
+  <div class="load-spinner"></div>
+  <div id="loadMsg">Conectando à Deriv...</div>
+</div>
+
+<!-- ── NOTIFICATIONS ── -->
+<div id="notifArea"></div>
+
+<!-- ── MAIN DASHBOARD ── -->
+<div id="dashboard">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-brand">DERIV AI ∴ AUTO</div>
+    <div class="topbar-status">
+      <div class="status-pill"><div class="dot" id="dotDeriv"></div><span id="lblDeriv">DERIV</span></div>
+      <div class="status-pill"><div class="dot" id="dotAi"></div><span id="lblAi">IA SERVER</span></div>
+      <div class="status-pill"><div class="dot" id="dotAuto"></div><span id="lblAuto">AUTO OFF</span></div>
+      <div class="status-pill" style="border-color:rgba(0,229,255,0.4)">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:0.75rem;color:var(--dim)">SYM</span>
+        <span id="lblSymbol" style="font-family:'Orbitron',monospace;font-size:0.75rem;color:var(--cyan)">---</span>
+      </div>
+    </div>
+    <div class="topbar-balance" id="topBalance">$0.00</div>
+  </div>
+
+  <!-- AUTO BAR -->
+  <div class="autobar">
+    <span class="autobar-label">MODO AUTÔNOMO</span>
+    <button class="auto-btn start" id="btnStart" onclick="startAuto()">▶ INICIAR AUTO</button>
+    <button class="auto-btn stop" id="btnStop" onclick="stopAuto()" disabled>■ PARAR</button>
+    <div id="autoStatusText">Sistema aguardando início...</div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
+
+      <!-- SALDO -->
+      <div class="card">
+        <div class="section-hdr"><h3>Banca</h3><span id="accType">DEMO</span></div>
+        <div class="label">Saldo Atual</div>
+        <div class="big-num green" id="balanceMain">$0.00</div>
+        <div style="margin-top:8px">
+          <div class="label">P&L da Sessão</div>
+          <div class="big-num" id="sessionPnl" style="font-size:1.4rem">$0.00</div>
+        </div>
+        <div class="metrics-row" style="margin-top:10px">
+          <div class="metric-box">
+            <div class="m-val" id="mTrades">0</div>
+            <div class="m-lbl">Trades</div>
+          </div>
+          <div class="metric-box">
+            <div class="m-val green" id="mWinRate">0%</div>
+            <div class="m-lbl">Win Rate</div>
+          </div>
+          <div class="metric-box">
+            <div class="m-val" id="mStreak">0</div>
+            <div class="m-lbl">Streak</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIMITE DIÁRIO -->
+      <div class="card">
+        <div class="section-hdr"><h3>Limite Diário</h3></div>
+        <div class="daily-wrap">
+          <div class="prog-wrap">
+            <div class="prog-label">
+              <span>Perda Hoje</span>
+              <span id="dailyLossText">$0 / $50</span>
+            </div>
+            <div class="prog-track"><div class="prog-fill red" id="dailyLossBar" style="width:0%"></div></div>
+          </div>
+          <div class="prog-wrap">
+            <div class="prog-label">
+              <span>Lucro Hoje</span>
+              <span id="dailyProfitText">$0 / $50</span>
+            </div>
+            <div class="prog-track"><div class="prog-fill green" id="dailyProfitBar" style="width:0%"></div></div>
+          </div>
+        </div>
+        <div id="emergencyStop">
+          <div class="emergency-title">⛔ SISTEMA BLOQUEADO</div>
+          <div class="emergency-sub" id="emergencyReason">Limite diário atingido</div>
+        </div>
+      </div>
+
+      <!-- SCORE BANCA -->
+      <div class="card">
+        <div class="section-hdr"><h3>Score de Oportunidade</h3></div>
+        <div class="gauge-wrap">
+          <svg id="gaugeSvg" viewBox="0 0 120 70">
+            <path d="M10,70 A50,50 0 0,1 110,70" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8" stroke-linecap="round"/>
+            <path id="gaugeArc" d="M10,70 A50,50 0 0,1 110,70" fill="none" stroke="var(--cyan)" stroke-width="8" stroke-linecap="round"
+                  stroke-dasharray="157" stroke-dashoffset="100" style="transition:stroke-dashoffset 0.6s,stroke 0.4s"/>
+          </svg>
+        </div>
+        <div class="gauge-score" id="gaugeScore">--</div>
+        <div class="gauge-lbl">SCORE /100</div>
+        <div style="margin-top:12px">
+          <div class="label">Risco Atual</div>
+          <div class="risk-bar"><div id="riskIndicator" style="left:10%"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px">
+            <span style="font-size:0.65rem;color:var(--green)">BAIXO</span>
+            <span style="font-size:0.65rem;color:var(--dim)" id="riskLabel">---</span>
+            <span style="font-size:0.65rem;color:var(--red)">ALTO</span>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="label">Stake Recomendado</div>
+          <div style="font-family:'Orbitron',monospace;font-size:1.4rem;font-weight:700;color:var(--orange)" id="stakeRec">$--</div>
+          <div style="font-size:0.7rem;color:var(--dim)" id="stakeReason">Aguardando análise...</div>
+        </div>
+      </div>
+
+      <!-- MARTINGALE -->
+      <div class="card">
+        <div class="section-hdr"><h3>Martingale</h3><span id="mgStatus">OFF</span></div>
+        <div class="metrics-row">
+          <div class="metric-box">
+            <div class="m-val orange" id="mgLevel">0</div>
+            <div class="m-lbl">Nível MG</div>
+          </div>
+          <div class="metric-box">
+            <div class="m-val" id="mgNext">$--</div>
+            <div class="m-lbl">Próx Stake</div>
+          </div>
+          <div class="metric-box">
+            <div class="m-val" id="mgMax">5</div>
+            <div class="m-lbl">Máx</div>
+          </div>
+        </div>
+        <div class="prog-wrap" style="margin-top:8px">
+          <div class="prog-label"><span>Progresso MG</span><span id="mgPct">0%</span></div>
+          <div class="prog-track"><div class="prog-fill orange" id="mgBar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+    </div><!-- /left-panel -->
+
+    <!-- CENTER PANEL -->
+    <div class="center-panel">
+
+      <!-- SIGNAL BOX -->
+      <div id="signalBox" class="wait">
+        <div class="label">SINAL IA</div>
+        <div id="signalDir" class="wait">AGUARDANDO</div>
+        <div id="signalConf">---</div>
+        <div id="signalMethod">Inicialize o sistema para começar</div>
+      </div>
+
+      <!-- ACTIVE TRADE -->
+      <div id="activeTrade">
+        <div class="trade-hdr">
+          <div>
+            <div class="label">ORDEM ATIVA</div>
+            <div class="trade-dir call" id="atDir">CALL</div>
+          </div>
+          <div class="trade-timer" id="atTimer">--:--</div>
+        </div>
+        <div class="trade-info">
+          <div class="trade-info-item">Símbolo: <span id="atSymbol">--</span></div>
+          <div class="trade-info-item">Stake: <span id="atStake">$--</span></div>
+          <div class="trade-info-item">Abertura: <span id="atTime">--:--</span></div>
+          <div class="trade-info-item">Duração: <span id="atDur">--s</span></div>
+        </div>
+      </div>
+
+      <!-- MINI CHART -->
+      <div class="card" style="padding:12px">
+        <div class="section-hdr"><h3>Preço em Tempo Real</h3><span id="lblPrice" style="font-family:'Orbitron',monospace;font-size:0.85rem;color:var(--white)">--</span></div>
+        <canvas id="tickCanvas"></canvas>
+      </div>
+
+      <!-- INDICADORES -->
+      <div class="card">
+        <div class="section-hdr"><h3>Indicadores Técnicos</h3><span id="indSource">IA + Local</span></div>
+        <div class="ind-grid">
+          <div class="ind-item">
+            <div class="ind-label">RSI (14)</div>
+            <div class="ind-val" id="indRsi">--</div>
+          </div>
+          <div class="ind-item">
+            <div class="ind-label">MACD Hist</div>
+            <div class="ind-val" id="indMacd">--</div>
+          </div>
+          <div class="ind-item">
+            <div class="ind-label">Stochastic</div>
+            <div class="ind-val" id="indStoch">--</div>
+          </div>
+          <div class="ind-item">
+            <div class="ind-label">BB Position</div>
+            <div class="ind-val" id="indBb">--</div>
+          </div>
+          <div class="ind-item">
+            <div class="ind-label">Volatilidade</div>
+            <div class="ind-val" id="indVol">--</div>
+          </div>
+          <div class="ind-item">
+            <div class="ind-label">Tendência</div>
+            <div class="ind-val" id="indTrend">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REGIME E ESTRATÉGIA -->
+      <div class="card">
+        <div class="section-hdr"><h3>Regime de Mercado</h3></div>
+        <div class="regime-box" id="regimeBox">
+          <div class="regime-icon" id="regimeIcon">❓</div>
+          <div>
+            <div class="regime-name" id="regimeName">Analisando...</div>
+            <div class="regime-sub" id="regimeSub">Aguardando dados</div>
+          </div>
+        </div>
+        <div class="strat-box" style="margin-top:10px" id="stratBox">
+          <div class="strat-name" id="stratName">🔵 Padrão</div>
+          <div class="strat-desc" id="stratDesc">Sistema em modo neutro</div>
+        </div>
+      </div>
+
+      <!-- LOG IA -->
+      <div>
+        <div class="section-hdr"><h3>Log do Sistema</h3><span style="font-size:0.7rem;color:var(--dim)">Tempo Real</span></div>
+        <div id="aiLog"></div>
+      </div>
+
+    </div><!-- /center-panel -->
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+
+      <!-- MODELOS IA -->
+      <div class="card">
+        <div class="section-hdr"><h3>Modelos IA</h3></div>
+        <div id="modelList">
+          <div style="color:var(--dim);font-size:0.8rem;text-align:center;padding:10px">Aguardando servidor...</div>
+        </div>
+      </div>
+
+      <!-- HISTÓRICO -->
+      <div class="card">
+        <div class="section-hdr"><h3>Histórico de Trades</h3><span id="hdrTrades">0 trades</span></div>
+        <div id="tradeHistory">
+          <div style="color:var(--dim);font-size:0.8rem;text-align:center;padding:20px">Nenhum trade ainda</div>
+        </div>
+      </div>
+
+      <!-- PROTEÇÕES ATIVAS -->
+      <div class="card">
+        <div class="section-hdr"><h3>Proteções</h3></div>
+        <div style="display:flex;flex-direction:column;gap:8px" id="protectionList">
+          <div class="model-item">
+            <div class="model-name">Drawdown Guard</div>
+            <div class="model-badge ready" id="prot1">ATIVO</div>
+          </div>
+          <div class="model-item">
+            <div class="model-name">Loss Streak (-6)</div>
+            <div class="model-badge ready" id="prot2">ATIVO</div>
+          </div>
+          <div class="model-item">
+            <div class="model-name">Limite Diário</div>
+            <div class="model-badge ready" id="prot3">ATIVO</div>
+          </div>
+          <div class="model-item">
+            <div class="model-name">Volatilidade Alta</div>
+            <div class="model-badge ready" id="prot4">ATIVO</div>
+          </div>
+          <div class="model-item">
+            <div class="model-name">Martingale Max</div>
+            <div class="model-badge ready" id="prot5">ATIVO</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right-panel -->
+
+  </div><!-- /main-grid -->
+</div><!-- /dashboard -->
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+//  CONFIGURAÇÃO GLOBAL
+// ═══════════════════════════════════════════════════════════
+const CFG = {
+  DERIV_WS: 'wss://ws.binaryws.com/websockets/v3?app_id=1089',
+  MIN_CONFIDENCE: 72,     // % mínimo para executar trade
+  MIN_AI_CANDLES: 30,     // mínimo de candles para o servidor dar sinal
+  SIGNAL_INTERVAL: 60000, // ms entre consultas de sinal
+  TICK_BUFFER: 200,       // ticks mantidos no gráfico
+  MG_MAX: 5,              // máximo de níveis Martingale
+  MG_MULTIPLIER: 2.05,    // fator Martingale
+  DRAWDOWN_WARN: 0.08,    // 8% drawdown = alerta
+  DRAWDOWN_MAX:  0.15,    // 15% drawdown = bloquear
+  LOSS_STREAK_WARN: 3,
+  LOSS_STREAK_BLOCK: 6,
+  STAKE_MIN: 0.35,
+};
+
+// ═══════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════
+let state = {
+  // conexão
+  derivWs: null,
+  derivConnected: false,
+  derivAuthed: false,
+  aiConnected: false,
+  aiUrl: '',
+  token: '',
+  symbol: 'R_50',
+  accountType: 'demo',
+  // banca
+  balance: 0,
+  startBalance: 0,
+  peakBalance: 0,
+  totalPnL: 0,
+  dailyLoss: 0,
+  dailyProfit: 0,
+  dailyLimit: 50,
+  // trades
+  trades: [],
+  totalTrades: 0,
+  wonTrades: 0,
+  lossStreak: 0,
+  winStreak: 0,
+  // ordem ativa
+  hasActiveOrder: false,
+  activeOrder: null,
+  orderTimer: null,
+  // configurações
+  baseStake: 1,
+  duration: 60,
+  // Martingale
+  mgLevel: 0,
+  mgCooldown: false,
+  // ticks
+  ticks: [],
+  lastPrice: 0,
+  // IA
+  lastSignal: null,
+  lastAnalysis: null,
+  aiCandles: 0,
+  // auto
+  isAuto: false,
+  autoTimer: null,
+  autoPaused: false,
+  autoLoopCount: 0,
+  // bloqueio
+  isBlocked: false,
+  blockReason: '',
+  // estratégia adaptativa
+  regime: 'unknown',
+  strategy: 'default',
+  strategyChanges: 0,
+};
+
+const strategies = {
+  default:        { name:'🔵 Padrão',        desc:'Operação normal balanceada', mgMax:5, stakeMult:1.0, delayMult:1.0 },
+  'trend-follow': { name:'📈 Trend Follow',  desc:'Seguindo tendência de mercado', mgMax:4, stakeMult:1.1, delayMult:0.8 },
+  'mean-reversion':{ name:'↩️ Mean Reversion',desc:'Reversão à média (mercado lateral)', mgMax:3, stakeMult:0.9, delayMult:1.1 },
+  'volatile-scalp':{ name:'🌪️ Scalp Volátil', desc:'Scalping em alta volatilidade', mgMax:3, stakeMult:0.7, delayMult:0.6 },
+  conservative:   { name:'🛡️ Conservador',   desc:'Após losses - reduzido', mgMax:2, stakeMult:0.6, delayMult:1.5 },
+  'ultra-safe':   { name:'🔴 Ultra-Seguro',  desc:'Modo emergência - mínimo', mgMax:1, stakeMult:0.4, delayMult:2.0 },
+  pause:          { name:'⏸️ Pausado',        desc:'Sistema em pausa de segurança', mgMax:0, stakeMult:0, delayMult:10 },
+};
+
+// ═══════════════════════════════════════════════════════════
+//  LOGIN
+// ═══════════════════════════════════════════════════════════
+async function doLogin() {
+  const token = document.getElementById('loginToken').value.trim();
+  const aiUrl  = document.getElementById('loginAiUrl').value.trim();
+  if (!token) { setLoginStatus('Insira o token Deriv', 'red'); return; }
+  if (!aiUrl)  { setLoginStatus('Insira a URL do servidor IA', 'red'); return; }
+
+  state.token       = token;
+  state.aiUrl       = aiUrl.replace(/\/$/, '');
+  state.symbol      = document.getElementById('loginSymbol').value;
+  state.accountType = document.getElementById('loginAccType').value;
+  state.baseStake   = parseFloat(document.getElementById('loginStake').value) || 1;
+  state.duration    = parseInt(document.getElementById('loginDuration').value) || 60;
+  state.dailyLimit  = parseFloat(document.getElementById('loginDailyLimit').value) || 50;
+
+  document.getElementById('loginBtn').disabled = true;
+  setLoginStatus('Verificando servidor IA...', 'cyan');
+
+  // Testar servidor IA
+  try {
+    const r = await fetch(state.aiUrl + '/', { signal: AbortSignal.timeout(6000) });
+    const d = await r.json();
+    if (d.status === 'online') {
+      state.aiConnected = true;
+      setLoginStatus('✅ IA online! Conectando à Deriv...', '#00ff88');
+    }
+  } catch(e) {
+    setLoginStatus('⚠️ Servidor IA indisponível — modo local ativo', '#ffaa00');
+    state.aiConnected = false;
+  }
+
+  // Mostrar dashboard
+  setTimeout(() => {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('lblSymbol').textContent = state.symbol;
+    document.getElementById('accType').textContent = state.accountType.toUpperCase();
+
+    // Conectar Deriv
+    connectDeriv();
+    // Polling de status IA
+    setInterval(pollAiStatus, 30000);
+    // Atualizar UI
+    setInterval(updateUI, 2000);
+  }, 800);
+}
+
+function setLoginStatus(msg, color) {
+  const el = document.getElementById('loginStatus');
+  el.textContent = msg;
+  el.style.color = color;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DERIV WEBSOCKET
+// ═══════════════════════════════════════════════════════════
+function connectDeriv() {
+  showLoad('Conectando à Deriv...');
+  try {
+    state.derivWs = new WebSocket(CFG.DERIV_WS);
+
+    state.derivWs.onopen = () => {
+      log('🌐 WebSocket Deriv conectado', 'info');
+      state.derivConnected = true;
+      setDot('dotDeriv', 'warn');
+      // Autorizar
+      send({ authorize: state.token });
+    };
+
+    state.derivWs.onmessage = (evt) => {
+      try { handleDerivMsg(JSON.parse(evt.data)); } catch(e) {}
+    };
+
+    state.derivWs.onerror = () => {
+      state.derivConnected = false;
+      setDot('dotDeriv', 'off');
+      log('❌ Erro WebSocket Deriv', 'warn');
+    };
+
+    state.derivWs.onclose = () => {
+      state.derivConnected = false;
+      state.derivAuthed = false;
+      setDot('dotDeriv', 'off');
+      log('⚠️ Deriv desconectado — reconectando em 15s', 'warn');
+      setTimeout(connectDeriv, 15000);
+    };
+  } catch(e) {
+    log('❌ Falha ao conectar Deriv: ' + e.message, 'warn');
+    setTimeout(connectDeriv, 15000);
+  }
+}
+
+function send(payload) {
+  if (state.derivWs && state.derivWs.readyState === WebSocket.OPEN) {
+    state.derivWs.send(JSON.stringify(payload));
+  }
+}
+
+function handleDerivMsg(msg) {
+  const mt  = msg.msg_type;
+  const err = msg.error;
+
+  if (err) {
+    log('❌ Deriv: ' + err.message, 'warn');
+    if (err.code === 'InvalidToken') {
+      notify('Token inválido!', 'error');
+      hideLoad();
+    }
+    return;
+  }
+
+  if (mt === 'authorize') {
+    state.derivAuthed = true;
+    setDot('dotDeriv', 'on');
+    log(`✅ Autorizado — Conta: ${msg.authorize.loginid}`, 'info');
+    hideLoad();
+
+    // Pedir saldo
+    send({ balance: 1, subscribe: 1 });
+    // Enviar token para o servidor IA
+    sendTokenToAI();
+    // Subscrever ticks
+    send({ ticks: state.symbol, subscribe: 1 });
+
+  } else if (mt === 'balance') {
+    const bal = parseFloat(msg.balance.balance);
+    if (state.startBalance === 0) {
+      state.startBalance = bal;
+      state.peakBalance  = bal;
+      log(`💰 Saldo inicial: $${bal.toFixed(2)}`, 'info');
+      updateBankrollUI();
+    }
+    state.balance = bal;
+    document.getElementById('topBalance').textContent = '$' + bal.toFixed(2);
+    document.getElementById('balanceMain').textContent = '$' + bal.toFixed(2);
+
+  } else if (mt === 'tick') {
+    const price = parseFloat(msg.tick.quote);
+    state.lastPrice = price;
+    state.ticks.push(price);
+    if (state.ticks.length > CFG.TICK_BUFFER) state.ticks.shift();
+    document.getElementById('lblPrice').textContent = price.toFixed(5);
+    drawChart();
+
+  } else if (mt === 'buy') {
+    handleBuyResponse(msg);
+
+  } else if (mt === 'proposal_open_contract') {
+    handleContractUpdate(msg);
+
+  } else if (mt === 'error') {
+    log('❌ ' + (msg.error?.message || 'Erro desconhecido'), 'warn');
+  }
+}
+
+async function sendTokenToAI() {
+  if (!state.aiConnected) return;
+  try {
+    await fetch(state.aiUrl + '/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: state.token }),
+    });
+    log('📡 Token enviado ao servidor IA', 'ai');
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AUTO TRADING
+// ═══════════════════════════════════════════════════════════
+function startAuto() {
+  if (state.isBlocked) {
+    notify('Sistema bloqueado — verifique limites', 'error');
+    return;
+  }
+  state.isAuto = true;
+  state.autoPaused = false;
+  document.getElementById('btnStart').disabled = true;
+  document.getElementById('btnStop').disabled = false;
+  document.getElementById('btnStart').classList.add('active');
+  setDot('dotAuto', 'on');
+  document.getElementById('lblAuto').textContent = 'AUTO ON';
+  notify('🤖 Modo Autônomo INICIADO', 'success');
+  log('🤖 AUTO TRADING INICIADO', 'win');
+  autoLoop();
+}
+
+function stopAuto() {
+  state.isAuto = false;
+  if (state.autoTimer) { clearTimeout(state.autoTimer); state.autoTimer = null; }
+  document.getElementById('btnStart').disabled = false;
+  document.getElementById('btnStop').disabled = true;
+  document.getElementById('btnStart').classList.remove('active');
+  setDot('dotAuto', 'off');
+  document.getElementById('lblAuto').textContent = 'AUTO OFF';
+  notify('⏹️ Auto Trading parado', 'warn');
+  log('⏹️ AUTO TRADING PARADO', 'warn');
+}
+
+async function autoLoop() {
+  if (!state.isAuto) return;
+
+  state.autoLoopCount++;
+  const loopN = state.autoLoopCount;
+
+  try {
+    // Verificar bloqueios
+    if (checkBlocked()) {
+      setAutoStatus('⛔ Sistema bloqueado — aguardando liberação...');
+      state.autoTimer = setTimeout(autoLoop, 30000);
+      return;
+    }
+
+    // Verificar ordem ativa
+    if (state.hasActiveOrder) {
+      setAutoStatus(`⏳ Ordem ativa em andamento — ${state.activeOrder?.direction || ''}...`);
+      state.autoTimer = setTimeout(autoLoop, 5000);
+      return;
+    }
+
+    // Verificar pausa de estratégia
+    if (state.strategy === 'pause') {
+      setAutoStatus('⏸️ Sistema pausado por proteção de loss streak...');
+      state.autoTimer = setTimeout(autoLoop, 30000);
+      return;
+    }
+
+    setAutoStatus('🔍 Consultando IA para sinal...');
+    log(`[${loopN}] 🔍 Consultando sinal da IA...`, 'ai');
+
+    // Obter sinal
+    const signal = await getSignalFromAI();
+
+    if (!signal) {
+      setAutoStatus('⚠️ IA sem sinal — aguardando dados...');
+      log('⚠️ Sem sinal da IA — aguardando candles', 'warn');
+      state.autoTimer = setTimeout(autoLoop, 20000);
+      return;
+    }
+
+    // Atualizar UI de sinal
+    updateSignalUI(signal);
+
+    // Verificar confiança
+    if (signal.confidence < CFG.MIN_CONFIDENCE) {
+      setAutoStatus(`📉 Confiança baixa (${signal.confidence.toFixed(0)}%) — aguardando sinal melhor...`);
+      log(`📉 Confiança baixa: ${signal.confidence.toFixed(0)}% < ${CFG.MIN_CONFIDENCE}%`, 'sys');
+      const delay = getAdaptiveDelay();
+      state.autoTimer = setTimeout(autoLoop, delay);
+      return;
+    }
+
+    // Obter avaliação de risco
+    const risk = await getRiskFromAI();
+    if (risk && risk.level === 'extreme') {
+      setAutoStatus('⚠️ Risco EXTREMO detectado — pulando trade');
+      log(`⚠️ Risco extremo: ${risk.message}`, 'warn');
+      state.autoTimer = setTimeout(autoLoop, 45000);
+      return;
+    }
+
+    // Calcular stake
+    const stake = calcStake();
+    if (stake <= 0) {
+      setAutoStatus('🛑 Stake bloqueado pela proteção de banca');
+      state.autoTimer = setTimeout(autoLoop, 30000);
+      return;
+    }
+
+    // EXECUTAR TRADE
+    setAutoStatus(`🚀 Executando ${signal.direction} | Conf: ${signal.confidence.toFixed(0)}% | Stake: $${stake.toFixed(2)}`);
+    log(`🚀 EXECUTANDO: ${signal.direction} | $${stake.toFixed(2)} | Conf: ${signal.confidence.toFixed(0)}%`, 'win');
+
+    await placeTrade(signal.direction, stake);
+
+    // Aguardar resolução + delay adaptativo
+    const waitTime = (state.duration * 1000) + getAdaptiveDelay();
+    setAutoStatus(`⏳ Aguardando resolução do trade... (${(waitTime/1000).toFixed(0)}s)`);
+    state.autoTimer = setTimeout(autoLoop, waitTime);
+
+  } catch(e) {
+    log('❌ Erro no loop auto: ' + e.message, 'warn');
+    state.autoTimer = setTimeout(autoLoop, 15000);
+  }
+}
+
+function getAdaptiveDelay() {
+  const strat = strategies[state.strategy] || strategies.default;
+  const base  = CFG.SIGNAL_INTERVAL;
+  return base * strat.delayMult + Math.random() * 10000;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SINAL DA IA
+// ═══════════════════════════════════════════════════════════
+async function getSignalFromAI() {
+  if (state.aiConnected) {
+    try {
+      const r = await fetch(state.aiUrl + '/signal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol: state.symbol }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        state.aiCandles = d.candles || 0;
+        if (d.rsi)   updateIndicators(d);
+        return d;
+      }
+    } catch(e) {
+      log('⚠️ Servidor IA timeout — usando análise local', 'warn');
+    }
+  }
+  // Fallback local
+  return localSignal();
+}
+
+async function getRiskFromAI() {
+  if (!state.aiConnected) return null;
+  try {
+    const r = await fetch(state.aiUrl + '/risk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol: state.symbol,
+        martingaleLevel: state.mgLevel,
+        recentTrades: state.trades.slice(-10),
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (r.ok) return await r.json();
+  } catch(e) {}
+  return null;
+}
+
+async function sendTradeResultToAI(result) {
+  if (!state.aiConnected) return;
+  try {
+    const trade = state.trades[state.trades.length - 1];
+    if (!trade) return;
+    await fetch(state.aiUrl + '/trade/result', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        symbol:    state.symbol,
+        result:    result ? 'win' : 'loss',
+        direction: trade.direction,
+        pnl:       trade.pnl || 0,
+        stake:     trade.stake || state.baseStake,
+      }),
+    });
+    log(`📚 IA aprendeu: ${result ? 'WIN' : 'LOSS'}`, 'ai');
+  } catch(e) {}
+}
+
+async function pollAiStatus() {
+  try {
+    const r = await fetch(state.aiUrl + '/stats', { signal: AbortSignal.timeout(5000) });
+    if (r.ok) {
+      const d = await r.json();
+      state.aiConnected = true;
+      setDot('dotAi', 'on');
+      document.getElementById('lblAi').textContent = 'IA ONLINE';
+      updateModelList(d.models);
+    }
+  } catch(e) {
+    if (state.aiConnected) {
+      state.aiConnected = false;
+      setDot('dotAi', 'off');
+      document.getElementById('lblAi').textContent = 'IA OFFLINE';
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ANÁLISE LOCAL (FALLBACK)
+// ═══════════════════════════════════════════════════════════
+function localSignal() {
+  const prices = state.ticks;
+  if (prices.length < 20) {
+    return { direction: 'CALL', confidence: 60, method: 'insufficient_data', model_ready: false };
+  }
+  const r   = calcRSI(prices, 14);
+  const e9  = calcEMA(prices, 9);
+  const e21 = calcEMA(prices, 21);
+  const vol = calcVolatility(prices, 10);
+
+  let score = 0;
+  if (r < 30)      score += 2;
+  else if (r > 70) score -= 2;
+  else if (r < 50) score += 0.5;
+  else             score -= 0.5;
+  if (e9 > e21) score += 1.5; else score -= 1.5;
+
+  const direction  = score > 0 ? 'CALL' : 'PUT';
+  const raw        = (score + 4) / 8 * 100;
+  const confidence = Math.max(50, Math.min(95, score > 0 ? raw : 100 - raw));
+
+  document.getElementById('indRsi').textContent   = r.toFixed(1);
+  document.getElementById('indVol').textContent   = (vol * 100).toFixed(2) + '%';
+  document.getElementById('indTrend').textContent = score > 0 ? '⬆ Alta' : '⬇ Baixa';
+
+  detectRegime(prices);
+  return { direction, confidence, method: 'local_technical', model_ready: false };
+}
+
+function calcRSI(p, per=14) {
+  if (p.length < per+1) return 50;
+  let gains=0, losses=0;
+  for(let i=p.length-per; i<p.length; i++) {
+    const d = p[i] - p[i-1];
+    if (d > 0) gains += d; else losses -= d;
+  }
+  const rs = (gains/per) / (losses/per + 1e-9);
+  return 100 - 100/(1+rs);
+}
+
+function calcEMA(p, span) {
+  const k = 2/(span+1);
+  let e = p[0];
+  for (let i=1; i<p.length; i++) e = p[i]*k + e*(1-k);
+  return e;
+}
+
+function calcVolatility(p, per=10) {
+  if (p.length < per) return 0.02;
+  let v = 0;
+  for (let i=p.length-per+1; i<p.length; i++) {
+    const ret = (p[i]-p[i-1])/p[i-1];
+    v += ret*ret;
+  }
+  return Math.sqrt(v/per);
+}
+
+function detectRegime(prices) {
+  if (prices.length < 30) return;
+  const n = Math.min(50, prices.length);
+  const sub = prices.slice(-n);
+  const first = sub[0], last = sub[n-1];
+  const pct = (last - first) / first * 100;
+  const vol = calcVolatility(sub, n-1);
+
+  let regime;
+  if      (vol > 0.002)  regime = 'volatile';
+  else if (pct > 0.05)   regime = 'trending-up';
+  else if (pct < -0.05)  regime = 'trending-down';
+  else                   regime = 'ranging';
+
+  if (regime !== state.regime) {
+    state.regime = regime;
+    adaptStrategy();
+    updateRegimeUI();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ESTRATÉGIA ADAPTATIVA
+// ═══════════════════════════════════════════════════════════
+function adaptStrategy() {
+  let strat;
+  if      (state.lossStreak >= 6) strat = 'pause';
+  else if (state.lossStreak >= 4) strat = 'ultra-safe';
+  else if (state.lossStreak >= 3) strat = 'conservative';
+  else {
+    const dd = (state.peakBalance - state.balance) / state.peakBalance;
+    if (dd > CFG.DRAWDOWN_MAX) strat = 'ultra-safe';
+    else if (dd > CFG.DRAWDOWN_WARN) strat = 'conservative';
+    else {
+      switch(state.regime) {
+        case 'trending-up':
+        case 'trending-down': strat = 'trend-follow';   break;
+        case 'ranging':       strat = 'mean-reversion'; break;
+        case 'volatile':      strat = 'volatile-scalp'; break;
+        default:              strat = 'default';
+      }
+    }
+  }
+
+  if (strat !== state.strategy) {
+    log(`🧠 Estratégia: ${strategies[state.strategy]?.name} → ${strategies[strat]?.name}`, 'ai');
+    state.strategy = strat;
+    state.strategyChanges++;
+    CFG.MG_MAX = strategies[strat].mgMax;
+    updateStrategyUI();
+    if (strat === 'pause') {
+      notify('⏸️ Sistema PAUSADO — excesso de losses', 'error');
+      setTimeout(() => { if(state.strategy === 'pause') { state.strategy = 'conservative'; adaptStrategy(); } }, 120000);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STAKE / BANCA
+// ═══════════════════════════════════════════════════════════
+function calcStake() {
+  const strat = strategies[state.strategy] || strategies.default;
+  if (strat.stakeMult === 0) return 0;
+
+  let base = state.baseStake;
+
+  // Martingale
+  if (state.mgLevel > 0) {
+    base = state.baseStake * Math.pow(CFG.MG_MULTIPLIER, state.mgLevel);
+  }
+
+  // Multiplicador de estratégia
+  base *= strat.stakeMult;
+
+  // Drawdown protection
+  const dd = state.peakBalance > 0 ? (state.peakBalance - state.balance) / state.peakBalance : 0;
+  if (dd > CFG.DRAWDOWN_WARN) {
+    const factor = 1 - ((dd - CFG.DRAWDOWN_WARN) / (CFG.DRAWDOWN_MAX - CFG.DRAWDOWN_WARN));
+    base *= Math.max(0.3, factor);
+  }
+
+  base = Math.max(CFG.STAKE_MIN, base);
+  base = Math.min(state.balance * 0.05, base); // máx 5% da banca
+  return parseFloat(base.toFixed(2));
+}
+
+// Score de oportunidade 0-100
+function calcOpportunityScore() {
+  const prices = state.ticks;
+  if (prices.length < 20) return 50;
+
+  let score = 50;
+  const r = calcRSI(prices, 14);
+  if (r < 30) score += 15;
+  else if (r > 70) score += 15;
+
+  const recentWR = state.trades.slice(-10).filter(t => t.win).length / Math.max(state.trades.slice(-10).length, 1);
+  score += (recentWR - 0.5) * 30;
+
+  if (state.winStreak > 0) score += Math.min(state.winStreak * 3, 12);
+  if (state.lossStreak > 0) score -= Math.min(state.lossStreak * 5, 20);
+
+  const vol = calcVolatility(prices, 10);
+  if (vol < 0.001) score += 5;
+  else if (vol > 0.003) score -= 10;
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TRADING
+// ═══════════════════════════════════════════════════════════
+async function placeTrade(direction, stake) {
+  if (!state.derivAuthed) {
+    log('❌ Não autorizado na Deriv', 'warn');
+    return;
+  }
+
+  const contractType = direction === 'CALL' ? 'CALL' : 'PUT';
+
+  // Pedir proposta
+  send({
+    buy: 1,
+    subscribe: 1,
+    price: stake,
+    parameters: {
+      amount:         stake,
+      basis:          'stake',
+      contract_type:  contractType,
+      currency:       'USD',
+      duration:       state.duration,
+      duration_unit:  's',
+      symbol:         state.symbol,
+    },
+  });
+
+  // Registrar ordem pendente
+  state.hasActiveOrder = true;
+  state.activeOrder = {
+    direction, stake,
+    openTime: new Date(),
+    contractId: null,
+  };
+
+  // Mostrar active trade UI
+  showActiveTrade(direction, stake);
+
+  // Timer countdown
+  startTradeTimer(state.duration);
+
+  log(`📋 Ordem enviada: ${direction} $${stake.toFixed(2)}`, 'info');
+}
+
+function handleBuyResponse(msg) {
+  if (msg.error) {
+    log(`❌ Erro na compra: ${msg.error.message}`, 'warn');
+    clearActiveOrder();
+    return;
+  }
+  const contractId = msg.buy?.contract_id;
+  if (contractId && state.activeOrder) {
+    state.activeOrder.contractId = contractId;
+    log(`✅ Contrato aberto: #${contractId}`, 'info');
+    // Subscrever atualizações
+    send({ proposal_open_contract: 1, contract_id: contractId, subscribe: 1 });
+  }
+}
+
+function handleContractUpdate(msg) {
+  const c = msg.proposal_open_contract;
+  if (!c) return;
+
+  const isFinished = c.status === 'sold' || c.is_expired || c.is_settleable || c.is_valid_to_sell === 0;
+
+  if (isFinished && state.hasActiveOrder) {
+    const isWin = c.profit > 0;
+    const pnl   = parseFloat(c.profit) || 0;
+
+    onTradeResult(isWin, pnl, c);
+  }
+}
+
+function onTradeResult(isWin, pnl, contract) {
+  // Registrar
+  const trade = {
+    direction: state.activeOrder?.direction || '?',
+    stake: state.activeOrder?.stake || state.baseStake,
+    win: isWin,
+    pnl,
+    time: new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}),
+  };
+  state.trades.push(trade);
+  state.totalTrades++;
+  if (isWin) state.wonTrades++;
+
+  // P&L
+  state.totalPnL += pnl;
+  if (pnl < 0) state.dailyLoss += Math.abs(pnl);
+  else         state.dailyProfit += pnl;
+
+  // Streaks
+  if (isWin) { state.winStreak++; state.lossStreak = 0; }
+  else       { state.lossStreak++; state.winStreak = 0; }
+
+  // Martingale
+  if (!isWin && state.mgLevel < (strategies[state.strategy]?.mgMax || 5)) {
+    state.mgLevel++;
+    log(`🎰 Martingale → Nível ${state.mgLevel}`, 'warn');
+  } else if (isWin) {
+    if (state.mgLevel > 0) log(`✅ Martingale resetado (era nível ${state.mgLevel})`, 'win');
+    state.mgLevel = 0;
+  }
+
+  // Atualizar banca pico
+  if (state.balance > state.peakBalance) state.peakBalance = state.balance;
+
+  // Enviar para IA aprender
+  sendTradeResultToAI(isWin);
+
+  // Adaptar estratégia
+  adaptStrategy();
+
+  // Verificar limites
+  checkLimits();
+
+  // Log
+  const emoji = isWin ? '🟢' : '🔴';
+  log(`${emoji} ${trade.direction} | ${isWin ? 'WIN' : 'LOSS'} | P&L: ${pnl > 0 ? '+' : ''}$${pnl.toFixed(2)}`, isWin ? 'win' : 'loss');
+  notify(`${emoji} ${isWin ? 'WIN' : 'LOSS'} ${trade.direction} | $${Math.abs(pnl).toFixed(2)}`, isWin ? 'success' : 'error');
+
+  // Adicionar ao histórico
+  addTradeToHistory(trade);
+
+  // Limpar ordem ativa
+  clearActiveOrder();
+
+  // Atualizar UI
+  updateUI();
+  updateBankrollUI();
+}
+
+function clearActiveOrder() {
+  state.hasActiveOrder = false;
+  state.activeOrder = null;
+  if (state.orderTimer) { clearInterval(state.orderTimer); state.orderTimer = null; }
+  document.getElementById('activeTrade').style.display = 'none';
+}
+
+function showActiveTrade(direction, stake) {
+  const el = document.getElementById('activeTrade');
+  el.style.display = 'block';
+  el.className = '';
+  const dirEl = document.getElementById('atDir');
+  dirEl.textContent = direction;
+  dirEl.className   = 'trade-dir ' + direction.toLowerCase();
+  document.getElementById('atStake').textContent  = '$' + stake.toFixed(2);
+  document.getElementById('atSymbol').textContent = state.symbol;
+  document.getElementById('atDur').textContent    = state.duration + 's';
+  document.getElementById('atTime').textContent   = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+function startTradeTimer(seconds) {
+  let rem = seconds;
+  document.getElementById('atTimer').textContent = fmtTime(rem);
+  if (state.orderTimer) clearInterval(state.orderTimer);
+  state.orderTimer = setInterval(() => {
+    rem--;
+    document.getElementById('atTimer').textContent = fmtTime(rem);
+    if (rem <= 0) { clearInterval(state.orderTimer); state.orderTimer = null; }
+  }, 1000);
+}
+
+function fmtTime(s) {
+  const m = Math.floor(s/60), sc = s%60;
+  return `${m}:${sc.toString().padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  VERIFICAÇÕES
+// ═══════════════════════════════════════════════════════════
+function checkBlocked() {
+  // Drawdown
+  if (state.balance > 0 && state.peakBalance > 0) {
+    const dd = (state.peakBalance - state.balance) / state.peakBalance;
+    if (dd >= CFG.DRAWDOWN_MAX) {
+      blockSystem('Drawdown máximo (' + (CFG.DRAWDOWN_MAX*100).toFixed(0) + '%) atingido');
+      return true;
+    }
+  }
+  // Limite diário
+  if (state.dailyLoss >= state.dailyLimit) {
+    blockSystem('Limite de perda diária atingido ($' + state.dailyLimit.toFixed(0) + ')');
+    return true;
+  }
+  return state.isBlocked;
+}
+
+function checkLimits() {
+  if (state.dailyLoss >= state.dailyLimit) {
+    blockSystem('Limite de perda diária atingido');
+  }
+  const dd = state.peakBalance > 0 ? (state.peakBalance - state.balance) / state.peakBalance : 0;
+  if (dd >= CFG.DRAWDOWN_MAX) {
+    blockSystem('Drawdown máximo atingido');
+  }
+}
+
+function blockSystem(reason) {
+  if (state.isBlocked) return;
+  state.isBlocked = true;
+  state.blockReason = reason;
+  stopAuto();
+  const el = document.getElementById('emergencyStop');
+  el.style.display = 'block';
+  document.getElementById('emergencyReason').textContent = reason;
+  notify('⛔ ' + reason, 'error');
+  log('⛔ SISTEMA BLOQUEADO: ' + reason, 'warn');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  UI UPDATES
+// ═══════════════════════════════════════════════════════════
+function updateUI() {
+  // Stats
+  const wr = state.totalTrades > 0 ? (state.wonTrades / state.totalTrades * 100) : 0;
+  document.getElementById('mTrades').textContent  = state.totalTrades;
+  document.getElementById('mWinRate').textContent = wr.toFixed(0) + '%';
+  document.getElementById('mWinRate').style.color = wr >= 55 ? 'var(--green)' : wr >= 45 ? 'var(--orange)' : 'var(--red)';
+
+  const streak = state.winStreak > 0 ? '+' + state.winStreak : (state.lossStreak > 0 ? '-' + state.lossStreak : '0');
+  document.getElementById('mStreak').textContent = streak;
+  document.getElementById('mStreak').style.color = state.winStreak > 0 ? 'var(--green)' : state.lossStreak > 0 ? 'var(--red)' : 'var(--white)';
+
+  // P&L
+  const pnlEl = document.getElementById('sessionPnl');
+  pnlEl.textContent = (state.totalPnL >= 0 ? '+' : '') + '$' + state.totalPnL.toFixed(2);
+  pnlEl.style.color = state.totalPnL >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Daily bars
+  const dLossMax = state.dailyLimit;
+  const dlPct = Math.min(100, state.dailyLoss / dLossMax * 100);
+  document.getElementById('dailyLossBar').style.width    = dlPct + '%';
+  document.getElementById('dailyLossText').textContent   = `$${state.dailyLoss.toFixed(2)} / $${dLossMax}`;
+  const dpPct = Math.min(100, state.dailyProfit / dLossMax * 100);
+  document.getElementById('dailyProfitBar').style.width  = dpPct + '%';
+  document.getElementById('dailyProfitText').textContent = `$${state.dailyProfit.toFixed(2)} / $${dLossMax}`;
+
+  // Martingale
+  document.getElementById('mgLevel').textContent = state.mgLevel;
+  document.getElementById('mgMax').textContent   = strategies[state.strategy]?.mgMax || 5;
+  const nextStake = calcStake();
+  document.getElementById('mgNext').textContent  = '$' + nextStake.toFixed(2);
+  const mgPct = state.mgLevel / (strategies[state.strategy]?.mgMax || 5) * 100;
+  document.getElementById('mgBar').style.width   = mgPct + '%';
+  document.getElementById('mgPct').textContent   = mgPct.toFixed(0) + '%';
+
+  // Histórico count
+  document.getElementById('hdrTrades').textContent = state.trades.length + ' trades';
+}
+
+function updateBankrollUI() {
+  const score = calcOpportunityScore();
+  const gauge = document.getElementById('gaugeArc');
+  const circumference = 157;
+  const offset = circumference - (score / 100) * circumference;
+  gauge.setAttribute('stroke-dashoffset', offset);
+  let c = score >= 70 ? 'var(--green)' : score >= 50 ? 'var(--cyan)' : score >= 30 ? 'var(--orange)' : 'var(--red)';
+  gauge.setAttribute('stroke', c);
+  document.getElementById('gaugeScore').textContent = score;
+  document.getElementById('gaugeScore').style.color = c;
+
+  // Stake recomendado
+  const stake = calcStake();
+  document.getElementById('stakeRec').textContent = '$' + stake.toFixed(2);
+
+  const dd = state.peakBalance > 0 ? (state.peakBalance - state.balance) / state.peakBalance : 0;
+  let risk = 'BAIXO', riskPct = 15;
+  if (dd > CFG.DRAWDOWN_MAX)   { risk = 'EXTREMO'; riskPct = 90; }
+  else if (dd > CFG.DRAWDOWN_WARN)  { risk = 'MODERADO'; riskPct = 60; }
+  else if (state.lossStreak >= 3)   { risk = 'ALTO'; riskPct = 75; }
+  document.getElementById('riskLabel').textContent = risk;
+  document.getElementById('riskIndicator').style.left = riskPct + '%';
+
+  const reason = score >= 70 ? '📈 Condições favoráveis' :
+                 score >= 50 ? '⚡ Condições normais' :
+                 score >= 30 ? '⚠️ Atenção — risco moderado' :
+                               '🛑 Condições desfavoráveis';
+  document.getElementById('stakeReason').textContent = reason;
+}
+
+function updateSignalUI(signal) {
+  const box   = document.getElementById('signalBox');
+  const dirEl = document.getElementById('signalDir');
+  const dir   = signal.direction;
+
+  dirEl.textContent  = dir;
+  dirEl.className    = dir.toLowerCase();
+  box.className      = dir.toLowerCase();
+
+  document.getElementById('signalConf').textContent   = `Confiança: ${signal.confidence.toFixed(1)}%`;
+  document.getElementById('signalMethod').textContent = `Método: ${signal.method || 'IA'} | Candles: ${signal.candles || '?'} | Modelo: ${signal.model_ready ? '✅ Treinado' : '⏳ Aprendendo'}`;
+}
+
+function updateIndicators(d) {
+  if (d.rsi   != null) document.getElementById('indRsi').textContent   = d.rsi.toFixed(1);
+  if (d.stoch != null) document.getElementById('indStoch').textContent = d.stoch.toFixed(1);
+  if (d.bb_pos!= null) document.getElementById('indBb').textContent    = d.bb_pos.toFixed(3);
+  if (d.volatility!= null) document.getElementById('indVol').textContent = d.volatility.toFixed(2) + '%';
+  if (d.trend != null) document.getElementById('indTrend').textContent = d.trend > 0 ? '⬆ +'+d.trend.toFixed(0) : '⬇ '+d.trend.toFixed(0);
+}
+
+function updateRegimeUI() {
+  const icons = { 'trending-up':'📈','trending-down':'📉','ranging':'↔️','volatile':'🌪️','choppy':'🔀','unknown':'❓' };
+  const names = { 'trending-up':'ALTA','trending-down':'BAIXA','ranging':'LATERAL','volatile':'VOLÁTIL','choppy':'CHOPPY','unknown':'ANALISANDO' };
+  document.getElementById('regimeIcon').textContent = icons[state.regime] || '❓';
+  document.getElementById('regimeName').textContent = names[state.regime] || 'ANALISANDO';
+  document.getElementById('regimeSub').textContent  = 'Detectado localmente';
+}
+
+function updateStrategyUI() {
+  const s = strategies[state.strategy] || strategies.default;
+  document.getElementById('stratName').textContent = s.name;
+  document.getElementById('stratDesc').textContent = s.desc;
+  const colors = { pause:'var(--red)', 'ultra-safe':'var(--red)', conservative:'var(--orange)', 'trend-follow':'var(--green)', 'volatile-scalp':'var(--cyan)', default:'var(--purple)', 'mean-reversion':'var(--cyan)' };
+  document.getElementById('stratBox').style.borderLeftColor = colors[state.strategy] || 'var(--purple)';
 }
 
 function updateModelList(models) {
@@ -139,3 +2063,18 @@ function hideLoad() {
 
 // ═══════════════════════════════════════════════════════════
 //  INICIALIZAÇÃO
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  log('🤖 Sistema DERIV AI inicializado', 'ai');
+  log('📋 Aguardando configuração e login...', 'sys');
+  updateStrategyUI();
+  updateRegimeUI();
+  setDot('dotAuto', 'off');
+  setDot('dotDeriv', 'off');
+  setDot('dotAi',   'off');
+  document.getElementById('lblAuto').textContent = 'AUTO OFF';
+});
+
+</script>
+</body>
+</html>
