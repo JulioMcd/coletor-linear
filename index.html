@@ -24,12 +24,9 @@
 
   header h1 { font-size: 18px; font-weight: 700; }
 
-  #last-update {
-    font-size: 11px;
-    color: #8b949e;
-  }
+  #last-update { font-size: 11px; color: #8b949e; }
 
-  /* STATUS DOTS */
+  /* STATUS PILLS */
   .status-row {
     display: flex;
     gap: 10px;
@@ -49,14 +46,13 @@
     font-weight: 600;
   }
 
-  .dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: #8b949e;
-  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #8b949e; }
   .dot.green  { background: #3fb950; box-shadow: 0 0 6px #3fb950; }
   .dot.red    { background: #f85149; }
-  .dot.yellow { background: #d29922; }
+  .dot.yellow { background: #d29922; box-shadow: 0 0 6px #d29922; }
+  .dot.pulse  { animation: pulse 1.2s ease-in-out infinite; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
   /* CARDS */
   .card {
@@ -89,22 +85,13 @@
     text-align: center;
   }
 
-  .stat-val {
-    font-size: 28px;
-    font-weight: 800;
-    line-height: 1;
-  }
+  .stat-val  { font-size: 28px; font-weight: 800; line-height: 1; }
+  .stat-lbl  { font-size: 11px; color: #8b949e; margin-top: 4px; }
 
-  .stat-lbl {
-    font-size: 11px;
-    color: #8b949e;
-    margin-top: 4px;
-  }
-
-  .green-val { color: #3fb950; }
-  .red-val   { color: #f85149; }
-  .blue-val  { color: #388bfd; }
-  .yellow-val{ color: #d29922; }
+  .green-val  { color: #3fb950; }
+  .red-val    { color: #f85149; }
+  .blue-val   { color: #388bfd; }
+  .yellow-val { color: #d29922; }
 
   /* WIN RATE BAR */
   .wr-bar-wrap { margin-top: 12px; }
@@ -115,22 +102,12 @@
     color: #8b949e;
     margin-bottom: 6px;
   }
-  .wr-bar {
-    height: 10px;
-    background: #0d1117;
-    border-radius: 5px;
-    overflow: hidden;
-  }
-  .wr-fill {
-    height: 100%;
-    border-radius: 5px;
-    transition: width 0.6s ease;
-    background: #3fb950;
-  }
-  .wr-fill.mid  { background: #d29922; }
-  .wr-fill.low  { background: #f85149; }
+  .wr-bar { height: 10px; background: #0d1117; border-radius: 5px; overflow: hidden; }
+  .wr-fill { height: 100%; border-radius: 5px; transition: width .6s ease; background: #3fb950; }
+  .wr-fill.mid { background: #d29922; }
+  .wr-fill.low { background: #f85149; }
 
-  /* MODELOS */
+  /* LISTA GENÉRICA */
   .model-list { display: flex; flex-direction: column; gap: 8px; }
 
   .model-row {
@@ -143,63 +120,101 @@
   }
 
   .model-name { font-size: 13px; color: #e6edf3; }
-
-  .model-acc {
-    font-size: 14px;
-    font-weight: 700;
-  }
+  .model-acc  { font-size: 14px; font-weight: 700; }
 
   .model-bar-wrap {
-    flex: 1;
-    margin: 0 12px;
-    height: 6px;
-    background: #21262d;
-    border-radius: 3px;
-    overflow: hidden;
+    flex: 1; margin: 0 12px;
+    height: 6px; background: #21262d;
+    border-radius: 3px; overflow: hidden;
   }
+  .model-bar-fill { height: 100%; border-radius: 3px; transition: width .6s; }
 
-  .model-bar-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.6s;
+  /* ── BACKTEST MÊS A MÊS ── */
+  .bt-month-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0d1117;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
   }
+  .bt-month-label { font-size: 13px; font-weight: 700; color: #d29922; }
+  .bt-month-sub   { font-size: 11px; color: #8b949e; }
+
+  .bt-month-bar-wrap {
+    height: 6px; background: #21262d;
+    border-radius: 3px; overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .bt-month-bar-fill {
+    height: 100%; border-radius: 3px;
+    background: #d29922; transition: width .6s;
+  }
+  .bt-month-bar-fill.done { background: #3fb950; }
+
+  .bt-symbol-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: #0d1117;
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .bt-sym-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+  .bt-sym-name  { color: #e6edf3; font-weight: 600; }
+  .bt-sym-stats { font-size: 11px; color: #8b949e; }
+
+  .bt-bar-wrap {
+    height: 5px; background: #21262d;
+    border-radius: 3px; overflow: hidden;
+    margin-top: 4px;
+  }
+  .bt-bar-fill { height: 100%; border-radius: 3px; background: #d29922; transition: width .6s; }
+  .bt-bar-fill.done { background: #3fb950; }
 
   /* REFRESH BTN */
   .refresh-btn {
-    width: 100%;
-    padding: 14px;
-    background: #238636;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 15px;
-    font-weight: 700;
-    cursor: pointer;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    width: 100%; padding: 14px;
+    background: #238636; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer; margin-bottom: 16px;
+    display: flex; align-items: center;
+    justify-content: center; gap: 8px;
   }
+  .refresh-btn:active { opacity: .8; }
 
-  .refresh-btn:active { opacity: 0.8; }
-
-  /* COUNTDOWN */
   #auto-refresh {
-    text-align: center;
-    font-size: 12px;
-    color: #8b949e;
-    margin-bottom: 16px;
+    text-align: center; font-size: 12px;
+    color: #8b949e; margin-bottom: 16px;
   }
 
-  /* SPINNER */
-  .spin {
-    display: inline-block;
-    animation: spin 1s linear infinite;
-  }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .hidden { display: none; }
+
+  .maint-badge {
+    text-align: center; font-size: 12px;
+    color: #8b949e; padding: 8px;
+    background: #0d1117; border-radius: 8px; margin-top: 8px;
+  }
+  .maint-badge span { color: #388bfd; font-weight: 600; }
+
+  .tag {
+    font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px;
+    text-transform: uppercase;
+  }
+  .tag-done    { background: #1a3a2a; color: #3fb950; }
+  .tag-running { background: #3a2e0a; color: #d29922; }
+  .tag-wait    { background: #21262d; color: #8b949e; }
 </style>
 </head>
 <body>
@@ -209,11 +224,15 @@
   <span id="last-update">Carregando…</span>
 </header>
 
-<!-- STATUS -->
+<!-- STATUS PILLS -->
 <div class="status-row">
   <div class="status-pill">
     <div class="dot" id="dot-deriv"></div>
     <span id="lbl-deriv">Deriv</span>
+  </div>
+  <div class="status-pill">
+    <div class="dot" id="dot-backtest"></div>
+    <span id="lbl-backtest">Backtest</span>
   </div>
   <div class="status-pill">
     <div class="dot" id="dot-trader"></div>
@@ -221,19 +240,47 @@
   </div>
 </div>
 
-<!-- BOTÃO REFRESH -->
+<!-- REFRESH -->
 <button class="refresh-btn" onclick="load()">
-  <span id="spin-icon" class="hidden">⟳</span>
+  <span id="spin-icon" class="hidden spin">⟳</span>
   🔄 Atualizar agora
 </button>
 <div id="auto-refresh">Próxima atualização em <span id="countdown">30</span>s</div>
 
+<!-- BACKTEST MÊS A MÊS -->
+<div class="card" id="bt-card">
+  <div class="card-title">🎓 Backtest — Pré-treinamento</div>
+
+  <!-- progresso de meses -->
+  <div class="bt-month-header">
+    <div>
+      <div class="bt-month-label" id="bt-month-lbl">Aguardando…</div>
+      <div class="bt-month-sub"  id="bt-month-sub">—</div>
+    </div>
+    <span class="tag" id="bt-tag">Aguardando</span>
+  </div>
+  <div class="bt-month-bar-wrap">
+    <div class="bt-month-bar-fill" id="bt-month-bar" style="width:0%"></div>
+  </div>
+
+  <!-- progresso por símbolo -->
+  <div class="model-list" id="bt-sym-list">
+    <div class="model-row"><span class="model-name" style="color:#8b949e">Carregando…</span></div>
+  </div>
+
+  <!-- próxima manutenção -->
+  <div class="maint-badge" id="maint-badge" style="display:none">
+    🔧 Próxima manutenção: <span id="bt-next-maint">—</span>
+  </div>
+</div>
+
 <!-- PAPER TRADING -->
 <div class="card">
-  <div class="card-title">📊 Paper Trading (conta demo)</div>
+  <div class="card-title">📊 Paper Trading — Conta Demo</div>
+  <div id="pt-status-msg" style="display:none;background:#0d1117;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#8b949e;text-align:center"></div>
   <div class="stat-grid">
     <div class="stat-box">
-      <div class="stat-val blue-val" id="p-trades">—</div>
+      <div class="stat-val blue-val"   id="p-trades">—</div>
       <div class="stat-lbl">Total Trades</div>
     </div>
     <div class="stat-box">
@@ -241,18 +288,17 @@
       <div class="stat-lbl">Win Rate</div>
     </div>
     <div class="stat-box">
-      <div class="stat-val green-val" id="p-wins">—</div>
+      <div class="stat-val green-val"  id="p-wins">—</div>
       <div class="stat-lbl">Wins</div>
     </div>
     <div class="stat-box">
-      <div class="stat-val red-val" id="p-losses">—</div>
+      <div class="stat-val red-val"    id="p-losses">—</div>
       <div class="stat-lbl">Losses</div>
     </div>
   </div>
   <div class="wr-bar-wrap">
     <div class="wr-bar-label">
-      <span>Win Rate</span>
-      <span id="p-wr2">—</span>
+      <span>Win Rate</span><span id="p-wr2">—</span>
     </div>
     <div class="wr-bar">
       <div class="wr-fill" id="wr-fill" style="width:0%"></div>
@@ -270,16 +316,20 @@
 
 <!-- CANDLES -->
 <div class="card">
-  <div class="card-title">📈 Candles coletados</div>
+  <div class="card-title">📈 Candles Coletados</div>
   <div class="model-list" id="candle-list">
     <div class="model-row"><span class="model-name">Carregando…</span></div>
   </div>
 </div>
 
 <script>
-const SERVER = 'https://web-production-41cb7.up.railway.app';
-let timer = null;
-let countdown = 30;
+const SERVER   = 'https://web-production-41cb7.up.railway.app';
+const SYMBOLS  = ['R_50', 'R_100', '1HZ25V'];
+// ~26 lotes por símbolo por mês (5000 candles/lote, M1)
+const LOTES_POR_MES = 26;
+
+let timer    = null;
+let cd       = 30;
 
 async function load() {
   document.getElementById('spin-icon').classList.remove('hidden');
@@ -288,84 +338,214 @@ async function load() {
     const d = await r.json();
     render(d);
     document.getElementById('last-update').textContent =
-      'Atualizado: ' + new Date().toLocaleTimeString();
+      'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
   } catch(e) {
-    document.getElementById('last-update').textContent = '❌ Erro ao carregar';
+    document.getElementById('last-update').textContent = '❌ Sem conexão com servidor';
   }
   document.getElementById('spin-icon').classList.add('hidden');
   resetCountdown();
 }
 
 function render(d) {
-  // Status
-  setDot('dot-deriv',  'lbl-deriv',  d.deriv_connected,        'Deriv');
-  setDot('dot-trader', 'lbl-trader', d.paper_trader_running,    'Paper Trader');
+  // ── Pills ──
+  setDot('dot-deriv',  'lbl-deriv',  d.deriv_connected,     'Deriv');
+  setDot('dot-trader', 'lbl-trader', d.paper_trader_running, 'Paper Trader');
 
-  // Paper trading
-  document.getElementById('p-trades').textContent  = d.paper_trades;
-  document.getElementById('p-wins').textContent    = d.paper_wins;
-  document.getElementById('p-losses').textContent  = d.paper_losses;
-  document.getElementById('p-wr').textContent      = d.paper_winrate.toFixed(1) + '%';
-  document.getElementById('p-wr2').textContent     = d.paper_winrate.toFixed(1) + '%';
+  const btDone    = d.backtest_done    === true;
+  const btRunning = d.backtest_running === true;
+  const dotBt = document.getElementById('dot-backtest');
+  const lblBt = document.getElementById('lbl-backtest');
+  if (btDone) {
+    dotBt.className  = 'dot green';
+    lblBt.textContent = '✅ Backtest';
+  } else if (btRunning) {
+    dotBt.className  = 'dot yellow pulse';
+    lblBt.textContent = '⏳ Backtest';
+  } else {
+    dotBt.className  = 'dot red';
+    lblBt.textContent = '⏸ Backtest';
+  }
+
+  // ── Backtest: progresso mês a mês ──
+  const bp          = d.backtest_progress || {};
+  const curMonth    = bp.current_month  || '';
+  const monthIdx    = bp.month_idx      || 0;
+  const totalMonths = bp.total_months   || 3;
+
+  const btMonthLbl = document.getElementById('bt-month-lbl');
+  const btMonthSub = document.getElementById('bt-month-sub');
+  const btTag      = document.getElementById('bt-tag');
+  const btBar      = document.getElementById('bt-month-bar');
+
+  if (btDone) {
+    btMonthLbl.textContent  = '✅ Treinamento concluído';
+    btMonthSub.textContent  = `${totalMonths} meses processados — paper trader ativo`;
+    btTag.textContent  = 'Concluído';
+    btTag.className    = 'tag tag-done';
+    btBar.style.width  = '100%';
+    btBar.className    = 'bt-month-bar-fill done';
+  } else if (btRunning && curMonth) {
+    btMonthLbl.textContent  = `Mês ${monthIdx} de ${totalMonths} — ${curMonth}`;
+    btMonthSub.textContent  = 'Baixando e treinando candle por candle…';
+    btTag.textContent  = 'Em andamento';
+    btTag.className    = 'tag tag-running';
+    const pct = Math.round(((monthIdx - 1) / totalMonths) * 100);
+    btBar.style.width  = pct + '%';
+    btBar.className    = 'bt-month-bar-fill';
+  } else {
+    btMonthLbl.textContent  = btRunning ? 'Iniciando backtest…' : 'Aguardando token Deriv';
+    btMonthSub.textContent  = btRunning ? 'Conectando ao servidor Deriv…' : 'Configure DERIV_TOKEN no Railway';
+    btTag.textContent  = btRunning ? 'Iniciando' : 'Aguardando';
+    btTag.className    = 'tag tag-wait';
+    btBar.style.width  = '0%';
+    btBar.className    = 'bt-month-bar-fill';
+  }
+
+  // ── Backtest: por símbolo ──
+  const symList = document.getElementById('bt-sym-list');
+  symList.innerHTML = '';
+
+  for (const sym of SYMBOLS) {
+    const p       = bp[sym] || {};
+    const batches = p.batches  || 0;
+    const samples = p.samples  || 0;
+    const symDone = p.done     === true;
+    const symMonth= p.month    || '';
+
+    // estimativa de % dentro do mês atual
+    let pct = 0;
+    if (btDone || symDone) {
+      pct = 100;
+    } else if (batches > 0) {
+      pct = Math.min(99, Math.round((batches / LOTES_POR_MES) * 100));
+    }
+
+    const fillCls = (btDone || symDone) ? 'bt-bar-fill done' : 'bt-bar-fill';
+    const statusTxt = btDone || symDone
+      ? `✅ ${samples.toLocaleString()} amostras`
+      : batches > 0
+        ? `${batches} lotes · ${samples.toLocaleString()} amostras${symMonth ? ' · ' + symMonth : ''}`
+        : '⏳ aguardando…';
+
+    symList.innerHTML += `
+      <div class="bt-symbol-row">
+        <div class="bt-sym-header">
+          <span class="bt-sym-name">${sym}</span>
+          <span class="bt-sym-stats">${statusTxt}</span>
+        </div>
+        <div class="bt-bar-wrap">
+          <div class="${fillCls}" style="width:${pct}%"></div>
+        </div>
+      </div>`;
+  }
+
+  // manutenção
+  const maintBadge = document.getElementById('maint-badge');
+  if (btDone) {
+    maintBadge.style.display = 'block';
+    if (d.next_maintenance) {
+      document.getElementById('bt-next-maint').textContent = d.next_maintenance;
+    } else {
+      const now = new Date();
+      const tm  = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(),
+                                    now.getUTCDate() + 1, 0, 1, 0));
+      const diff = Math.round((tm - now) / 60000);
+      document.getElementById('bt-next-maint').textContent =
+        `em ${Math.floor(diff/60)}h ${diff%60}m`;
+    }
+  } else {
+    maintBadge.style.display = 'none';
+  }
+
+  // ── Paper Trading ──
+  const ptMsg = document.getElementById('pt-status-msg');
+  if (!d.paper_trader_running) {
+    ptMsg.style.display = 'block';
+    if (!d.backtest_done) {
+      ptMsg.innerHTML = '⏳ Aguardando conclusão do backtest para iniciar operações…';
+    } else {
+      ptMsg.innerHTML = '⏸ Paper trader pausado (manutenção diária ou reinício)';
+    }
+  } else {
+    ptMsg.style.display = 'none';
+  }
+
+  const wr = d.paper_winrate || 0;
+  document.getElementById('p-trades').textContent = d.paper_trades  || 0;
+  document.getElementById('p-wins').textContent   = d.paper_wins    || 0;
+  document.getElementById('p-losses').textContent = d.paper_losses  || 0;
+  document.getElementById('p-wr').textContent     = wr.toFixed(1)   + '%';
+  document.getElementById('p-wr2').textContent    = wr.toFixed(1)   + '%';
 
   const fill = document.getElementById('wr-fill');
-  fill.style.width = d.paper_winrate + '%';
-  fill.className = 'wr-fill' +
-    (d.paper_winrate >= 55 ? '' : d.paper_winrate >= 50 ? ' mid' : ' low');
+  fill.style.width = wr + '%';
+  fill.className   = 'wr-fill' + (wr >= 55 ? '' : wr >= 50 ? ' mid' : ' low');
 
-  // Modelos — ordenados por acurácia
+  // ── Modelos ──
   const models = Object.entries(d.models || {})
     .sort((a, b) => b[1].accuracy - a[1].accuracy);
 
   const ml = document.getElementById('model-list');
   ml.innerHTML = '';
+  if (models.length === 0) {
+    ml.innerHTML = '<div class="model-row"><span class="model-name" style="color:#8b949e">Nenhum modelo treinado ainda</span></div>';
+  }
   for (const [sym, m] of models) {
-    const acc = m.accuracy;
+    const acc   = m.accuracy || 0;
     const color = acc >= 58 ? '#3fb950' : acc >= 52 ? '#d29922' : '#f85149';
+    const samp  = (m.samples || 0).toLocaleString();
     ml.innerHTML += `
       <div class="model-row">
         <span class="model-name">${sym}</span>
         <div class="model-bar-wrap">
           <div class="model-bar-fill" style="width:${acc}%;background:${color}"></div>
         </div>
-        <span class="model-acc" style="color:${color}">${m.trained ? acc.toFixed(1)+'%' : '⏳'}</span>
+        <span class="model-acc" style="color:${color}">
+          ${m.trained ? acc.toFixed(1)+'%' : '⏳'}
+          <span style="font-size:10px;color:#8b949e;font-weight:400"> · ${samp}</span>
+        </span>
       </div>`;
   }
 
-  // Candles
+  // ── Candles ──
   const candles = Object.entries(d.candles || {})
     .sort((a, b) => a[0].localeCompare(b[0]));
 
   const cl = document.getElementById('candle-list');
   cl.innerHTML = '';
+  if (candles.length === 0) {
+    cl.innerHTML = '<div class="model-row"><span class="model-name" style="color:#8b949e">Nenhum candle ainda</span></div>';
+  }
   for (const [sym, g] of candles) {
+    const m1  = (g[60]  || g['60']  || 0);
+    const m5  = (g[300] || g['300'] || 0);
     cl.innerHTML += `
       <div class="model-row">
         <span class="model-name">${sym}</span>
-        <span style="font-size:12px;color:#8b949e">M1: <b style="color:#388bfd">${g[60]}</b> &nbsp; M5: <b style="color:#d29922">${g[300]}</b></span>
+        <span style="font-size:12px;color:#8b949e">
+          M1: <b style="color:#388bfd">${m1}</b>
+          &nbsp;M5: <b style="color:#d29922">${m5}</b>
+        </span>
       </div>`;
   }
 }
 
 function setDot(dotId, lblId, ok, label) {
-  const dot = document.getElementById(dotId);
-  const lbl = document.getElementById(lblId);
-  dot.className = 'dot ' + (ok ? 'green' : 'red');
-  lbl.textContent = (ok ? '✅ ' : '❌ ') + label;
+  document.getElementById(dotId).className = 'dot ' + (ok ? 'green' : 'red');
+  document.getElementById(lblId).textContent = (ok ? '✅ ' : '❌ ') + label;
 }
 
 function resetCountdown() {
   if (timer) clearInterval(timer);
-  countdown = 30;
-  document.getElementById('countdown').textContent = countdown;
+  cd = 30;
+  document.getElementById('countdown').textContent = cd;
   timer = setInterval(() => {
-    countdown--;
-    document.getElementById('countdown').textContent = countdown;
-    if (countdown <= 0) load();
+    cd--;
+    document.getElementById('countdown').textContent = cd;
+    if (cd <= 0) load();
   }, 1000);
 }
 
-// Iniciar
 load();
 </script>
 </body>
