@@ -1,606 +1,1599 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trading AI — Monitor</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: #0d1117;
-    color: #e6edf3;
-    font-family: 'Segoe UI', sans-serif;
-    padding: 16px;
-    min-height: 100vh;
-  }
-
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-
-  header h1 { font-size: 18px; font-weight: 700; }
-
-  #last-update { font-size: 11px; color: #8b949e; }
-
-  /* STATUS PILLS */
-  .status-row {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
-
-  .status-pill {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 20px;
-    padding: 6px 12px;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: #8b949e; }
-  .dot.green  { background: #3fb950; box-shadow: 0 0 6px #3fb950; }
-  .dot.red    { background: #f85149; }
-  .dot.yellow { background: #d29922; box-shadow: 0 0 6px #d29922; }
-  .dot.pulse  { animation: pulse 1.2s ease-in-out infinite; }
-
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-  /* CARDS */
-  .card {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 12px;
-  }
-
-  .card-title {
-    font-size: 11px;
-    color: #8b949e;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-  }
-
-  /* STAT GRID */
-  .stat-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .stat-box {
-    background: #0d1117;
-    border-radius: 8px;
-    padding: 14px;
-    text-align: center;
-  }
-
-  .stat-val  { font-size: 28px; font-weight: 800; line-height: 1; }
-  .stat-lbl  { font-size: 11px; color: #8b949e; margin-top: 4px; }
-
-  .green-val  { color: #3fb950; }
-  .red-val    { color: #f85149; }
-  .blue-val   { color: #388bfd; }
-  .yellow-val { color: #d29922; }
-
-  /* WIN RATE BAR */
-  .wr-bar-wrap { margin-top: 12px; }
-  .wr-bar-label {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: #8b949e;
-    margin-bottom: 6px;
-  }
-  .wr-bar { height: 10px; background: #0d1117; border-radius: 5px; overflow: hidden; }
-  .wr-fill { height: 100%; border-radius: 5px; transition: width .6s ease; background: #3fb950; }
-  .wr-fill.mid { background: #d29922; }
-  .wr-fill.low { background: #f85149; }
-
-  /* LISTA GENÉRICA */
-  .model-list { display: flex; flex-direction: column; gap: 8px; }
-
-  .model-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #0d1117;
-    border-radius: 8px;
-    padding: 10px 14px;
-  }
-
-  .model-name { font-size: 13px; color: #e6edf3; }
-  .model-acc  { font-size: 14px; font-weight: 700; }
-
-  .model-bar-wrap {
-    flex: 1; margin: 0 12px;
-    height: 6px; background: #21262d;
-    border-radius: 3px; overflow: hidden;
-  }
-  .model-bar-fill { height: 100%; border-radius: 3px; transition: width .6s; }
-
-  /* ── BARRA 1 ANO ── */
-  .year-bar-wrap {
-    background: #0d1117; border-radius: 8px;
-    padding: 12px 14px; margin-bottom: 10px;
-  }
-  .year-bar-label {
-    display: flex; justify-content: space-between;
-    font-size: 12px; margin-bottom: 6px;
-  }
-  .year-bar-label span:first-child { color: #e6edf3; font-weight: 600; }
-  .year-bar-label span:last-child  { color: #8b949e; }
-  .year-bar { height: 12px; background: #21262d; border-radius: 6px; overflow: hidden; }
-  .year-bar-fill {
-    height: 100%; border-radius: 6px;
-    background: linear-gradient(90deg, #388bfd 0%, #3fb950 100%);
-    transition: width .8s ease;
-  }
-  .year-months {
-    display: flex; justify-content: space-between;
-    margin-top: 6px;
-  }
-  .year-months span {
-    font-size: 9px; color: #8b949e; text-align: center; flex: 1;
-  }
-  .year-months span.done { color: #3fb950; font-weight: 700; }
-
-  /* ── BACKTEST MÊS A MÊS ── */
-  .bt-month-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #0d1117;
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-  }
-  .bt-month-label { font-size: 13px; font-weight: 700; color: #d29922; }
-  .bt-month-sub   { font-size: 11px; color: #8b949e; }
-
-  .bt-month-bar-wrap {
-    height: 6px; background: #21262d;
-    border-radius: 3px; overflow: hidden;
-    margin-bottom: 10px;
-  }
-  .bt-month-bar-fill {
-    height: 100%; border-radius: 3px;
-    background: #d29922; transition: width .6s;
-  }
-  .bt-month-bar-fill.done { background: #3fb950; }
-
-  .bt-symbol-row {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    background: #0d1117;
-    border-radius: 8px;
-    padding: 10px 14px;
-  }
-  .bt-sym-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-  }
-  .bt-sym-name  { color: #e6edf3; font-weight: 600; }
-  .bt-sym-stats { font-size: 11px; color: #8b949e; }
-
-  .bt-bar-wrap {
-    height: 5px; background: #21262d;
-    border-radius: 3px; overflow: hidden;
-    margin-top: 4px;
-  }
-  .bt-bar-fill { height: 100%; border-radius: 3px; background: #d29922; transition: width .6s; }
-  .bt-bar-fill.done { background: #3fb950; }
-
-  /* REFRESH BTN */
-  .refresh-btn {
-    width: 100%; padding: 14px;
-    background: #238636; color: #fff;
-    border: none; border-radius: 8px;
-    font-size: 15px; font-weight: 700;
-    cursor: pointer; margin-bottom: 16px;
-    display: flex; align-items: center;
-    justify-content: center; gap: 8px;
-  }
-  .refresh-btn:active { opacity: .8; }
-
-  #auto-refresh {
-    text-align: center; font-size: 12px;
-    color: #8b949e; margin-bottom: 16px;
-  }
-
-  .spin { display: inline-block; animation: spin 1s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .hidden { display: none; }
-
-  .maint-badge {
-    text-align: center; font-size: 12px;
-    color: #8b949e; padding: 8px;
-    background: #0d1117; border-radius: 8px; margin-top: 8px;
-  }
-  .maint-badge span { color: #388bfd; font-weight: 600; }
-
-  .tag {
-    font-size: 10px; font-weight: 700;
-    padding: 2px 8px; border-radius: 10px;
-    text-transform: uppercase;
-  }
-  .tag-done    { background: #1a3a2a; color: #3fb950; }
-  .tag-running { background: #3a2e0a; color: #d29922; }
-  .tag-wait    { background: #21262d; color: #8b949e; }
-</style>
-</head>
-<body>
-
-<header>
-  <h1>🤖 Trading AI</h1>
-  <span id="last-update">Carregando…</span>
-</header>
-
-<!-- STATUS PILLS -->
-<div class="status-row">
-  <div class="status-pill">
-    <div class="dot" id="dot-deriv"></div>
-    <span id="lbl-deriv">Deriv</span>
-  </div>
-  <div class="status-pill">
-    <div class="dot" id="dot-backtest"></div>
-    <span id="lbl-backtest">Backtest</span>
-  </div>
-  <div class="status-pill">
-    <div class="dot" id="dot-trader"></div>
-    <span id="lbl-trader">Paper Trader</span>
-  </div>
-</div>
-
-<!-- REFRESH -->
-<button class="refresh-btn" onclick="load()">
-  <span id="spin-icon" class="hidden spin">⟳</span>
-  🔄 Atualizar agora
-</button>
-<div id="auto-refresh">Próxima atualização em <span id="countdown">30</span>s</div>
-
-<!-- BACKTEST MÊS A MÊS -->
-<div class="card" id="bt-card">
-  <div class="card-title">🎓 Backtest — Pré-treinamento</div>
-
-  <!-- barra 1 ano -->
-  <div class="year-bar-wrap">
-    <div class="year-bar-label">
-      <span>📅 Progresso histórico</span>
-      <span id="year-lbl">0 / 12 meses</span>
-    </div>
-    <div class="year-bar"><div class="year-bar-fill" id="year-fill" style="width:0%"></div></div>
-    <div class="year-months" id="year-months"></div>
-  </div>
-
-  <!-- progresso de meses -->
-  <div class="bt-month-header">
-    <div>
-      <div class="bt-month-label" id="bt-month-lbl">Aguardando…</div>
-      <div class="bt-month-sub"  id="bt-month-sub">—</div>
-    </div>
-    <span class="tag" id="bt-tag">Aguardando</span>
-  </div>
-  <div class="bt-month-bar-wrap">
-    <div class="bt-month-bar-fill" id="bt-month-bar" style="width:0%"></div>
-  </div>
-
-  <!-- progresso por símbolo -->
-  <div class="model-list" id="bt-sym-list">
-    <div class="model-row"><span class="model-name" style="color:#8b949e">Carregando…</span></div>
-  </div>
-
-  <!-- próxima manutenção -->
-  <div class="maint-badge" id="maint-badge" style="display:none">
-    🔧 Próxima manutenção: <span id="bt-next-maint">—</span>
-  </div>
-</div>
-
-<!-- PAPER TRADING -->
-<div class="card">
-  <div class="card-title">📊 Paper Trading — Conta Demo</div>
-  <div id="pt-status-msg" style="display:none;background:#0d1117;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#8b949e;text-align:center"></div>
-  <div class="stat-grid">
-    <div class="stat-box">
-      <div class="stat-val blue-val"   id="p-trades">—</div>
-      <div class="stat-lbl">Total Trades</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val yellow-val" id="p-wr">—</div>
-      <div class="stat-lbl">Win Rate</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val green-val"  id="p-wins">—</div>
-      <div class="stat-lbl">Wins</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val red-val"    id="p-losses">—</div>
-      <div class="stat-lbl">Losses</div>
-    </div>
-  </div>
-  <div class="wr-bar-wrap">
-    <div class="wr-bar-label">
-      <span>Win Rate</span><span id="p-wr2">—</span>
-    </div>
-    <div class="wr-bar">
-      <div class="wr-fill" id="wr-fill" style="width:0%"></div>
-    </div>
-  </div>
-</div>
-
-<!-- MODELOS -->
-<div class="card">
-  <div class="card-title">🧠 Modelos IA — Acurácia</div>
-  <div class="model-list" id="model-list">
-    <div class="model-row"><span class="model-name">Carregando…</span></div>
-  </div>
-</div>
-
-<!-- CANDLES -->
-<div class="card">
-  <div class="card-title">📈 Candles Coletados</div>
-  <div class="model-list" id="candle-list">
-    <div class="model-row"><span class="model-name">Carregando…</span></div>
-  </div>
-</div>
-
-<script>
-const SERVER   = 'https://web-production-41cb7.up.railway.app';
-const SYMBOLS  = ['R_50', 'R_100', '1HZ25V'];
-// ~26 lotes por símbolo por mês (5000 candles/lote, M1)
-const LOTES_POR_MES = 26;
-
-let timer    = null;
-let cd       = 30;
-
-async function load() {
-  document.getElementById('spin-icon').classList.remove('hidden');
-  try {
-    const r = await fetch(`${SERVER}/stats`);
-    const d = await r.json();
-    render(d);
-    document.getElementById('last-update').textContent =
-      'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
-  } catch(e) {
-    document.getElementById('last-update').textContent = '❌ Sem conexão com servidor';
-  }
-  document.getElementById('spin-icon').classList.add('hidden');
-  resetCountdown();
-}
-
-function render(d) {
-  // ── Pills ──
-  setDot('dot-deriv',  'lbl-deriv',  d.deriv_connected,     'Deriv');
-  setDot('dot-trader', 'lbl-trader', d.paper_trader_running, 'Paper Trader');
-
-  const btDone    = d.backtest_done    === true;
-  const btRunning = d.backtest_running === true;
-  const dotBt = document.getElementById('dot-backtest');
-  const lblBt = document.getElementById('lbl-backtest');
-  if (btDone) {
-    dotBt.className  = 'dot green';
-    lblBt.textContent = '✅ Backtest';
-  } else if (btRunning) {
-    dotBt.className  = 'dot yellow pulse';
-    lblBt.textContent = '⏳ Backtest';
-  } else {
-    dotBt.className  = 'dot red';
-    lblBt.textContent = '⏸ Backtest';
-  }
-
-  // ── Barra 1 ano ──
-  const totalTarget = 12;
-  const monthsTrained = d.months_trained || 0;
-  const yearPct = Math.min(100, Math.round((monthsTrained / totalTarget) * 100));
-  document.getElementById('year-fill').style.width = yearPct + '%';
-  document.getElementById('year-lbl').textContent = `${monthsTrained} / ${totalTarget} meses`;
-
-  // Mostrar os 12 meses como pílulas (do mais antigo ao mais recente)
-  const now = new Date();
-  const ymEl = document.getElementById('year-months');
-  ymEl.innerHTML = '';
-  for (let i = totalTarget - 1; i >= 0; i--) {
-    const d2 = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const lbl = d2.toLocaleDateString('pt-BR', {month:'short', year:'2-digit'});
-    const trained = (totalTarget - i) <= monthsTrained;
-    ymEl.innerHTML += `<span class="${trained ? 'done' : ''}">${lbl}</span>`;
-  }
-
-  // ── Backtest: progresso mês a mês ──
-  const bp          = d.backtest_progress || {};
-  const curMonth    = bp.current_month  || '';
-  const monthIdx    = bp.month_idx      || 0;
-  const totalMonths = bp.total_months   || 3;
-
-  const btMonthLbl = document.getElementById('bt-month-lbl');
-  const btMonthSub = document.getElementById('bt-month-sub');
-  const btTag      = document.getElementById('bt-tag');
-  const btBar      = document.getElementById('bt-month-bar');
-
-  if (btDone) {
-    btMonthLbl.textContent  = '✅ Treinamento concluído';
-    btMonthSub.textContent  = `${totalMonths} meses processados — paper trader ativo`;
-    btTag.textContent  = 'Concluído';
-    btTag.className    = 'tag tag-done';
-    btBar.style.width  = '100%';
-    btBar.className    = 'bt-month-bar-fill done';
-  } else if (btRunning && curMonth) {
-    btMonthLbl.textContent  = `Mês ${monthIdx} de ${totalMonths} — ${curMonth}`;
-    btMonthSub.textContent  = 'Baixando e treinando candle por candle…';
-    btTag.textContent  = 'Em andamento';
-    btTag.className    = 'tag tag-running';
-    const pct = Math.round(((monthIdx - 1) / totalMonths) * 100);
-    btBar.style.width  = pct + '%';
-    btBar.className    = 'bt-month-bar-fill';
-  } else {
-    btMonthLbl.textContent  = btRunning ? 'Iniciando backtest…' : 'Aguardando token Deriv';
-    btMonthSub.textContent  = btRunning ? 'Conectando ao servidor Deriv…' : 'Configure DERIV_TOKEN no Railway';
-    btTag.textContent  = btRunning ? 'Iniciando' : 'Aguardando';
-    btTag.className    = 'tag tag-wait';
-    btBar.style.width  = '0%';
-    btBar.className    = 'bt-month-bar-fill';
-  }
-
-  // ── Backtest: por símbolo ──
-  const symList = document.getElementById('bt-sym-list');
-  symList.innerHTML = '';
-
-  for (const sym of SYMBOLS) {
-    const p       = bp[sym] || {};
-    const batches = p.batches  || 0;
-    const samples = p.samples  || 0;
-    const symDone = p.done     === true;
-    const symMonth= p.month    || '';
-
-    // estimativa de % dentro do mês atual
-    let pct = 0;
-    if (btDone || symDone) {
-      pct = 100;
-    } else if (batches > 0) {
-      pct = Math.min(99, Math.round((batches / LOTES_POR_MES) * 100));
-    }
-
-    const fillCls = (btDone || symDone) ? 'bt-bar-fill done' : 'bt-bar-fill';
-    const statusTxt = btDone || symDone
-      ? `✅ ${samples.toLocaleString()} amostras`
-      : batches > 0
-        ? `${batches} lotes · ${samples.toLocaleString()} amostras${symMonth ? ' · ' + symMonth : ''}`
-        : '⏳ aguardando…';
-
-    symList.innerHTML += `
-      <div class="bt-symbol-row">
-        <div class="bt-sym-header">
-          <span class="bt-sym-name">${sym}</span>
-          <span class="bt-sym-stats">${statusTxt}</span>
-        </div>
-        <div class="bt-bar-wrap">
-          <div class="${fillCls}" style="width:${pct}%"></div>
-        </div>
-      </div>`;
-  }
-
-  // manutenção
-  const maintBadge = document.getElementById('maint-badge');
-  if (btDone) {
-    maintBadge.style.display = 'block';
-    if (d.next_maintenance) {
-      document.getElementById('bt-next-maint').textContent = d.next_maintenance;
-    } else {
-      const now = new Date();
-      const tm  = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(),
-                                    now.getUTCDate() + 1, 0, 1, 0));
-      const diff = Math.round((tm - now) / 60000);
-      document.getElementById('bt-next-maint').textContent =
-        `em ${Math.floor(diff/60)}h ${diff%60}m`;
-    }
-  } else {
-    maintBadge.style.display = 'none';
-  }
-
-  // ── Paper Trading ──
-  const ptMsg = document.getElementById('pt-status-msg');
-  if (!d.paper_trader_running) {
-    ptMsg.style.display = 'block';
-    if (!d.backtest_done) {
-      ptMsg.innerHTML = '⏳ Aguardando conclusão do backtest para iniciar operações…';
-    } else {
-      ptMsg.innerHTML = '⏸ Paper trader pausado (manutenção diária ou reinício)';
-    }
-  } else {
-    ptMsg.style.display = 'none';
-  }
-
-  const wr = d.paper_winrate || 0;
-  document.getElementById('p-trades').textContent = d.paper_trades  || 0;
-  document.getElementById('p-wins').textContent   = d.paper_wins    || 0;
-  document.getElementById('p-losses').textContent = d.paper_losses  || 0;
-  document.getElementById('p-wr').textContent     = wr.toFixed(1)   + '%';
-  document.getElementById('p-wr2').textContent    = wr.toFixed(1)   + '%';
-
-  const fill = document.getElementById('wr-fill');
-  fill.style.width = wr + '%';
-  fill.className   = 'wr-fill' + (wr >= 55 ? '' : wr >= 50 ? ' mid' : ' low');
-
-  // ── Modelos ──
-  const models = Object.entries(d.models || {})
-    .sort((a, b) => b[1].accuracy - a[1].accuracy);
-
-  const ml = document.getElementById('model-list');
-  ml.innerHTML = '';
-  if (models.length === 0) {
-    ml.innerHTML = '<div class="model-row"><span class="model-name" style="color:#8b949e">Nenhum modelo treinado ainda</span></div>';
-  }
-  for (const [sym, m] of models) {
-    const acc   = m.accuracy || 0;
-    const color = acc >= 58 ? '#3fb950' : acc >= 52 ? '#d29922' : '#f85149';
-    const samp  = (m.samples || 0).toLocaleString();
-    ml.innerHTML += `
-      <div class="model-row">
-        <span class="model-name">${sym}</span>
-        <div class="model-bar-wrap">
-          <div class="model-bar-fill" style="width:${acc}%;background:${color}"></div>
-        </div>
-        <span class="model-acc" style="color:${color}">
-          ${m.trained ? acc.toFixed(1)+'%' : '⏳'}
-          <span style="font-size:10px;color:#8b949e;font-weight:400"> · ${samp}</span>
-        </span>
-      </div>`;
-  }
-
-  // ── Candles ──
-  const candles = Object.entries(d.candles || {})
-    .sort((a, b) => a[0].localeCompare(b[0]));
-
-  const cl = document.getElementById('candle-list');
-  cl.innerHTML = '';
-  if (candles.length === 0) {
-    cl.innerHTML = '<div class="model-row"><span class="model-name" style="color:#8b949e">Nenhum candle ainda</span></div>';
-  }
-  for (const [sym, g] of candles) {
-    const m1  = (g[60]  || g['60']  || 0);
-    const m5  = (g[300] || g['300'] || 0);
-    cl.innerHTML += `
-      <div class="model-row">
-        <span class="model-name">${sym}</span>
-        <span style="font-size:12px;color:#8b949e">
-          M1: <b style="color:#388bfd">${m1}</b>
-          &nbsp;M5: <b style="color:#d29922">${m5}</b>
-        </span>
-      </div>`;
-  }
-}
-
-function setDot(dotId, lblId, ok, label) {
-  document.getElementById(dotId).className = 'dot ' + (ok ? 'green' : 'red');
-  document.getElementById(lblId).textContent = (ok ? '✅ ' : '❌ ') + label;
-}
-
-function resetCountdown() {
-  if (timer) clearInterval(timer);
-  cd = 30;
-  document.getElementById('countdown').textContent = cd;
-  timer = setInterval(() => {
-    cd--;
-    document.getElementById('countdown').textContent = cd;
-    if (cd <= 0) load();
-  }, 1000);
-}
-
-load();
-</script>
-</body>
-</html>
+"""
+╔══════════════════════════════════════════════════════════════════╗
+║        TRADING AI SERVER - APRENDIZADO CONTÍNUO DERIV          ║
+║  • Baixa candles reais da Deriv via WebSocket                  ║
+║  • Treina modelo ML automaticamente com histórico              ║
+║  • Envia sinais inteligentes para o HTML via HTTP              ║
+║  • Aprende com resultados dos trades enviados pelo HTML        ║
+╚══════════════════════════════════════════════════════════════════╝
+"""
+
+import os, json, threading, time, logging, math
+import numpy as np
+import pandas as pd
+from datetime import datetime
+from collections import deque
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import websocket
+from sklearn.linear_model import SGDClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
+import joblib
+import warnings
+warnings.filterwarnings('ignore')
+
+# ─── LOGGING ─────────────────────────────────────────────────
+logging.basicConfig(level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s')
+log = logging.getLogger(__name__)
+
+# ─── CONFIG ──────────────────────────────────────────────────
+PORT       = int(os.environ.get('PORT', 5000))
+MODEL_PATH = os.environ.get('MODEL_PATH', '/data/models.pkl')
+
+# Token Deriv: pode vir de variável de ambiente ou do HTML via /config
+DERIV_TOKEN = os.environ.get('DERIV_TOKEN', '')
+
+DERIV_WS = 'wss://ws.binaryws.com/websockets/v3?app_id=1089'
+
+SYMBOLS = ['R_50', 'R_100', '1HZ25V']
+
+# ─── ARMAZENAMENTO ───────────────────────────────────────────
+GRANULARITIES = [60, 300]  # M1 e M5
+
+class Store:
+    def __init__(self):
+        self.candles: dict[str, dict[int, deque]] = {
+            s: {g: deque(maxlen=1000) for g in GRANULARITIES} for s in SYMBOLS
+        }
+        self.trades:  deque = deque(maxlen=5000)
+        self.token    = DERIV_TOKEN
+        self.lock     = threading.Lock()
+
+    def add_candle(self, symbol: str, c: dict, granularity: int = 60):
+        with self.lock:
+            existing = {x['epoch'] for x in self.candles[symbol][granularity]}
+            if c['epoch'] not in existing:
+                self.candles[symbol][granularity].append(c)
+
+    def get_prices(self, symbol: str, granularity: int = 60, n: int = 300) -> list:
+        with self.lock:
+            data = list(self.candles[symbol].get(granularity, deque()))
+            data.sort(key=lambda x: x['epoch'])
+            return [float(c['close']) for c in data[-n:]]
+
+    def candle_count(self) -> dict:
+        with self.lock:
+            return {s: {g: len(list(q)) for g, q in grans.items()}
+                    for s, grans in self.candles.items()}
+
+    def add_trade(self, t: dict):
+        with self.lock:
+            t['ts'] = datetime.utcnow().isoformat()
+            self.trades.append(t)
+
+    def get_trades(self, n: int = 200) -> list:
+        with self.lock:
+            return list(self.trades)[-n:]
+
+store = Store()
+
+# ─── INDICADORES TÉCNICOS ────────────────────────────────────
+def rsi(prices, period=14):
+    if len(prices) < period + 1: return 50.0
+    s = pd.Series(prices)
+    d = s.diff()
+    g = d.where(d > 0, 0).ewm(alpha=1/period).mean()
+    l = (-d.where(d < 0, 0)).ewm(alpha=1/period).mean()
+    rs = g / l.replace(0, 1e-9)
+    return float((100 - 100/(1+rs)).iloc[-1])
+
+def ema(prices, span):
+    if not prices: return 0.0
+    return float(pd.Series(prices).ewm(span=span).mean().iloc[-1])
+
+def macd_hist(prices):
+    if len(prices) < 27: return 0.0
+    s = pd.Series(prices)
+    m = s.ewm(span=12).mean() - s.ewm(span=26).mean()
+    sig = m.ewm(span=9).mean()
+    return float((m - sig).iloc[-1])
+
+def bollinger_pos(prices, period=20):
+    if len(prices) < period: return 0.5
+    s = pd.Series(prices)
+    mean = s.rolling(period).mean()
+    std  = s.rolling(period).std()
+    upper = mean + 2*std
+    lower = mean - 2*std
+    rng = float((upper - lower).iloc[-1])
+    if rng == 0: return 0.5
+    return float((prices[-1] - float(lower.iloc[-1])) / rng)
+
+def stoch(prices, period=14):
+    if len(prices) < period: return 50.0
+    s = pd.Series(prices)
+    lo = s.rolling(period).min()
+    hi = s.rolling(period).max()
+    rng = float((hi - lo).iloc[-1])
+    if rng == 0: return 50.0
+    return float((prices[-1] - float(lo.iloc[-1])) / rng * 100)
+
+def volatility(prices, period=14):
+    if len(prices) < period+1: return 0.02
+    ret = pd.Series(prices).pct_change().dropna()
+    return float(ret.rolling(period).std().iloc[-1] * math.sqrt(252))
+
+def trend_strength(prices):
+    """Regressão linear normalizada → -100 a +100"""
+    if len(prices) < 10: return 0.0
+    n = len(prices)
+    x = np.arange(n)
+    slope = np.polyfit(x, prices, 1)[0]
+    avg = np.mean(prices)
+    return float(np.clip((slope / max(avg, 1e-9)) * 10000, -100, 100))
+
+def extract_features(prices_m1: list, prices_m5: list = None) -> np.ndarray:
+    if len(prices_m1) < 30:
+        return np.zeros(17)
+    # M1 — 10 features
+    r   = rsi(prices_m1) / 100
+    mh  = math.tanh(macd_hist(prices_m1) * 10)
+    bp  = bollinger_pos(prices_m1)
+    st  = stoch(prices_m1) / 100
+    vo  = min(volatility(prices_m1), 5) / 5
+    ts  = trend_strength(prices_m1) / 100
+    e9  = ema(prices_m1, 9)
+    e21 = ema(prices_m1, 21)
+    ed  = math.tanh((e9 - e21) / max(e21, 1e-9) * 100)
+    hr  = datetime.utcnow().hour
+    sh  = math.sin(hr * math.pi / 12)
+    ch  = math.cos(hr * math.pi / 12)
+    m1  = np.array([r, mh, bp, st, vo, ts, ed, sh, ch, float(len(prices_m1)/300)])
+    # M5 — 7 features (tendência de prazo maior)
+    if prices_m5 and len(prices_m5) >= 10:
+        r5  = rsi(prices_m5) / 100
+        mh5 = math.tanh(macd_hist(prices_m5) * 10)
+        bp5 = bollinger_pos(prices_m5)
+        ts5 = trend_strength(prices_m5) / 100
+        vo5 = min(volatility(prices_m5), 5) / 5
+        e9_5, e21_5 = ema(prices_m5, 9), ema(prices_m5, 21)
+        ed5 = math.tanh((e9_5 - e21_5) / max(e21_5, 1e-9) * 100)
+        m5  = np.array([r5, mh5, bp5, ts5, vo5, ed5, float(len(prices_m5)/100)])
+    else:
+        m5 = np.zeros(7)
+    return np.concatenate([m1, m5])
+
+# ─── MODELO ML POR SÍMBOLO ───────────────────────────────────
+class SymbolModel:
+    MIN_TRAIN = 60
+
+    def __init__(self, symbol: str):
+        self.symbol  = symbol
+        self.clf     = SGDClassifier(loss='log_loss', eta0=0.01,
+                                     learning_rate='adaptive', random_state=42)
+        self.scaler  = StandardScaler()
+        self.trained = False
+        self.samples = 0
+        self.accuracy = 0.0
+        self.lock    = threading.Lock()
+
+    def train(self, prices_m1: list, prices_m5: list = None):
+        """Treina/atualiza com histórico completo de preços M1 e M5."""
+        if len(prices_m1) < self.MIN_TRAIN + 1:
+            return
+
+        X, y = [], []
+        for i in range(self.MIN_TRAIN, len(prices_m1) - 1):
+            feat = extract_features(prices_m1[max(0, i-299):i+1], prices_m5)
+            label = 1 if prices_m1[i+1] > prices_m1[i] else 0
+            X.append(feat)
+            y.append(label)
+
+        if len(X) < 10:
+            return
+
+        X = np.array(X)
+        y = np.array(y)
+
+        with self.lock:
+            if not self.trained:
+                self.scaler.fit(X)
+                Xs = self.scaler.transform(X)
+                self.clf.partial_fit(Xs, y, classes=[0, 1])
+                self.trained = True
+                log.info(f"✅ [{self.symbol}] Modelo treinado com {len(X)} amostras")
+            else:
+                # atualização incremental com últimas amostras
+                recent = X[-20:]
+                ry = y[-20:]
+                Xs = self.scaler.transform(recent)
+                self.clf.partial_fit(Xs, ry)
+
+            # Preserva contador acumulado do backtest; usa max para não diminuir
+            self.samples = max(self.samples, len(X))
+            if self.trained and len(y) > 5:
+                Xs_all = self.scaler.transform(X)
+                preds  = self.clf.predict(Xs_all)
+                self.accuracy = float(accuracy_score(y, preds))
+                log.info(f"📊 [{self.symbol}] Acc={self.accuracy:.3f} samples={self.samples}")
+
+    def backtest_batch(self, prices_m1: list, prices_m5: list = None):
+        """Treina com lote grande de dados históricos (backtest pré-treinamento)."""
+        if len(prices_m1) < self.MIN_TRAIN + 1:
+            return
+        X, y = [], []
+        for i in range(self.MIN_TRAIN, len(prices_m1) - 1):
+            feat  = extract_features(prices_m1[max(0, i-299):i+1], prices_m5)
+            label = 1 if prices_m1[i+1] > prices_m1[i] else 0
+            X.append(feat)
+            y.append(label)
+        if len(X) < 10:
+            return
+        X = np.array(X)
+        y = np.array(y)
+        with self.lock:
+            if not self.trained:
+                self.scaler.fit(X)
+                Xs = self.scaler.transform(X)
+                self.clf.partial_fit(Xs, y, classes=[0, 1])
+                self.trained = True
+            else:
+                Xs = self.scaler.transform(X)
+                self.clf.partial_fit(Xs, y)
+            self.samples += len(X)
+            if len(y) > 5:
+                Xs_all = self.scaler.transform(X)
+                preds  = self.clf.predict(Xs_all)
+                self.accuracy = float(accuracy_score(y, preds))
+        log.info(f"🎓 [{self.symbol}] Backtest: +{len(X)} amostras | "
+                 f"total={self.samples} | acc={self.accuracy*100:.1f}%")
+
+    def learn_trade(self, feat: list, target: int):
+        """Aprende com resultado de trade real enviado pelo HTML ou paper trader."""
+        if not self.trained:
+            return
+        with self.lock:
+            X = np.array(feat).reshape(1, -1)
+            Xs = self.scaler.transform(X)
+            self.clf.partial_fit(Xs, [target])
+            self.samples += 1
+            # Atualiza acurácia com a nova amostra
+            pred = self.clf.predict(Xs)[0]
+            if pred == target:
+                self.accuracy = min(1.0, self.accuracy + 0.001)
+            else:
+                self.accuracy = max(0.0, self.accuracy - 0.001)
+            log.info(f"📚 [{self.symbol}] Aprendeu trade resultado={'WIN' if target==1 else 'LOSS'} "
+                     f"samples={self.samples} acc={self.accuracy*100:.1f}%")
+
+    def predict(self, prices_m1: list, prices_m5: list = None) -> dict:
+        feat = extract_features(prices_m1, prices_m5)
+
+        if not self.trained:
+            return self._technical_fallback(prices_m1, feat)
+
+        with self.lock:
+            try:
+                Xs = self.scaler.transform(feat.reshape(1, -1))
+                pred  = int(self.clf.predict(Xs)[0])
+                proba = self.clf.predict_proba(Xs)[0]
+                confidence = float(max(proba)) * 100
+                direction  = 'CALL' if pred == 1 else 'PUT'
+            except Exception:
+                return self._technical_fallback(prices_m1, feat)
+
+        return {
+            'direction':  direction,
+            'confidence': round(confidence, 2),
+            'method':     'machine_learning',
+            'accuracy':   round(self.accuracy * 100, 2),
+            'samples':    self.samples,
+        }
+
+    def _technical_fallback(self, prices_m1: list, feat: np.ndarray) -> dict:
+        r  = rsi(prices_m1)
+        mh = macd_hist(prices_m1)
+        bp = bollinger_pos(prices_m1)
+        st = stoch(prices_m1)
+        ts = trend_strength(prices_m1)
+        e9, e21 = ema(prices_m1, 9), ema(prices_m1, 21)
+
+        score = 0.0
+        if r < 30:    score += 2.0
+        elif r > 70:  score -= 2.0
+        elif r < 50:  score += 0.5
+        else:         score -= 0.5
+        score += 1.0 if mh > 0 else -1.0
+        if bp < 0.2:  score += 1.5
+        elif bp > 0.8: score -= 1.5
+        score += 1.0 if e9 > e21 else -1.0
+        if st < 20:   score += 1.0
+        elif st > 80: score -= 1.0
+        score += ts / 100 * 2
+
+        total = 9.0
+        pct   = (score + total) / (2 * total) * 100
+        pct   = max(50, min(95, pct))
+        direction = 'CALL' if score > 0 else 'PUT'
+        if score < 0: pct = 100 - pct
+
+        return {
+            'direction':  direction,
+            'confidence': round(pct, 2),
+            'method':     'technical_analysis',
+            'accuracy':   0.0,
+            'samples':    0,
+        }
+
+# Instâncias por símbolo
+models: dict[str, SymbolModel] = {s: SymbolModel(s) for s in SYMBOLS}
+
+def get_model(symbol: str) -> SymbolModel:
+    if symbol not in models:
+        models[symbol] = SymbolModel(symbol)
+    return models[symbol]
+
+# ─── DERIV WEBSOCKET CLIENT ──────────────────────────────────
+class DerivClient:
+    def __init__(self):
+        self._ws         = None
+        self._thread     = None
+        self._auth       = False
+        self._req        = 0
+        self._lock       = threading.Lock()
+        self._running       = False
+        self._reconnecting  = False   # flag anti-duplicata
+        self._pending_symbols: list[str] = []
+        self._backtest_callbacks: dict   = {}  # req_id → (event, holder)
+        self._subscribed: set            = set()  # (symbol, granularity) já assinados
+
+    def _next(self) -> int:
+        with self._lock:
+            self._req += 1
+            return self._req
+
+    def _send(self, payload: dict):
+        if self._ws and self._ws.sock and self._ws.sock.connected:
+            try:
+                payload['req_id'] = self._next()
+                self._ws.send(json.dumps(payload))
+            except Exception as e:
+                log.warning(f"⚠️ WS send falhou: {e} — marcando como desconectado")
+                self._auth = False  # força watchdog a reconectar
+
+    # ── handlers ────────────────────────────────────────────
+    def _on_open(self, ws):
+        # ← reset da flag aqui: conexão estabelecida com sucesso
+        self._reconnecting = False
+        log.info("🌐 Deriv WS aberto")
+        if store.token:
+            try:
+                # usa ws diretamente (não self._ws) para evitar race condition
+                # quando duas conexões abrem quase ao mesmo tempo
+                payload = {'authorize': store.token, 'req_id': self._next()}
+                ws.send(json.dumps(payload))
+            except Exception as e:
+                log.error(f"❌ _on_open authorize erro: {e}")
+        else:
+            log.warning("⚠️  Sem token Deriv — aguardando /config")
+
+    def _on_message(self, ws, raw):
+        try:
+            msg  = json.loads(raw)
+            mtype = msg.get('msg_type', '')
+            err   = msg.get('error')
+
+            if err:
+                log.error(f"❌ Deriv: {err.get('message','?')}")
+                return
+
+            if mtype == 'authorize':
+                self._auth = True
+                log.info(f"✅ Deriv autorizado: {msg['authorize'].get('loginid','ok')}")
+                # Solicitar candles para todos os símbolos
+                self._fetch_all_candles()
+
+            elif mtype == 'candles':
+                self._handle_candles(msg)
+
+            elif mtype == 'ohlc':
+                self._handle_ohlc(msg)
+
+        except Exception as e:
+            log.error(f"Erro handler: {e}")
+
+    def _on_error(self, ws, err):
+        log.error(f"❌ WS erro: {err}")
+
+    def _on_close(self, ws, code, msg):
+        self._auth = False
+        if self._reconnecting:
+            return   # já reconectando — ignorar
+        self._reconnecting = True
+        log.warning(f"⚠️  WS fechado ({code}). Reconectando em 15s…")
+        time.sleep(15)
+        if self._running:
+            try:
+                self._connect()
+            except Exception as e:
+                log.error(f"❌ _connect erro em _on_close: {e}")
+                self._reconnecting = False  # libera só se falhou totalmente
+        # NÃO reseta _reconnecting aqui — _on_open vai resetar quando conectar
+
+    # ── lógica de fetch ─────────────────────────────────────
+    def _fetch_all_candles(self):
+        """Baixa candles históricos de todos os símbolos em thread única sequencial."""
+        def _run():
+            for sym in SYMBOLS:
+                self._fetch(sym, 60, 500)
+                time.sleep(1.5)
+                self._fetch(sym, 300, 200)
+                time.sleep(1.5)
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _fetch(self, symbol: str, granularity: int = 60, count: int = 500):
+        """Baixa candles históricos."""
+        self._send({
+            'ticks_history': symbol,
+            'adjust_start_time': 1,
+            'count': count,
+            'end': 'latest',
+            'granularity': granularity,
+            'style': 'candles',
+        })
+        log.info(f"📡 Solicitando {count} candles {symbol} ({granularity}s)")
+
+    def _subscribe_ohlc(self, symbol: str, granularity: int = 60):
+        """Subscreve stream em tempo real — ignora se já subscrito."""
+        key = (symbol, granularity)
+        if key in self._subscribed:
+            return
+        self._subscribed.add(key)
+        self._send({
+            'ticks_history': symbol,
+            'count': 1,
+            'end': 'latest',
+            'granularity': granularity,
+            'style': 'candles',
+            'subscribe': 1,
+        })
+
+    def _handle_candles(self, msg: dict):
+        # Rota para backtest se req_id registrado
+        req_id = msg.get('req_id')
+        if req_id and req_id in self._backtest_callbacks:
+            event, holder = self._backtest_callbacks.pop(req_id)
+            holder.append(msg.get('candles', []))
+            event.set()
+            return
+
+        echo        = msg.get('echo_req', {})
+        symbol      = echo.get('ticks_history', 'UNKNOWN')
+        granularity = int(echo.get('granularity', 60))
+        candles_raw = msg.get('candles', [])
+        for c in candles_raw:
+            store.add_candle(symbol, {
+                'epoch': int(c['epoch']),
+                'open':  float(c['open']),
+                'high':  float(c['high']),
+                'low':   float(c['low']),
+                'close': float(c['close']),
+            }, granularity)
+
+        prices_m1 = store.get_prices(symbol, 60)
+        prices_m5 = store.get_prices(symbol, 300)
+        if len(prices_m1) >= 60:
+            # chamada direta — SGD treina em ms, não precisa de thread própria
+            get_model(symbol).train(prices_m1, prices_m5)
+
+        self._subscribe_ohlc(symbol, granularity)
+        log.info(f"📊 {len(candles_raw)} candles {granularity}s recebidos para {symbol}")
+
+    def _handle_ohlc(self, msg: dict):
+        ohlc        = msg.get('ohlc', {})
+        symbol      = ohlc.get('symbol', 'UNKNOWN')
+        granularity = int(ohlc.get('granularity', 60))
+        store.add_candle(symbol, {
+            'epoch': int(ohlc.get('epoch', 0)),
+            'open':  float(ohlc.get('open', 0)),
+            'high':  float(ohlc.get('high', 0)),
+            'low':   float(ohlc.get('low', 0)),
+            'close': float(ohlc.get('close', 0)),
+        }, granularity)
+        prices_m1 = store.get_prices(symbol, 60)
+        prices_m5 = store.get_prices(symbol, 300)
+        if len(prices_m1) >= 60 and len(prices_m1) % 5 == 0:
+            # chamada direta — elimina criação de threads por candle
+            get_model(symbol).train(prices_m1, prices_m5)
+
+    # ── controle ─────────────────────────────────────────────
+    def _connect(self):
+        self._subscribed.clear()  # limpa subscrições ao reconectar
+        self._ws = websocket.WebSocketApp(
+            DERIV_WS,
+            on_open=self._on_open,
+            on_message=self._on_message,
+            on_error=self._on_error,
+            on_close=self._on_close,
+        )
+        self._thread = threading.Thread(
+            target=self._ws.run_forever,
+            kwargs={'ping_interval': 0},  # Deriv gerencia keepalive no servidor
+            daemon=True,
+        )
+        self._thread.start()
+
+    def start(self):
+        self._running = True
+        self._connect()
+        log.info("🚀 Deriv client iniciado")
+
+    def reconnect_with_token(self, token: str):
+        """Reconecta com novo token (chamado via /config)."""
+        store.token = token
+        if self._ws:
+            try:
+                self._ws.close()
+            except: pass
+        time.sleep(2)
+        self._connect()
+        log.info(f"🔄 Reconectando com novo token: {token[:8]}…")
+
+    def fetch_symbol(self, symbol: str):
+        if self._auth:
+            self._fetch(symbol, 60, 500)
+            self._fetch(symbol, 300, 200)
+
+    @property
+    def is_ready(self) -> bool:
+        return self._auth
+
+
+deriv = DerivClient()
+
+# ─── PERSISTÊNCIA DE MODELOS ──────────────────────────────────
+def save_models():
+    """Salva todos os modelos treinados em disco (/data/models.pkl)."""
+    try:
+        trained = {s: m for s, m in models.items() if m.trained}
+        if not trained:
+            return
+        data = {}
+        for sym, model in trained.items():
+            with model.lock:
+                data[sym] = {
+                    'clf':      model.clf,
+                    'scaler':   model.scaler,
+                    'trained':  model.trained,
+                    'samples':  model.samples,
+                    'accuracy': model.accuracy,
+                }
+        # Persiste total de meses treinados para sobreviver redeploys
+        data['__meta__'] = {'months_trained': backtest_trainer._months_trained}
+        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+        joblib.dump(data, MODEL_PATH)
+        log.info(f"💾 {len(data)} modelos salvos em {MODEL_PATH}")
+    except Exception as e:
+        log.error(f"Erro ao salvar modelos: {e}")
+
+def load_models():
+    """Carrega modelos do disco ao iniciar — preserva progresso entre redeploys."""
+    try:
+        if not os.path.exists(MODEL_PATH):
+            log.info("📂 Nenhum modelo salvo encontrado — começando do zero")
+            return
+        data = joblib.load(MODEL_PATH)
+        count = 0
+        for sym, state in data.items():
+            if sym == '__meta__':
+                # Restaura meses treinados acumulados
+                backtest_trainer._months_trained = state.get('months_trained', BacktestTrainer.MONTHS_BACK)
+                log.info(f"📅 Meses treinados restaurados: {backtest_trainer._months_trained}")
+                continue
+            if sym in models:
+                model = models[sym]
+                with model.lock:
+                    model.clf      = state['clf']
+                    model.scaler   = state['scaler']
+                    model.trained  = state['trained']
+                    model.samples  = state['samples']
+                    model.accuracy = state['accuracy']
+                count += 1
+        log.info(f"✅ {count} modelos carregados de {MODEL_PATH} — progresso preservado!")
+    except Exception as e:
+        log.error(f"Erro ao carregar modelos: {e}")
+
+def auto_save_loop():
+    """Salva modelos automaticamente a cada 5 minutos."""
+    while True:
+        time.sleep(300)
+        save_models()
+
+# ─── WATCHDOG DE CONEXÃO ──────────────────────────────────────
+def watchdog_loop():
+    """Monitora conexão com a Deriv e reconecta automaticamente se cair."""
+    time.sleep(60)  # aguarda inicialização
+    while True:
+        try:
+            if not deriv.is_ready and store.token and not deriv._reconnecting:
+                log.warning("🔄 Watchdog: Deriv desconectado — reconectando…")
+                deriv._reconnecting = True
+                try:
+                    deriv._ws.close()
+                except: pass
+                time.sleep(5)
+                try:
+                    deriv._connect()
+                except Exception as e:
+                    log.error(f"Watchdog _connect erro: {e}")
+                    deriv._reconnecting = False  # libera só se falhou totalmente
+                # NÃO reseta _reconnecting aqui — _on_open vai resetar quando conectar
+            time.sleep(30)
+        except Exception as e:
+            log.error(f"Watchdog erro: {e}")
+            deriv._reconnecting = False  # segurança: libera em caso de crash inesperado
+            time.sleep(30)
+
+# ─── REFRESH PERIÓDICO ────────────────────────────────────────
+def refresh_loop():
+    """A cada 10 min, atualiza candles de todos os símbolos."""
+    time.sleep(120)  # aguarda conexão inicial
+    idx = 0
+    while True:
+        try:
+            if deriv.is_ready:
+                sym = SYMBOLS[idx % len(SYMBOLS)]
+                deriv.fetch_symbol(sym)
+                idx += 1
+            time.sleep(600)
+        except Exception as e:
+            log.error(f"Refresh loop erro: {e}")
+            time.sleep(600)  # mesmo intervalo do caminho normal — evita loop rápido de erros
+
+# ─── PAPER TRADER ─────────────────────────────────────────────
+class PaperTrader:
+    """Abre ordens reais na conta demo e aprende com os resultados."""
+
+    STAKE      = 1.0      # valor mínimo em USD (conta demo)
+    DURATION   = 1        # duração do contrato em minutos
+    MIN_CONF   = 52.0     # confiança mínima para abrir trade
+    INTERVAL   = 90       # segundos entre trades
+    MIN_CANDLES = 60      # candles mínimos antes de operar
+
+    def __init__(self):
+        self._ws      = None
+        self._thread  = None
+        self._running = False
+        self._lock    = threading.Lock()
+        self._pending: dict = {}   # contract_id → {symbol, direction, feat}
+        self._req     = 0
+
+    def _next(self) -> int:
+        with self._lock:
+            self._req += 1
+            return self._req
+
+    def _send(self, payload: dict):
+        if self._ws and self._ws.sock and self._ws.sock.connected:
+            try:
+                payload['req_id'] = self._next()
+                self._ws.send(json.dumps(payload))
+            except Exception as e:
+                log.warning(f"⚠️ PaperTrader send falhou: {e}")
+
+    def _on_open(self, ws):
+        log.info("🎮 PaperTrader WS aberto — autorizando…")
+        self._send({'authorize': store.token})
+
+    def _on_message(self, ws, raw):
+        try:
+            msg   = json.loads(raw)
+            mtype = msg.get('msg_type', '')
+            err   = msg.get('error')
+
+            if err:
+                log.warning(f"⚠️ PaperTrader: {err.get('message','?')}")
+                return
+
+            if mtype == 'authorize':
+                log.info("✅ PaperTrader autorizado")
+
+            elif mtype == 'buy':
+                buy = msg.get('buy', {})
+                cid = buy.get('contract_id')
+                echo = msg.get('echo_req', {})
+                if cid and cid in self._pending:
+                    log.info(f"📝 Ordem aberta contract_id={cid}")
+                # subscrever resultado
+                if cid:
+                    self._send({'proposal_open_contract': 1,
+                                'contract_id': cid, 'subscribe': 1})
+
+            elif mtype == 'proposal_open_contract':
+                poc = msg.get('proposal_open_contract', {})
+                cid = poc.get('contract_id')
+                if not poc.get('is_expired') and not poc.get('is_sold'):
+                    return  # contrato ainda aberto
+
+                with self._lock:
+                    info = self._pending.pop(cid, None)
+                if not info:
+                    return
+
+                profit    = float(poc.get('profit', 0))
+                result    = 'win' if profit > 0 else 'loss'
+                win       = profit > 0
+                direction = info.get('direction', 'CALL')
+                # aprende com erros: se errou, ensina o oposto
+                if direction == 'CALL':
+                    target = 1 if win else 0
+                else:  # PUT
+                    target = 0 if win else 1
+
+                model = get_model(info['symbol'])
+                threading.Thread(
+                    target=model.learn_trade,
+                    args=(info['feat'], target),
+                    daemon=True,
+                ).start()
+
+                store.add_trade({
+                    'type':      'paper_trade',
+                    'symbol':    info['symbol'],
+                    'direction': info['direction'],
+                    'result':    result,
+                    'profit':    profit,
+                    'stake':     self.STAKE,
+                })
+                log.info(f"{'✅ WIN' if profit > 0 else '❌ LOSS'} "
+                         f"{info['symbol']} {info['direction']} profit={profit:.2f}")
+
+        except Exception as e:
+            log.error(f"PaperTrader handler erro: {e}")
+
+    def _on_error(self, ws, err):
+        log.error(f"PaperTrader WS erro: {err}")
+
+    def _on_close(self, ws, code, msg):
+        log.warning(f"PaperTrader WS fechado ({code}). Reconectando em 20s…")
+        time.sleep(20)
+        if self._running:
+            self._connect()
+
+    def _connect(self):
+        self._ws = websocket.WebSocketApp(
+            DERIV_WS,
+            on_open=self._on_open,
+            on_message=self._on_message,
+            on_error=self._on_error,
+            on_close=self._on_close,
+        )
+        self._thread = threading.Thread(
+            target=self._ws.run_forever,
+            kwargs={'ping_interval': 30, 'ping_timeout': 10},
+            daemon=True,
+        )
+        self._thread.start()
+
+    def _trade_loop(self):
+        """Loop principal: gera sinal e abre ordem a cada INTERVAL segundos."""
+        time.sleep(180)  # aguarda modelos inicializarem
+        idx = 0
+        while self._running:
+            try:
+                sym       = SYMBOLS[idx % len(SYMBOLS)]
+                idx      += 1
+                prices_m1 = store.get_prices(sym, 60)
+                prices_m5 = store.get_prices(sym, 300)
+
+                if len(prices_m1) < self.MIN_CANDLES:
+                    time.sleep(10)
+                    continue
+
+                model  = get_model(sym)
+                result = model.predict(prices_m1, prices_m5)
+
+                if result['confidence'] < self.MIN_CONF:
+                    log.info(f"⏭ {sym} confiança {result['confidence']:.1f}% < {self.MIN_CONF}% — pulando")
+                    time.sleep(self.INTERVAL)
+                    continue
+
+                direction = result['direction']
+                contract  = 'CALL' if direction == 'CALL' else 'PUT'
+                feat      = extract_features(prices_m1, prices_m5).tolist()
+
+                proposal_payload = {
+                    'buy': 1,
+                    'price': self.STAKE,
+                    'parameters': {
+                        'amount':        self.STAKE,
+                        'basis':         'stake',
+                        'contract_type': contract,
+                        'currency':      'USD',
+                        'duration':      self.DURATION,
+                        'duration_unit': 'm',
+                        'symbol':        sym,
+                    },
+                }
+
+                # registrar pending antes de enviar
+                req_id = self._next()
+                proposal_payload['req_id'] = req_id
+
+                # guardar info temporária pelo req_id até receber contract_id
+                with self._lock:
+                    self._pending[req_id] = {
+                        'symbol':    sym,
+                        'direction': direction,
+                        'feat':      feat,
+                    }
+
+                if self._ws and self._ws.sock and self._ws.sock.connected:
+                    self._ws.send(json.dumps(proposal_payload))
+                    log.info(f"🎯 PaperTrade {sym} {direction} conf={result['confidence']:.1f}%")
+                else:
+                    with self._lock:
+                        self._pending.pop(req_id, None)
+
+                time.sleep(self.INTERVAL)
+
+            except Exception as e:
+                log.error(f"PaperTrader loop erro: {e}")
+                time.sleep(30)
+
+    def _on_message(self, ws, raw):
+        try:
+            msg   = json.loads(raw)
+            mtype = msg.get('msg_type', '')
+            err   = msg.get('error')
+
+            if err:
+                log.warning(f"⚠️ PaperTrader: {err.get('message','?')}")
+                return
+
+            if mtype == 'authorize':
+                log.info("✅ PaperTrader autorizado")
+
+            elif mtype == 'buy':
+                buy = msg.get('buy', {})
+                cid = buy.get('contract_id')
+                echo_req_id = msg.get('req_id')
+                # mover pending de req_id para contract_id
+                with self._lock:
+                    info = self._pending.pop(echo_req_id, None)
+                    if info and cid:
+                        self._pending[cid] = info
+                if cid:
+                    self._send({'proposal_open_contract': 1,
+                                'contract_id': cid, 'subscribe': 1})
+                log.info(f"📝 Ordem aberta contract_id={cid}")
+
+            elif mtype == 'proposal_open_contract':
+                poc = msg.get('proposal_open_contract', {})
+                cid = poc.get('contract_id')
+                if not poc.get('is_expired') and not poc.get('is_sold'):
+                    return
+
+                with self._lock:
+                    info = self._pending.pop(cid, None)
+                if not info:
+                    return
+
+                profit    = float(poc.get('profit', 0))
+                result    = 'win' if profit > 0 else 'loss'
+                win       = profit > 0
+                direction = info.get('direction', 'CALL')
+                # aprende com erros: se errou, ensina o oposto
+                if direction == 'CALL':
+                    target = 1 if win else 0
+                else:  # PUT
+                    target = 0 if win else 1
+
+                model = get_model(info['symbol'])
+                threading.Thread(
+                    target=model.learn_trade,
+                    args=(info['feat'], target),
+                    daemon=True,
+                ).start()
+
+                store.add_trade({
+                    'type':      'paper_trade',
+                    'symbol':    info['symbol'],
+                    'direction': info['direction'],
+                    'result':    result,
+                    'profit':    profit,
+                    'stake':     self.STAKE,
+                })
+                log.info(f"{'✅ WIN' if profit > 0 else '❌ LOSS'} "
+                         f"{info['symbol']} {info['direction']} profit={profit:.2f}")
+
+        except Exception as e:
+            log.error(f"PaperTrader handler erro: {e}")
+
+    def start(self):
+        if not store.token:
+            log.warning("⚠️ PaperTrader: sem token, aguardando /config")
+            return
+        self._running = True
+        self._connect()
+        threading.Thread(target=self._trade_loop, daemon=True).start()
+        log.info("🎮 PaperTrader iniciado")
+
+    def stop(self):
+        self._running = False
+
+    @property
+    def is_running(self) -> bool:
+        return self._running
+
+
+paper_trader = PaperTrader()
+
+
+# ─── BACKTEST PRÉ-TREINAMENTO ─────────────────────────────────
+class BacktestTrainer:
+    """Busca 3 meses de histórico via WS dedicado e pré-treina os modelos."""
+
+    MONTHS_BACK   = 3
+    BATCH_CANDLES = 5000   # máximo da API Deriv por requisição
+    BATCH_DELAY   = 2.5    # segundos entre requisições (aumentado para evitar rate limit)
+    CONTEXT       = 300    # candles de contexto mantidos entre batches
+
+    def __init__(self):
+        self._done           = False
+        self._running        = False
+        self._months_trained = self.MONTHS_BACK  # total acumulado de meses treinados
+        # progress: campos de mês + por símbolo
+        self._progress = {
+            'current_month': '',
+            'month_idx':     0,
+            'total_months':  0,
+            **{s: {'batches': 0, 'samples': 0, 'done': False, 'month': ''} for s in SYMBOLS}
+        }
+
+    @property
+    def is_done(self) -> bool:
+        return self._done
+
+    @property
+    def is_running(self) -> bool:
+        return self._running
+
+    @property
+    def progress(self) -> dict:
+        return self._progress
+
+    def start(self):
+        """Inicia backtest em thread separada. Paper trader sobe ao terminar."""
+        if not store.token:
+            log.warning("⚠️ Backtest: sem token — iniciando paper trader diretamente")
+            paper_trader.start()
+            return
+        self._running = True
+        threading.Thread(target=self._run, daemon=True).start()
+
+    @staticmethod
+    def today_midnight_utc() -> int:
+        """Retorna o timestamp Unix de hoje às 00:00:00 UTC."""
+        today = datetime.utcnow().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        return int(today.timestamp())
+
+    def _run(self):
+        from datetime import timedelta
+
+        now           = datetime.utcnow()
+        today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # ── Montar lista de meses: do mais antigo ao mais recente ──
+        months = []
+        for i in range(self.MONTHS_BACK - 1, -1, -1):   # ex: 2, 1, 0
+            year  = now.year
+            month = now.month - i
+            while month <= 0:
+                month += 12
+                year  -= 1
+            month_start = datetime(year, month, 1, 0, 0, 0)
+            # primeiro dia do mês seguinte
+            ny, nm = (year, month + 1) if month < 12 else (year + 1, 1)
+            month_end = min(datetime(ny, nm, 1, 0, 0, 0), today_midnight)
+            if month_start >= today_midnight:
+                continue
+            months.append((int(month_start.timestamp()),
+                            int(month_end.timestamp()),
+                            month_start.strftime('%Y-%m')))
+
+        total_months = len(months)
+        log.info(f"🎓 === BACKTEST MÊS A MÊS — {total_months} meses ===")
+        self._progress['total_months'] = total_months
+
+        for m_idx, (start_epoch, end_epoch, label) in enumerate(months):
+            if not self._running:
+                break
+
+            self._progress['current_month'] = label
+            self._progress['month_idx']     = m_idx + 1
+            log.info(f"🎓 [{m_idx+1}/{total_months}] === Mês {label} "
+                     f"({datetime.utcfromtimestamp(start_epoch).strftime('%d/%m')} → "
+                     f"{datetime.utcfromtimestamp(end_epoch).strftime('%d/%m')}) ===")
+
+            # Processar cada símbolo neste mês
+            for sym in SYMBOLS:
+                if not self._running:
+                    break
+                self._progress[sym]['month'] = label
+                log.info(f"🎓   {sym} — mês {label}…")
+                try:
+                    self._process_symbol_ws(sym, start_epoch, end_epoch=end_epoch)
+                except Exception as e:
+                    log.error(f"Backtest {sym} {label} erro: {e}")
+                time.sleep(3)   # pausa entre símbolos — evita rate limit Deriv
+
+            # ── Salvar progresso após cada mês completo ──
+            save_models()
+            log.info(f"💾 [{m_idx+1}/{total_months}] Modelos salvos após mês {label}")
+
+            if m_idx < total_months - 1:
+                time.sleep(10)   # respiro entre meses
+
+        self._done    = True
+        self._running = False
+        log.info("🎓 === BACKTEST CONCLUÍDO — iniciando paper trading ===")
+        paper_trader.start()
+
+    def _process_symbol_ws(self, symbol: str, start_epoch: int, end_epoch: int = None):
+        """WS dedicado por símbolo — não interfere no WS live."""
+        accumulated   = []
+        batch_num     = 0
+        current_start = start_epoch
+        now           = end_epoch if end_epoch else (int(time.time()) - 60)
+
+        # Estado compartilhado entre callbacks do WS dedicado
+        state = {'authorized': False, 'candles': None, 'error': None}
+        auth_event   = threading.Event()
+        candle_event = threading.Event()
+
+        def on_open(ws):
+            ws.send(json.dumps({'authorize': store.token, 'req_id': 1}))
+
+        def on_message(ws, raw):
+            try:
+                msg   = json.loads(raw)
+                mtype = msg.get('msg_type', '')
+                if mtype == 'authorize':
+                    state['authorized'] = True
+                    auth_event.set()
+                elif mtype == 'candles':
+                    state['candles'] = msg.get('candles', [])
+                    candle_event.set()
+                elif msg.get('error'):
+                    state['error'] = msg['error'].get('message', 'unknown')
+                    candle_event.set()
+            except Exception as e:
+                log.error(f"Backtest WS msg erro: {e}")
+
+        def on_error(ws, err):
+            log.warning(f"Backtest WS erro: {err}")
+            auth_event.set()
+            candle_event.set()
+
+        def on_close(ws, code, msg):
+            auth_event.set()
+            candle_event.set()
+
+        # Abrir WS dedicado para este símbolo
+        bt_ws = websocket.WebSocketApp(
+            DERIV_WS,
+            on_open=on_open,
+            on_message=on_message,
+            on_error=on_error,
+            on_close=on_close,
+        )
+        threading.Thread(
+            target=bt_ws.run_forever,
+            kwargs={'ping_interval': 30, 'ping_timeout': 15},
+            daemon=True,
+        ).start()
+
+        # Aguardar autorização
+        if not auth_event.wait(timeout=20) or not state['authorized']:
+            log.warning(f"⚠️ Backtest {symbol}: falha na autorização")
+            try: bt_ws.close()
+            except: pass
+            return
+
+        # Buscar batches sequencialmente
+        while current_start < now and self._running:
+            state['candles'] = None
+            state['error']   = None
+            candle_event.clear()
+
+            try:
+                bt_ws.send(json.dumps({
+                    'ticks_history': symbol,
+                    'start':         current_start,
+                    'end':           min(current_start + self.BATCH_CANDLES * 60, now),
+                    'granularity':   60,
+                    'style':         'candles',
+                    'req_id':        batch_num + 2,
+                }))
+            except Exception as e:
+                log.warning(f"⚠️ Backtest {symbol}: erro ao enviar batch {batch_num}: {e}")
+                break
+
+            if not candle_event.wait(timeout=30):
+                log.warning(f"⚠️ Backtest {symbol}: timeout batch {batch_num}")
+                break
+
+            if state['error'] or not state['candles']:
+                log.warning(f"⚠️ Backtest {symbol}: {state['error'] or 'sem candles'}")
+                break
+
+            candles = state['candles']
+            prices  = [float(c['close']) for c in candles]
+            accumulated.extend(prices)
+            current_start = int(candles[-1]['epoch']) + 1
+            batch_num    += 1
+            self._progress[symbol]['batches'] = batch_num
+
+            if len(accumulated) >= 1000:
+                get_model(symbol).backtest_batch(accumulated)
+                self._progress[symbol]['samples'] = get_model(symbol).samples
+                accumulated = accumulated[-self.CONTEXT:]
+
+            time.sleep(self.BATCH_DELAY)
+
+        # Fechar WS dedicado
+        try: bt_ws.close()
+        except: pass
+
+        # Treinar com o restante
+        if len(accumulated) >= 60:
+            get_model(symbol).backtest_batch(accumulated)
+            self._progress[symbol]['samples'] = get_model(symbol).samples
+
+        self._progress[symbol]['done'] = True
+        log.info(f"✅ Backtest {symbol}: {batch_num} batches | "
+                 f"{get_model(symbol).samples} amostras totais")
+
+
+    def extend(self, extra_months: int = 3):
+        """Treina nos meses ANTERIORES ao período já aprendido — sem resetar pesos."""
+        if self._extending:
+            log.warning("⚠️ Extensão já em andamento")
+            return
+        threading.Thread(target=self._run_extend, args=(extra_months,), daemon=True).start()
+
+    def _run_extend(self, extra_months: int):
+        self._extending = True
+        ALREADY = self._months_trained   # acumulado real (3, 6, 9…)
+        now = datetime.utcnow()
+        today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Montar lista de meses mais antigos: do mais antigo → mais recente
+        months = []
+        for i in range(ALREADY + extra_months - 1, ALREADY - 1, -1):
+            yr, mo = now.year, now.month - i
+            while mo <= 0:
+                mo += 12; yr -= 1
+            ms = datetime(yr, mo, 1)
+            ny, nm = (yr, mo + 1) if mo < 12 else (yr + 1, 1)
+            me = min(datetime(ny, nm, 1), today_midnight)
+            if ms >= today_midnight:
+                continue
+            months.append((int(ms.timestamp()), int(me.timestamp()), ms.strftime('%Y-%m')))
+
+        total = len(months)
+        log.info(f"🎓 === EXTENSÃO DE BACKTEST: {total} meses anteriores ===")
+        self._ext_progress = {'total': total, 'done': 0, 'current': ''}
+
+        # ── Parar paper trader para não sobrecarregar conexões WS ──
+        was_running = paper_trader.is_running
+        if was_running:
+            log.info("⏸ Pausando paper trader durante extensão…")
+            paper_trader.stop()
+            time.sleep(5)   # aguarda WS do paper trader fechar
+
+        try:
+            for idx, (start_e, end_e, label) in enumerate(months):
+                self._ext_progress['current'] = label
+                log.info(f"🎓 [{idx+1}/{total}] Mês antigo: {label}…")
+                for sym in SYMBOLS:
+                    try:
+                        self._process_symbol_ws(sym, start_e, end_epoch=end_e)
+                    except Exception as e:
+                        log.error(f"extend {sym} {label}: {e}")
+                    time.sleep(3)
+                save_models()
+                self._ext_progress['done'] = idx + 1
+                log.info(f"💾 Extensão: modelos salvos após {label}")
+                if idx < total - 1:
+                    time.sleep(10)
+        finally:
+            self._extending = False
+            # Conta apenas meses realmente processados (protege contra falha parcial)
+            months_done = self._ext_progress.get('done', 0)
+            self._months_trained += months_done
+            save_models()   # garante persistência do months_trained via stats
+            if was_running:
+                log.info("▶️ Retomando paper trader após extensão…")
+                paper_trader.start()
+            log.info(f"✅ Extensão concluída — {months_done}/{extra_months} meses · total acumulado: {self._months_trained} meses")
+
+
+backtest_trainer = BacktestTrainer()
+backtest_trainer._extending    = False
+backtest_trainer._ext_progress = {}
+
+
+# ─── MANUTENÇÃO DIÁRIA ────────────────────────────────────────
+def daily_maintenance_loop():
+    """Todos os dias às 00:01 UTC: pausa operações, atualiza dados do dia anterior e retoma."""
+    while True:
+        try:
+            now    = datetime.utcnow()
+            # Próximo 00:01 UTC
+            from datetime import timedelta
+            target = (now + timedelta(days=1)).replace(
+                hour=0, minute=1, second=0, microsecond=0
+            )
+            wait_s = (target - now).total_seconds()
+            log.info(f"⏰ Manutenção diária agendada para {target.strftime('%Y-%m-%d %H:%M')} UTC ({wait_s/3600:.1f}h)")
+            time.sleep(wait_s)
+
+            log.info("🔄 === MANUTENÇÃO DIÁRIA INICIADA ===")
+
+            # 1. Parar paper trader
+            paper_trader.stop()
+            time.sleep(5)
+
+            # 2. Buscar candles do dia anterior (ontem 00:00 → hoje 00:00)
+            today_midnight     = BacktestTrainer.today_midnight_utc()
+            yesterday_midnight = today_midnight - 86400  # 24h atrás
+
+            log.info(f"📥 Atualizando candles de {datetime.utcfromtimestamp(yesterday_midnight).strftime('%Y-%m-%d')}...")
+            for sym in SYMBOLS:
+                try:
+                    backtest_trainer._process_symbol_ws(
+                        sym,
+                        start_epoch=yesterday_midnight,
+                        end_epoch=today_midnight,
+                    )
+                except Exception as e:
+                    log.error(f"Manutenção {sym} erro: {e}")
+                time.sleep(2)
+
+            save_models()
+            log.info("✅ === MANUTENÇÃO CONCLUÍDA — retomando operações ===")
+
+            # 3. Retomar paper trader
+            paper_trader.start()
+
+        except Exception as e:
+            log.error(f"daily_maintenance_loop erro: {e}")
+            time.sleep(60)
+
+
+# ─── INICIALIZAÇÃO ────────────────────────────────────────────
+load_models()   # ← carrega progresso salvo antes de qualquer coisa
+deriv.start()
+threading.Thread(target=refresh_loop, daemon=True).start()
+threading.Thread(target=auto_save_loop, daemon=True).start()
+threading.Thread(target=watchdog_loop, daemon=True).start()
+threading.Thread(target=daily_maintenance_loop, daemon=True).start()
+# Backtest pré-treina com 3 meses e só depois inicia o paper trader
+threading.Thread(target=lambda: (time.sleep(20), backtest_trainer.start()), daemon=True).start()
+
+# ─── FLASK API ────────────────────────────────────────────────
+app = Flask(__name__)
+CORS(app, origins='*')
+
+# ── /config — recebe token do HTML ao conectar ────────────────
+@app.route('/config', methods=['POST'])
+def config():
+    """HTML envia token Deriv aqui quando o usuário faz login."""
+    data  = request.get_json() or {}
+    token = data.get('token', '').strip()
+    if not token:
+        return jsonify({'error': 'token obrigatório'}), 400
+    deriv.reconnect_with_token(token)
+    return jsonify({'ok': True, 'message': 'Token recebido — conectando à Deriv'})
+
+# ── / — health ────────────────────────────────────────────────
+@app.route('/', methods=['GET'])
+def health():
+    cc = store.candle_count()
+    ms = {s: {'trained': m.trained, 'samples': m.samples,
+               'accuracy': round(m.accuracy*100, 2)}
+          for s, m in models.items()}
+    return jsonify({
+        'status':               'online',
+        'service':              'Trading AI - Deriv Continuous Learning v2.0',
+        'deriv_connected':      deriv.is_ready,
+        'paper_trader_running': paper_trader.is_running,
+        'candles':              cc,
+        'models':               ms,
+        'timestamp':            datetime.utcnow().isoformat(),
+    })
+
+# ── /signal — sinal de trading ────────────────────────────────
+@app.route('/signal', methods=['POST'])
+def signal():
+    data   = request.get_json() or {}
+    symbol = data.get('symbol', 'R_50').upper()
+
+    prices_m1 = store.get_prices(symbol, 60)
+    prices_m5 = store.get_prices(symbol, 300)
+
+    if len(prices_m1) < 30:
+        if deriv.is_ready:
+            threading.Thread(target=deriv.fetch_symbol, args=(symbol,), daemon=True).start()
+        return jsonify({
+            'direction':    'CALL',
+            'confidence':   62.0,
+            'method':       'insufficient_data',
+            'message':      f'Coletando dados… {len(prices_m1)}/30 candles',
+            'candles':      len(prices_m1),
+            'model_ready':  False,
+        })
+
+    model  = get_model(symbol)
+    result = model.predict(prices_m1, prices_m5)
+
+    result.update({
+        'symbol':      symbol,
+        'candles_m1':  len(prices_m1),
+        'candles_m5':  len(prices_m5),
+        'model_ready': model.trained,
+        'rsi':         round(rsi(prices_m1), 2),
+        'trend':       round(trend_strength(prices_m1), 2),
+        'volatility':  round(volatility(prices_m1) * 100, 2),
+        'stoch':       round(stoch(prices_m1), 2),
+        'bb_pos':      round(bollinger_pos(prices_m1), 3),
+    })
+
+    store.add_trade({
+        'type':      'signal',
+        'symbol':    symbol,
+        'direction': result['direction'],
+        'confidence': result['confidence'],
+    })
+
+    return jsonify(result)
+
+# ── /analyze — análise de mercado ────────────────────────────
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    data      = request.get_json() or {}
+    symbol    = data.get('symbol', 'R_50').upper()
+    prices_m1 = store.get_prices(symbol, 60)
+
+    if len(prices_m1) < 10:
+        return jsonify({'message': 'Aguardando dados da Deriv…', 'candles': len(prices_m1)})
+
+    r   = rsi(prices_m1)
+    ts  = trend_strength(prices_m1)
+    vol = volatility(prices_m1) * 100
+    st  = stoch(prices_m1)
+    bp  = bollinger_pos(prices_m1)
+    model = get_model(symbol)
+
+    condition = 'oversold' if r < 30 else 'overbought' if r > 70 else 'neutral'
+    trend_dir = 'bullish' if ts > 15 else 'bearish' if ts < -15 else 'lateral'
+
+    msg = (f"📊 {symbol} | RSI={r:.1f} ({condition}) | "
+           f"Tendência={trend_dir} ({ts:.0f}) | "
+           f"Volatilidade={vol:.1f}% | Stoch={st:.1f} | "
+           f"BB_pos={bp:.2f} | "
+           f"Modelo={'✅ treinado' if model.trained else '⏳ aprendendo'} "
+           f"({model.samples} amostras, {model.accuracy*100:.1f}% acc)")
+
+    return jsonify({
+        'message':    msg,
+        'trend':      trend_dir,
+        'confidence': round(min(95, 50 + abs(ts)*0.4 + (30-r if r < 50 else r-70) * 0.3), 1),
+        'rsi':        round(r, 2),
+        'trend_strength': round(ts, 2),
+        'volatility': round(vol, 2),
+        'stoch':      round(st, 2),
+        'bb_pos':     round(bp, 3),
+        'candles':    len(prices_m1),
+        'model_ready': model.trained,
+        'model_accuracy': round(model.accuracy*100, 2),
+    })
+
+# ── /risk — avaliação de risco ───────────────────────────────
+@app.route('/risk', methods=['POST'])
+def risk():
+    data   = request.get_json() or {}
+    symbol = data.get('symbol', 'R_50').upper()
+    mg_lvl = int(data.get('martingaleLevel', 0))
+    trades_data = data.get('recentTrades', [])
+
+    prices_m1 = store.get_prices(symbol, 60)
+    vol = volatility(prices_m1) * 100 if len(prices_m1) > 14 else 30
+    r   = rsi(prices_m1) if len(prices_m1) > 14 else 50
+
+    # calcular win rate recente
+    recent = trades_data[-10:] if trades_data else []
+    wins   = sum(1 for t in recent if t.get('status') == 'won')
+    wr     = (wins / len(recent) * 100) if recent else 50
+
+    # score de risco 0-100
+    risk_score = 0
+    risk_score += min(mg_lvl * 15, 45)
+    risk_score += max(0, vol - 20) * 0.5
+    risk_score += max(0, 40 - wr) * 0.5
+
+    if risk_score < 25:
+        level = 'low'
+        msg   = 'Risco baixo — condições favoráveis'
+        rec   = 'Pode operar normalmente'
+    elif risk_score < 55:
+        level = 'medium'
+        msg   = f'Risco moderado (vol={vol:.1f}%, MG nível {mg_lvl})'
+        rec   = 'Operar com cautela, confirmar sinal'
+    elif risk_score < 75:
+        level = 'high'
+        msg   = f'Risco alto! MG nível {mg_lvl}, win_rate recente {wr:.0f}%'
+        rec   = 'Reduzir stake, aguardar melhor momento'
+    else:
+        level = 'extreme'
+        msg   = f'Risco EXTREMO — MG nível {mg_lvl} + volatilidade alta'
+        rec   = 'PAUSAR operações agora'
+
+    return jsonify({
+        'level':          level,
+        'score':          round(risk_score, 1),
+        'message':        msg,
+        'recommendation': rec,
+        'volatility':     round(vol, 2),
+        'win_rate_recent': round(wr, 2),
+    })
+
+# ── /trade/result — HTML envia resultado pós-trade ───────────
+@app.route('/trade/result', methods=['POST'])
+def trade_result():
+    """
+    HTML envia o resultado de cada trade finalizado.
+    O servidor usa isso para aprendizado reforçado.
+    """
+    data   = request.get_json() or {}
+    symbol = data.get('symbol', 'R_50').upper()
+    result = data.get('result', '').lower()   # 'win' ou 'loss'
+    direction = data.get('direction', 'CALL').upper()
+
+    if result not in ('win', 'loss'):
+        return jsonify({'error': 'result deve ser win ou loss'}), 400
+
+    prices_m1 = store.get_prices(symbol, 60)
+    prices_m5 = store.get_prices(symbol, 300)
+    if len(prices_m1) >= 30:
+        feat   = extract_features(prices_m1, prices_m5).tolist()
+        win    = result == 'win'
+        # aprende com erros: se errou, ensina o oposto
+        if direction == 'CALL':
+            target = 1 if win else 0
+        else:  # PUT
+            target = 0 if win else 1
+        model  = get_model(symbol)
+        threading.Thread(
+            target=model.learn_trade,
+            args=(feat, target),
+            daemon=True,
+        ).start()
+
+    store.add_trade({
+        'type':      'trade_result',
+        'symbol':    symbol,
+        'direction': direction,
+        'result':    result,
+        'pnl':       float(data.get('pnl', 0)),
+        'stake':     float(data.get('stake', 1)),
+    })
+
+    return jsonify({'ok': True, 'message': f'Resultado {result} registrado e aprendido'})
+
+# ── /extend-backtest — adiciona meses históricos mais antigos ─
+@app.route('/extend-backtest', methods=['POST'])
+def extend_backtest():
+    """
+    Treina nos meses ANTERIORES ao período já aprendido.
+    Não reseta os pesos — usa partial_fit por cima dos 29k amostras.
+    Body JSON opcional: {"months": 3}
+    """
+    if backtest_trainer._extending:
+        return jsonify({'status': 'já em andamento', 'progress': backtest_trainer._ext_progress})
+    data        = request.get_json() or {}
+    months      = int(data.get('months', 3))
+    TARGET_MAX  = 12
+    already     = backtest_trainer._months_trained
+    remaining   = TARGET_MAX - already
+    if remaining <= 0:
+        return jsonify({
+            'status':  'completo',
+            'months_trained': already,
+            'message': f'Ano completo já treinado ({already} meses) — nenhuma ação necessária.',
+        })
+    months = min(months, remaining)   # nunca ultrapassa 12
+    backtest_trainer.extend(months)
+    return jsonify({
+        'status':  'iniciado',
+        'months':  months,
+        'already': already,
+        'will_reach': already + months,
+        'message': f'Treinando {months} meses anteriores (partial_fit — sem perda de dados). Chegará a {already + months}/12.',
+    })
+
+# ── /candles/<symbol> — debug ─────────────────────────────────
+@app.route('/candles/<symbol>', methods=['GET'])
+def candles(symbol):
+    limit = int(request.args.get('limit', 50))
+    gran  = int(request.args.get('granularity', 60))
+    sym   = symbol.upper()
+    data  = list(store.candles.get(sym, {}).get(gran, []))[-limit:]
+    return jsonify({'symbol': sym, 'granularity': gran, 'count': len(data), 'candles': data})
+
+def _next_maintenance_str() -> str:
+    """Retorna string legível com o tempo até a próxima manutenção (00:01 UTC)."""
+    try:
+        from datetime import timedelta
+        now    = datetime.utcnow()
+        target = (now + timedelta(days=1)).replace(hour=0, minute=1, second=0, microsecond=0)
+        diff   = int((target - now).total_seconds())
+        h, rem = divmod(diff, 3600)
+        m      = rem // 60
+        return f"em {h}h {m}m"
+    except Exception:
+        return "—"
+
+
+# ── /stats ────────────────────────────────────────────────────
+@app.route('/stats', methods=['GET'])
+def stats():
+    trades       = store.get_trades(200)
+    paper        = [t for t in trades if t.get('type') == 'paper_trade']
+    html_results = [t for t in trades if t.get('type') == 'trade_result']
+    p_wins  = sum(1 for t in paper if t.get('result') == 'win')
+    h_wins  = sum(1 for t in html_results if t.get('result') == 'win')
+    return jsonify({
+        'paper_trades':  len(paper),
+        'paper_wins':    p_wins,
+        'paper_losses':  len(paper) - p_wins,
+        'paper_winrate': round(p_wins / max(len(paper), 1) * 100, 2),
+        'html_trades':   len(html_results),
+        'html_wins':     h_wins,
+        'html_winrate':  round(h_wins / max(len(html_results), 1) * 100, 2),
+        'paper_trader_running':  paper_trader.is_running,
+        'deriv_connected':       deriv.is_ready,
+        'backtest_done':         backtest_trainer.is_done,
+        'backtest_running':      backtest_trainer.is_running,
+        'backtest_progress':     backtest_trainer.progress,
+        'backtest_extending':    backtest_trainer._extending,
+        'backtest_ext_progress': backtest_trainer._ext_progress,
+        'months_trained':        backtest_trainer._months_trained,
+        'next_maintenance':      _next_maintenance_str(),
+        'candles':               store.candle_count(),
+        'models': {
+            s: {
+                'trained':  m.trained,
+                'samples':  m.samples,
+                'accuracy': round(m.accuracy*100, 2)
+            } for s, m in models.items()
+        },
+    })
+
+# ─── MAIN ─────────────────────────────────────────────────────
+if __name__ == '__main__':
+    log.info("=" * 60)
+    log.info("🚀 Trading AI Server v2.0 — Deriv Continuous Learning")
+    log.info("=" * 60)
+    log.info(f"  Porta HTTP : {PORT}")
+    log.info(f"  Token ENV  : {'✅ configurado' if DERIV_TOKEN else '⏳ aguardando /config'}")
+    log.info("  Endpoints  : /signal /analyze /risk /trade/result /config /stats")
+    log.info("=" * 60)
+
+    app.run(host='0.0.0.0', port=PORT, debug=False, threaded=True)
