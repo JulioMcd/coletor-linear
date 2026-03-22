@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading AI — Monitor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: 'Segoe UI', sans-serif;
+    padding: 16px;
+    min-height: 100vh;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  header h1 { font-size: 18px; font-weight: 700; }
+
+  #last-update {
+    font-size: 11px;
+    color: #8b949e;
+  }
+
+  /* STATUS DOTS */
+  .status-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #8b949e;
+  }
+  .dot.green  { background: #3fb950; box-shadow: 0 0 6px #3fb950; }
+  .dot.red    { background: #f85149; }
+  .dot.yellow { background: #d29922; }
+
+  /* CARDS */
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .card-title {
+    font-size: 11px;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  /* STAT GRID */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .stat-box {
+    background: #0d1117;
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .stat-lbl {
+    font-size: 11px;
+    color: #8b949e;
+    margin-top: 4px;
+  }
+
+  .green-val { color: #3fb950; }
+  .red-val   { color: #f85149; }
+  .blue-val  { color: #388bfd; }
+  .yellow-val{ color: #d29922; }
+
+  /* WIN RATE BAR */
+  .wr-bar-wrap { margin-top: 12px; }
+  .wr-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #8b949e;
+    margin-bottom: 6px;
+  }
+  .wr-bar {
+    height: 10px;
+    background: #0d1117;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .wr-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.6s ease;
+    background: #3fb950;
+  }
+  .wr-fill.mid  { background: #d29922; }
+  .wr-fill.low  { background: #f85149; }
+
+  /* MODELOS */
+  .model-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .model-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0d1117;
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+
+  .model-name { font-size: 13px; color: #e6edf3; }
+
+  .model-acc {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .model-bar-wrap {
+    flex: 1;
+    margin: 0 12px;
+    height: 6px;
+    background: #21262d;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .model-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s;
+  }
+
+  /* REFRESH BTN */
+  .refresh-btn {
+    width: 100%;
+    padding: 14px;
+    background: #238636;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .refresh-btn:active { opacity: 0.8; }
+
+  /* COUNTDOWN */
+  #auto-refresh {
+    text-align: center;
+    font-size: 12px;
+    color: #8b949e;
+    margin-bottom: 16px;
+  }
+
+  /* SPINNER */
+  .spin {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🤖 Trading AI</h1>
+  <span id="last-update">Carregando…</span>
+</header>
+
+<!-- STATUS -->
+<div class="status-row">
+  <div class="status-pill">
+    <div class="dot" id="dot-deriv"></div>
+    <span id="lbl-deriv">Deriv</span>
+  </div>
+  <div class="status-pill">
+    <div class="dot" id="dot-trader"></div>
+    <span id="lbl-trader">Paper Trader</span>
+  </div>
+</div>
+
+<!-- BOTÃO REFRESH -->
+<button class="refresh-btn" onclick="load()">
+  <span id="spin-icon" class="hidden">⟳</span>
+  🔄 Atualizar agora
+</button>
+<div id="auto-refresh">Próxima atualização em <span id="countdown">30</span>s</div>
+
+<!-- PAPER TRADING -->
+<div class="card">
+  <div class="card-title">📊 Paper Trading (conta demo)</div>
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="stat-val blue-val" id="p-trades">—</div>
+      <div class="stat-lbl">Total Trades</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val yellow-val" id="p-wr">—</div>
+      <div class="stat-lbl">Win Rate</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val green-val" id="p-wins">—</div>
+      <div class="stat-lbl">Wins</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val red-val" id="p-losses">—</div>
+      <div class="stat-lbl">Losses</div>
+    </div>
+  </div>
+  <div class="wr-bar-wrap">
+    <div class="wr-bar-label">
+      <span>Win Rate</span>
+      <span id="p-wr2">—</span>
+    </div>
+    <div class="wr-bar">
+      <div class="wr-fill" id="wr-fill" style="width:0%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODELOS -->
+<div class="card">
+  <div class="card-title">🧠 Modelos IA — Acurácia</div>
+  <div class="model-list" id="model-list">
+    <div class="model-row"><span class="model-name">Carregando…</span></div>
+  </div>
+</div>
+
+<!-- CANDLES -->
+<div class="card">
+  <div class="card-title">📈 Candles coletados</div>
+  <div class="model-list" id="candle-list">
+    <div class="model-row"><span class="model-name">Carregando…</span></div>
+  </div>
+</div>
+
+<script>
+const SERVER = 'https://web-production-41cb7.up.railway.app';
+let timer = null;
+let countdown = 30;
+
+async function load() {
+  document.getElementById('spin-icon').classList.remove('hidden');
+  try {
+    const r = await fetch(`${SERVER}/stats`);
+    const d = await r.json();
+    render(d);
+    document.getElementById('last-update').textContent =
+      'Atualizado: ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    document.getElementById('last-update').textContent = '❌ Erro ao carregar';
+  }
+  document.getElementById('spin-icon').classList.add('hidden');
+  resetCountdown();
+}
+
+function render(d) {
+  // Status
+  setDot('dot-deriv',  'lbl-deriv',  d.deriv_connected,        'Deriv');
+  setDot('dot-trader', 'lbl-trader', d.paper_trader_running,    'Paper Trader');
+
+  // Paper trading
+  document.getElementById('p-trades').textContent  = d.paper_trades;
+  document.getElementById('p-wins').textContent    = d.paper_wins;
+  document.getElementById('p-losses').textContent  = d.paper_losses;
+  document.getElementById('p-wr').textContent      = d.paper_winrate.toFixed(1) + '%';
+  document.getElementById('p-wr2').textContent     = d.paper_winrate.toFixed(1) + '%';
+
+  const fill = document.getElementById('wr-fill');
+  fill.style.width = d.paper_winrate + '%';
+  fill.className = 'wr-fill' +
+    (d.paper_winrate >= 55 ? '' : d.paper_winrate >= 50 ? ' mid' : ' low');
+
+  // Modelos — ordenados por acurácia
+  const models = Object.entries(d.models || {})
+    .sort((a, b) => b[1].accuracy - a[1].accuracy);
+
+  const ml = document.getElementById('model-list');
+  ml.innerHTML = '';
+  for (const [sym, m] of models) {
+    const acc = m.accuracy;
+    const color = acc >= 58 ? '#3fb950' : acc >= 52 ? '#d29922' : '#f85149';
+    ml.innerHTML += `
+      <div class="model-row">
+        <span class="model-name">${sym}</span>
+        <div class="model-bar-wrap">
+          <div class="model-bar-fill" style="width:${acc}%;background:${color}"></div>
+        </div>
+        <span class="model-acc" style="color:${color}">${m.trained ? acc.toFixed(1)+'%' : '⏳'}</span>
+      </div>`;
+  }
+
+  // Candles
+  const candles = Object.entries(d.candles || {})
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+  const cl = document.getElementById('candle-list');
+  cl.innerHTML = '';
+  for (const [sym, g] of candles) {
+    cl.innerHTML += `
+      <div class="model-row">
+        <span class="model-name">${sym}</span>
+        <span style="font-size:12px;color:#8b949e">M1: <b style="color:#388bfd">${g[60]}</b> &nbsp; M5: <b style="color:#d29922">${g[300]}</b></span>
+      </div>`;
+  }
+}
+
+function setDot(dotId, lblId, ok, label) {
+  const dot = document.getElementById(dotId);
+  const lbl = document.getElementById(lblId);
+  dot.className = 'dot ' + (ok ? 'green' : 'red');
+  lbl.textContent = (ok ? '✅ ' : '❌ ') + label;
+}
+
+function resetCountdown() {
+  if (timer) clearInterval(timer);
+  countdown = 30;
+  document.getElementById('countdown').textContent = countdown;
+  timer = setInterval(() => {
+    countdown--;
+    document.getElementById('countdown').textContent = countdown;
+    if (countdown <= 0) load();
+  }, 1000);
+}
+
+// Iniciar
+load();
+</script>
+</body>
+</html>
