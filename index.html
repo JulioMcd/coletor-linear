@@ -129,6 +129,32 @@
   }
   .model-bar-fill { height: 100%; border-radius: 3px; transition: width .6s; }
 
+  /* ── BARRA 1 ANO ── */
+  .year-bar-wrap {
+    background: #0d1117; border-radius: 8px;
+    padding: 12px 14px; margin-bottom: 10px;
+  }
+  .year-bar-label {
+    display: flex; justify-content: space-between;
+    font-size: 12px; margin-bottom: 6px;
+  }
+  .year-bar-label span:first-child { color: #e6edf3; font-weight: 600; }
+  .year-bar-label span:last-child  { color: #8b949e; }
+  .year-bar { height: 12px; background: #21262d; border-radius: 6px; overflow: hidden; }
+  .year-bar-fill {
+    height: 100%; border-radius: 6px;
+    background: linear-gradient(90deg, #388bfd 0%, #3fb950 100%);
+    transition: width .8s ease;
+  }
+  .year-months {
+    display: flex; justify-content: space-between;
+    margin-top: 6px;
+  }
+  .year-months span {
+    font-size: 9px; color: #8b949e; text-align: center; flex: 1;
+  }
+  .year-months span.done { color: #3fb950; font-weight: 700; }
+
   /* ── BACKTEST MÊS A MÊS ── */
   .bt-month-header {
     display: flex;
@@ -251,6 +277,16 @@
 <div class="card" id="bt-card">
   <div class="card-title">🎓 Backtest — Pré-treinamento</div>
 
+  <!-- barra 1 ano -->
+  <div class="year-bar-wrap">
+    <div class="year-bar-label">
+      <span>📅 Progresso histórico</span>
+      <span id="year-lbl">0 / 12 meses</span>
+    </div>
+    <div class="year-bar"><div class="year-bar-fill" id="year-fill" style="width:0%"></div></div>
+    <div class="year-months" id="year-months"></div>
+  </div>
+
   <!-- progresso de meses -->
   <div class="bt-month-header">
     <div>
@@ -364,6 +400,24 @@ function render(d) {
   } else {
     dotBt.className  = 'dot red';
     lblBt.textContent = '⏸ Backtest';
+  }
+
+  // ── Barra 1 ano ──
+  const totalTarget = 12;
+  const monthsTrained = d.months_trained || 0;
+  const yearPct = Math.min(100, Math.round((monthsTrained / totalTarget) * 100));
+  document.getElementById('year-fill').style.width = yearPct + '%';
+  document.getElementById('year-lbl').textContent = `${monthsTrained} / ${totalTarget} meses`;
+
+  // Mostrar os 12 meses como pílulas (do mais antigo ao mais recente)
+  const now = new Date();
+  const ymEl = document.getElementById('year-months');
+  ymEl.innerHTML = '';
+  for (let i = totalTarget - 1; i >= 0; i--) {
+    const d2 = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const lbl = d2.toLocaleDateString('pt-BR', {month:'short', year:'2-digit'});
+    const trained = (totalTarget - i) <= monthsTrained;
+    ymEl.innerHTML += `<span class="${trained ? 'done' : ''}">${lbl}</span>`;
   }
 
   // ── Backtest: progresso mês a mês ──
