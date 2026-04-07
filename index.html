@@ -2,605 +2,406 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trading AI — Monitor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Coletor Ossocão</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; background:#1a1a2e; min-height:100vh; }
 
-  body {
-    background: #0d1117;
-    color: #e6edf3;
-    font-family: 'Segoe UI', sans-serif;
-    padding: 16px;
-    min-height: 100vh;
-  }
+/* HEADER */
+.header { background:linear-gradient(135deg,#16213e,#0f3460); padding:14px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:100; box-shadow:0 2px 10px rgba(0,0,0,0.4); }
+.header h1 { color:#e94560; font-size:18px; font-weight:700; flex:1; }
+.header .stats { color:#a8b2d8; font-size:12px; text-align:right; }
+.header .stats span { color:#64ffda; font-weight:700; }
 
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
+/* TOOLBAR */
+.toolbar { background:#16213e; padding:10px 12px; display:flex; flex-direction:column; gap:8px; position:sticky; top:56px; z-index:99; border-bottom:1px solid #0f3460; }
+.search-row { display:flex; gap:8px; }
+.search-input { flex:1; background:#0f3460; border:1px solid #1a4a7a; border-radius:10px; padding:10px 14px; color:#e2e8f0; font-size:15px; outline:none; }
+.search-input::placeholder { color:#4a5568; }
+.search-input:focus { border-color:#e94560; }
+.btn-scan { background:#e94560; border:none; border-radius:10px; padding:10px 16px; color:#fff; font-size:20px; cursor:pointer; }
+.filter-row { display:flex; gap:6px; }
+.filter-btn { flex:1; padding:7px; border:1px solid #1a4a7a; border-radius:8px; background:transparent; color:#a8b2d8; font-size:12px; cursor:pointer; transition:all .2s; }
+.filter-btn.active { background:#e94560; border-color:#e94560; color:#fff; font-weight:600; }
 
-  header h1 { font-size: 18px; font-weight: 700; }
+/* SCANNER */
+.scanner-wrap { display:none; background:#000; position:relative; }
+.scanner-wrap.show { display:block; }
+#video { width:100%; max-height:220px; object-fit:cover; display:block; }
+.scan-overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+.scan-box { width:70%; height:80px; border:2px solid #64ffda; border-radius:6px; box-shadow:0 0 0 9999px rgba(0,0,0,0.5); }
+.scan-line { position:absolute; width:70%; height:2px; background:#e94560; animation:scanline 2s linear infinite; }
+@keyframes scanline { 0%{top:30%} 50%{top:65%} 100%{top:30%} }
+.scan-close { position:absolute; top:8px; right:8px; background:rgba(0,0,0,0.7); border:none; color:#fff; font-size:22px; width:36px; height:36px; border-radius:50%; cursor:pointer; }
 
-  #last-update { font-size: 11px; color: #8b949e; }
+/* TOAST */
+.toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px); background:#0f3460; color:#e2e8f0; padding:10px 20px; border-radius:20px; font-size:14px; opacity:0; transition:all .3s; z-index:999; white-space:nowrap; border:1px solid #1a4a7a; pointer-events:none; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
-  /* STATUS PILLS */
-  .status-row {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
+/* TABLE */
+.table-wrap { padding:8px; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead th { background:#0f3460; color:#64ffda; padding:8px 6px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.5px; position:sticky; top:0; }
+tbody tr { border-bottom:1px solid #1a2a4a; transition:background .15s; }
+tbody tr:hover { background:#16213e; }
+tbody tr.scanned { background:rgba(100,255,218,0.05); }
+td { padding:8px 6px; color:#c8d0e7; vertical-align:middle; }
+td.nome { color:#e2e8f0; font-weight:500; max-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+td.cod { color:#64ffda; font-family:monospace; font-size:12px; white-space:nowrap; }
+td.un { color:#a8b2d8; font-size:11px; }
+td.barras-cell { white-space:nowrap; }
 
-  .status-pill {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 20px;
-    padding: 6px 12px;
-    font-size: 13px;
-    font-weight: 600;
-  }
+/* Barras badges */
+.badge-ok { background:#064e3b; color:#6ee7b7; padding:3px 8px; border-radius:12px; font-size:11px; font-family:monospace; cursor:pointer; }
+.badge-empty { background:#1e3a5f; color:#4a6fa5; padding:3px 8px; border-radius:12px; font-size:11px; cursor:pointer; }
+.badge-scan { background:#7c3aed; color:#ddd6fe; padding:3px 8px; border-radius:12px; font-size:11px; animation:pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.6} }
 
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: #8b949e; }
-  .dot.green  { background: #3fb950; box-shadow: 0 0 6px #3fb950; }
-  .dot.red    { background: #f85149; }
-  .dot.yellow { background: #d29922; box-shadow: 0 0 6px #d29922; }
-  .dot.pulse  { animation: pulse 1.2s ease-in-out infinite; }
+/* INPUT INLINE */
+.inline-input { background:#0f3460; border:1px solid #e94560; border-radius:8px; padding:4px 8px; color:#fff; font-size:13px; font-family:monospace; width:160px; outline:none; }
 
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+/* FAB exportar */
+.fab { position:fixed; bottom:20px; right:16px; background:#e94560; border:none; border-radius:50px; padding:12px 20px; color:#fff; font-size:14px; font-weight:700; cursor:pointer; box-shadow:0 4px 20px rgba(233,69,96,0.5); z-index:200; display:flex; align-items:center; gap:8px; }
 
-  /* CARDS */
-  .card {
-    background: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 12px;
-  }
+/* MODAL */
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:500; align-items:center; justify-content:center; }
+.modal-bg.show { display:flex; }
+.modal { background:#16213e; border:1px solid #0f3460; border-radius:16px; padding:24px; width:88%; max-width:360px; }
+.modal h3 { color:#e94560; margin-bottom:8px; font-size:16px; }
+.modal p { color:#a8b2d8; font-size:13px; margin-bottom:16px; }
+.modal-inp { width:100%; background:#0f3460; border:1px solid #1a4a7a; border-radius:10px; padding:12px; color:#fff; font-size:16px; font-family:monospace; outline:none; margin-bottom:12px; }
+.modal-inp:focus { border-color:#e94560; }
+.modal-btns { display:flex; gap:10px; }
+.modal-btns button { flex:1; padding:10px; border-radius:10px; border:none; font-size:14px; font-weight:600; cursor:pointer; }
+.btn-confirm { background:#e94560; color:#fff; }
+.btn-cancel { background:#0f3460; color:#a8b2d8; border:1px solid #1a4a7a !important; }
 
-  .card-title {
-    font-size: 11px;
-    color: #8b949e;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 12px;
-  }
+/* Nome usuario */
+.name-badge { background:#0f3460; border:1px solid #1a4a7a; border-radius:8px; padding:4px 10px; color:#64ffda; font-size:12px; cursor:pointer; white-space:nowrap; }
 
-  /* STAT GRID */
-  .stat-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .stat-box {
-    background: #0d1117;
-    border-radius: 8px;
-    padding: 14px;
-    text-align: center;
-  }
-
-  .stat-val  { font-size: 28px; font-weight: 800; line-height: 1; }
-  .stat-lbl  { font-size: 11px; color: #8b949e; margin-top: 4px; }
-
-  .green-val  { color: #3fb950; }
-  .red-val    { color: #f85149; }
-  .blue-val   { color: #388bfd; }
-  .yellow-val { color: #d29922; }
-
-  /* WIN RATE BAR */
-  .wr-bar-wrap { margin-top: 12px; }
-  .wr-bar-label {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: #8b949e;
-    margin-bottom: 6px;
-  }
-  .wr-bar { height: 10px; background: #0d1117; border-radius: 5px; overflow: hidden; }
-  .wr-fill { height: 100%; border-radius: 5px; transition: width .6s ease; background: #3fb950; }
-  .wr-fill.mid { background: #d29922; }
-  .wr-fill.low { background: #f85149; }
-
-  /* LISTA GENÉRICA */
-  .model-list { display: flex; flex-direction: column; gap: 8px; }
-
-  .model-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #0d1117;
-    border-radius: 8px;
-    padding: 10px 14px;
-  }
-
-  .model-name { font-size: 13px; color: #e6edf3; }
-  .model-acc  { font-size: 14px; font-weight: 700; }
-
-  .model-bar-wrap {
-    flex: 1; margin: 0 12px;
-    height: 6px; background: #21262d;
-    border-radius: 3px; overflow: hidden;
-  }
-  .model-bar-fill { height: 100%; border-radius: 3px; transition: width .6s; }
-
-  /* ── BARRA 1 ANO ── */
-  .year-bar-wrap {
-    background: #0d1117; border-radius: 8px;
-    padding: 12px 14px; margin-bottom: 10px;
-  }
-  .year-bar-label {
-    display: flex; justify-content: space-between;
-    font-size: 12px; margin-bottom: 6px;
-  }
-  .year-bar-label span:first-child { color: #e6edf3; font-weight: 600; }
-  .year-bar-label span:last-child  { color: #8b949e; }
-  .year-bar { height: 12px; background: #21262d; border-radius: 6px; overflow: hidden; }
-  .year-bar-fill {
-    height: 100%; border-radius: 6px;
-    background: linear-gradient(90deg, #388bfd 0%, #3fb950 100%);
-    transition: width .8s ease;
-  }
-  .year-months {
-    display: flex; justify-content: space-between;
-    margin-top: 6px;
-  }
-  .year-months span {
-    font-size: 9px; color: #8b949e; text-align: center; flex: 1;
-  }
-  .year-months span.done { color: #3fb950; font-weight: 700; }
-
-  /* ── BACKTEST MÊS A MÊS ── */
-  .bt-month-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #0d1117;
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-  }
-  .bt-month-label { font-size: 13px; font-weight: 700; color: #d29922; }
-  .bt-month-sub   { font-size: 11px; color: #8b949e; }
-
-  .bt-month-bar-wrap {
-    height: 6px; background: #21262d;
-    border-radius: 3px; overflow: hidden;
-    margin-bottom: 10px;
-  }
-  .bt-month-bar-fill {
-    height: 100%; border-radius: 3px;
-    background: #d29922; transition: width .6s;
-  }
-  .bt-month-bar-fill.done { background: #3fb950; }
-
-  .bt-symbol-row {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    background: #0d1117;
-    border-radius: 8px;
-    padding: 10px 14px;
-  }
-  .bt-sym-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-  }
-  .bt-sym-name  { color: #e6edf3; font-weight: 600; }
-  .bt-sym-stats { font-size: 11px; color: #8b949e; }
-
-  .bt-bar-wrap {
-    height: 5px; background: #21262d;
-    border-radius: 3px; overflow: hidden;
-    margin-top: 4px;
-  }
-  .bt-bar-fill { height: 100%; border-radius: 3px; background: #d29922; transition: width .6s; }
-  .bt-bar-fill.done { background: #3fb950; }
-
-  /* REFRESH BTN */
-  .refresh-btn {
-    width: 100%; padding: 14px;
-    background: #238636; color: #fff;
-    border: none; border-radius: 8px;
-    font-size: 15px; font-weight: 700;
-    cursor: pointer; margin-bottom: 16px;
-    display: flex; align-items: center;
-    justify-content: center; gap: 8px;
-  }
-  .refresh-btn:active { opacity: .8; }
-
-  #auto-refresh {
-    text-align: center; font-size: 12px;
-    color: #8b949e; margin-bottom: 16px;
-  }
-
-  .spin { display: inline-block; animation: spin 1s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .hidden { display: none; }
-
-  .maint-badge {
-    text-align: center; font-size: 12px;
-    color: #8b949e; padding: 8px;
-    background: #0d1117; border-radius: 8px; margin-top: 8px;
-  }
-  .maint-badge span { color: #388bfd; font-weight: 600; }
-
-  .tag {
-    font-size: 10px; font-weight: 700;
-    padding: 2px 8px; border-radius: 10px;
-    text-transform: uppercase;
-  }
-  .tag-done    { background: #1a3a2a; color: #3fb950; }
-  .tag-running { background: #3a2e0a; color: #d29922; }
-  .tag-wait    { background: #21262d; color: #8b949e; }
+/* empty state */
+.empty { text-align:center; padding:40px 20px; color:#4a5568; }
+.empty div { font-size:40px; margin-bottom:10px; }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>🤖 Trading AI</h1>
-  <span id="last-update">Carregando…</span>
-</header>
+<div class="header">
+  <h1>📦 Ossocão</h1>
+  <div class="stats">
+    <span id="statDone">0</span>/<span id="statTotal">0</span> escaneados<br>
+    <span id="statPct" style="color:#e94560">0%</span>
+  </div>
+  <button class="name-badge" onclick="askName()" id="nameBadge">👤 Eu</button>
+</div>
 
-<!-- STATUS PILLS -->
-<div class="status-row">
-  <div class="status-pill">
-    <div class="dot" id="dot-deriv"></div>
-    <span id="lbl-deriv">Deriv</span>
+<div class="toolbar">
+  <div class="search-row">
+    <input class="search-input" id="searchInput" type="text" inputmode="text"
+      placeholder="🔍 Buscar produto ou código..." autocomplete="off"
+      oninput="onSearch(this.value)">
+    <button class="btn-scan" onclick="toggleScanner()" title="Abrir câmera">📷</button>
   </div>
-  <div class="status-pill">
-    <div class="dot" id="dot-backtest"></div>
-    <span id="lbl-backtest">Backtest</span>
-  </div>
-  <div class="status-pill">
-    <div class="dot" id="dot-trader"></div>
-    <span id="lbl-trader">Paper Trader</span>
+  <div class="filter-row">
+    <button class="filter-btn active" id="f-all"      onclick="setFilter('all')">Todos</button>
+    <button class="filter-btn"        id="f-pending"  onclick="setFilter('pending')">⏳ Pendentes</button>
+    <button class="filter-btn"        id="f-scanned"  onclick="setFilter('scanned')">✅ Escaneados</button>
   </div>
 </div>
 
-<!-- REFRESH -->
-<button class="refresh-btn" onclick="load()">
-  <span id="spin-icon" class="hidden spin">⟳</span>
-  🔄 Atualizar agora
-</button>
-<div id="auto-refresh">Próxima atualização em <span id="countdown">30</span>s</div>
-
-<!-- BACKTEST MÊS A MÊS -->
-<div class="card" id="bt-card">
-  <div class="card-title">🎓 Backtest — Pré-treinamento</div>
-
-  <!-- barra 1 ano -->
-  <div class="year-bar-wrap">
-    <div class="year-bar-label">
-      <span>📅 Progresso histórico</span>
-      <span id="year-lbl">0 / 12 meses</span>
-    </div>
-    <div class="year-bar"><div class="year-bar-fill" id="year-fill" style="width:0%"></div></div>
-    <div class="year-months" id="year-months"></div>
+<!-- Scanner -->
+<div class="scanner-wrap" id="scannerWrap">
+  <video id="video" autoplay playsinline muted></video>
+  <div class="scan-overlay">
+    <div class="scan-box"></div>
+    <div class="scan-line"></div>
   </div>
-
-  <!-- progresso de meses -->
-  <div class="bt-month-header">
-    <div>
-      <div class="bt-month-label" id="bt-month-lbl">Aguardando…</div>
-      <div class="bt-month-sub"  id="bt-month-sub">—</div>
-    </div>
-    <span class="tag" id="bt-tag">Aguardando</span>
-  </div>
-  <div class="bt-month-bar-wrap">
-    <div class="bt-month-bar-fill" id="bt-month-bar" style="width:0%"></div>
-  </div>
-
-  <!-- progresso por símbolo -->
-  <div class="model-list" id="bt-sym-list">
-    <div class="model-row"><span class="model-name" style="color:#8b949e">Carregando…</span></div>
-  </div>
-
-  <!-- próxima manutenção -->
-  <div class="maint-badge" id="maint-badge" style="display:none">
-    🔧 Próxima manutenção: <span id="bt-next-maint">—</span>
-  </div>
+  <button class="scan-close" onclick="closeScanner()">✕</button>
 </div>
 
-<!-- PAPER TRADING -->
-<div class="card">
-  <div class="card-title">📊 Paper Trading — Conta Demo</div>
-  <div id="pt-status-msg" style="display:none;background:#0d1117;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#8b949e;text-align:center"></div>
-  <div class="stat-grid">
-    <div class="stat-box">
-      <div class="stat-val blue-val"   id="p-trades">—</div>
-      <div class="stat-lbl">Total Trades</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val yellow-val" id="p-wr">—</div>
-      <div class="stat-lbl">Win Rate</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val green-val"  id="p-wins">—</div>
-      <div class="stat-lbl">Wins</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-val red-val"    id="p-losses">—</div>
-      <div class="stat-lbl">Losses</div>
-    </div>
-  </div>
-  <div class="wr-bar-wrap">
-    <div class="wr-bar-label">
-      <span>Win Rate</span><span id="p-wr2">—</span>
-    </div>
-    <div class="wr-bar">
-      <div class="wr-fill" id="wr-fill" style="width:0%"></div>
-    </div>
-  </div>
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Table -->
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Cód</th>
+        <th>Produto</th>
+        <th>UN</th>
+        <th>Barras</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="empty" id="empty" style="display:none"><div>🔍</div>Nenhum produto encontrado</div>
 </div>
 
-<!-- MODELOS -->
-<div class="card">
-  <div class="card-title">🧠 Modelos IA — Acurácia</div>
-  <div class="model-list" id="model-list">
-    <div class="model-row"><span class="model-name">Carregando…</span></div>
-  </div>
-</div>
+<!-- FAB -->
+<button class="fab" onclick="exportarTXT()">⬇️ Exportar TXT</button>
 
-<!-- CANDLES -->
-<div class="card">
-  <div class="card-title">📈 Candles Coletados</div>
-  <div class="model-list" id="candle-list">
-    <div class="model-row"><span class="model-name">Carregando…</span></div>
+<!-- Modal editar barras -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">Código de Barras</h3>
+    <p id="modalDesc"></p>
+    <input class="modal-inp" id="modalInp" inputmode="numeric" placeholder="Digite o código de barras">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmModal()">Salvar</button>
+    </div>
   </div>
 </div>
 
 <script>
-const SERVER   = 'https://web-production-41cb7.up.railway.app';
-const SYMBOLS  = ['R_50', 'R_100', '1HZ25V'];
-// ~26 lotes por símbolo por mês (5000 candles/lote, M1)
-const LOTES_POR_MES = 26;
+const PRODUCTS = [{"id": 1, "codigo": "4000", "nome": "ADE CREME TEIA DE ARANHA 3.200GR BALDE", "un": "UN", "barras": ""}, {"id": 2, "codigo": "1649", "nome": "ALICATE DE GATO ELP26-KZ UNID", "un": "UN", "barras": "6920192117444"}, {"id": 3, "codigo": "978", "nome": "ALICATE ELP369 PQ UNID", "un": "UN", "barras": ""}, {"id": 4, "codigo": "8926", "nome": "ALICATE KZ PEQUENO AZUL UNID", "un": "UN", "barras": "6976245090080"}, {"id": 5, "codigo": "8927", "nome": "ALICATE KZ PEQUENO ROSA UNID", "un": "UN", "barras": ""}, {"id": 6, "codigo": "4374", "nome": "ALICATE KZ UNHA GD AZUL UNID", "un": "UN", "barras": ""}, {"id": 7, "codigo": "8879", "nome": "ALICATE KZ UNHA GD ROSA UNID", "un": "UN", "barras": ""}, {"id": 8, "codigo": "798", "nome": "ALICATE PET ELP38 UNID", "un": "UN", "barras": ""}, {"id": 9, "codigo": "2400", "nome": "ALICATE PQ C/ LIXA UNID", "un": "UN", "barras": ""}, {"id": 10, "codigo": "4629", "nome": "ALICATE UNHA GD J1499 UNID", "un": "UN", "barras": ""}, {"id": 11, "codigo": "4369", "nome": "ALICATE UNHA PQ J1498 UNID", "un": "UN", "barras": ""}, {"id": 12, "codigo": "5224", "nome": "APLICADOR DE REMEDIO ELP385 C/12 UNID", "un": "CX", "barras": ""}, {"id": 13, "codigo": "5217", "nome": "APLICADOR DE REMEDIO ELP385 UNID", "un": "UN", "barras": ""}, {"id": 14, "codigo": "1131", "nome": "BANDANA GD C/12 UNID", "un": "KT", "barras": "7908492200584"}, {"id": 15, "codigo": "3930", "nome": "BANDANA GD POM POM C/12 UNID", "un": "KT", "barras": ""}, {"id": 16, "codigo": "1135", "nome": "BANDANA GG 12 UNID", "un": "KT", "barras": "7908492200591"}, {"id": 17, "codigo": "3929", "nome": "BANDANA GG POM POM C/12 UNID", "un": "KT", "barras": ""}, {"id": 18, "codigo": "1130", "nome": "BANDANA MD C/12 UNID", "un": "KT", "barras": "7908492200577"}, {"id": 19, "codigo": "3931", "nome": "BANDANA MD POM POM C/12 UNID", "un": "KT", "barras": ""}, {"id": 20, "codigo": "3752", "nome": "BANDANA PP C/12 UNID", "un": "KT", "barras": ""}, {"id": 21, "codigo": "3933", "nome": "BANDANA PP POM POM C/12 UNID", "un": "KT", "barras": ""}, {"id": 22, "codigo": "1129", "nome": "BANDANA PQ C/12 UNID", "un": "KT", "barras": ""}, {"id": 23, "codigo": "3932", "nome": "BANDANA PQ POM POM C/12 UNID", "un": "KT", "barras": ""}, {"id": 24, "codigo": "4432", "nome": "BANHO A SECO 500 ML C/12 UNID", "un": "KT", "barras": ""}, {"id": 25, "codigo": "4431", "nome": "BANHO A SECO 500 ML UNID", "un": "UN", "barras": "7898348684999"}, {"id": 26, "codigo": "548", "nome": "BEBEDOURO BICO ACOP DOG033 E Z5032", "un": "UN", "barras": ""}, {"id": 27, "codigo": "5159", "nome": "BEBEDOURO C/BOIA 800 ML C/06", "un": "KT", "barras": ""}, {"id": 28, "codigo": "5091", "nome": "BEBEDOURO C/BOIA 800 ML UNID", "un": "UN", "barras": ""}, {"id": 29, "codigo": "2160", "nome": "BEBEDOURO C/BOIA AZUL 1000 ML UNID", "un": "UN", "barras": ""}, {"id": 30, "codigo": "2162", "nome": "BEBEDOURO C/BOIA ROSA 1000 ML  UNID", "un": "UN", "barras": ""}, {"id": 31, "codigo": "7292", "nome": "BEBEDOURO P 500 ML SQUEEZE AZUL UNID", "un": "UN", "barras": ""}, {"id": 32, "codigo": "5534", "nome": "BEBEDOURO P 500 ML SQUEEZE ROSA UNID", "un": "UN", "barras": ""}, {"id": 33, "codigo": "3914", "nome": "BEBEDOURO P 500ML ELP73 UNID", "un": "UN", "barras": ""}, {"id": 34, "codigo": "5537", "nome": "BIF. BARRA CARNE 500G UN 168650", "un": "UN", "barras": "7898929873835"}, {"id": 35, "codigo": "382", "nome": "BIF. DOGSSIMO CARNE 500 GR UNID", "un": "UN", "barras": "742832354844"}, {"id": 36, "codigo": "2190", "nome": "BIF. ROLICO MINI OSSOCAO GRANDOGS 500GR", "un": "GR", "barras": ""}, {"id": 37, "codigo": "3761", "nome": "BIF. ROLICO MINI OSSOCAO GRD 500 C/12 UNID.", "un": "CX", "barras": ""}, {"id": 38, "codigo": "5548", "nome": "BILISKO CARNE 65 GR UNID 164775", "un": "UN", "barras": "7896447100969"}, {"id": 39, "codigo": "5551", "nome": "BILISKO FIGADO 65 GR UNID 164793", "un": "UN", "barras": "7896447100853"}, {"id": 40, "codigo": "5553", "nome": "BILISKO FRANGO 65 GR UNID 164776", "un": "UN", "barras": "7896447100952"}, {"id": 41, "codigo": "361", "nome": "BILISKO GATOS CARNE 45 GR UNID", "un": "UN", "barras": ""}, {"id": 42, "codigo": "374", "nome": "BILISKO GATOS PEIXE 45 GR UNID", "un": "UN", "barras": "7896447101423"}, {"id": 43, "codigo": "5558", "nome": "BILISKO MACA C/CENOURA 65 GR UNID 165146", "un": "UN", "barras": "7896447102789"}, {"id": 44, "codigo": "5559", "nome": "BISCOITO 400 GR CARNE UNID 165856", "un": "UN", "barras": "7898596140285"}, {"id": 45, "codigo": "5560", "nome": "BISCOITO 400 GR MIX UNID 288675", "un": "UN", "barras": "7908492200850"}, {"id": 46, "codigo": "4600", "nome": "BOLA 203 PEGADA UNID", "un": "UN", "barras": ""}, {"id": 47, "codigo": "4601", "nome": "BOLA 204 OSSO UNID", "un": "UN", "barras": ""}, {"id": 48, "codigo": "503", "nome": "BOLA 5002 VINIL GD UNID", "un": "UN", "barras": ""}, {"id": 49, "codigo": "112", "nome": "BOLA CORDA 3001-EL8270 COLORIDA UNID", "un": "UN", "barras": "7898935433320"}, {"id": 50, "codigo": "797", "nome": "BOLA CORDA DOG235 COLOR 3 UNID", "un": "UN", "barras": ""}, {"id": 51, "codigo": "1473", "nome": "BOLA CX SAVANA 24 UNID DOG109", "un": "CX", "barras": ""}, {"id": 52, "codigo": "5173", "nome": "BOLA DOG W9071 PRINT PQ UNID", "un": "UN", "barras": ""}, {"id": 53, "codigo": "8740", "nome": "BOLA DOG109B PT C/36UNID", "un": "PT", "barras": ""}, {"id": 54, "codigo": "4289", "nome": "BOLA DOG143 CACHORRO UNID", "un": "UN", "barras": ""}, {"id": 55, "codigo": "783", "nome": "BOLA DOG144 ADESTRADOR P/ RACAO UNID", "un": "UN", "barras": "7890001006179"}, {"id": 56, "codigo": "2225", "nome": "BOLA DOG146-10252 LUNAR UNID", "un": "UN", "barras": "7890001006193"}, {"id": 57, "codigo": "4859", "nome": "BOLA DOG159 C/ PONTAS PT C/ 12 UNID", "un": "PT", "barras": ""}, {"id": 58, "codigo": "2226", "nome": "BOLA DOG159 C/PONTAS UNID", "un": "UN", "barras": ""}, {"id": 59, "codigo": "5579", "nome": "BOLA DOG162 PATAS OSSO MD UNID 269115", "un": "UN", "barras": "7890001006353"}, {"id": 60, "codigo": "4286", "nome": "BOLA DOG168 LISA MD UNID", "un": "UN", "barras": "7890001006582"}, {"id": 61, "codigo": "4167", "nome": "BOLA ELP114 CARINHA UNID", "un": "UN", "barras": ""}, {"id": 62, "codigo": "4639", "nome": "BOLA ELP19 TRANCADA PQ UNID", "un": "UN", "barras": ""}, {"id": 63, "codigo": "4640", "nome": "BOLA ELP193 FUTEBOL LED UNID", "un": "UN", "barras": ""}, {"id": 64, "codigo": "4262", "nome": "BOLA ELP30 PETISQUEIRA UNID", "un": "UN", "barras": "7891607080303"}, {"id": 65, "codigo": "5590", "nome": "BOLA ELP66 FUT AMERICANO UNID 261615", "un": "UN", "barras": "7892018120664"}, {"id": 66, "codigo": "8814", "nome": "BOLA ELP67 BASQUETE UNID", "un": "PC", "barras": "7898701922287"}, {"id": 67, "codigo": "4715", "nome": "BOLA ELP70 PARDAL UNID", "un": "UN", "barras": ""}, {"id": 68, "codigo": "4144", "nome": "BOLA ELP84 BOLA PETISQUEIRA C/SOM PQ UN", "un": "UN", "barras": ""}, {"id": 69, "codigo": "4848", "nome": "BOLA HM BASQUETE C/ SOM UNID", "un": "UN", "barras": ""}, {"id": 70, "codigo": "4569", "nome": "BOLA HM ESPIRAL UNID.", "un": "UN", "barras": ""}, {"id": 71, "codigo": "4881", "nome": "BOLA HM ESPORTES SORTIDAS UNID", "un": "UN", "barras": "7896176826970"}, {"id": 72, "codigo": "4849", "nome": "BOLA HM FUTEBOL C/ SOM UNID", "un": "UN", "barras": ""}, {"id": 73, "codigo": "4880", "nome": "BOLA HM OSSO VINIL VERDE UNID", "un": "UN", "barras": ""}, {"id": 74, "codigo": "1501", "nome": "BOLA J. CARA DE CACHORRO UNID", "un": "UN", "barras": ""}, {"id": 75, "codigo": "406", "nome": "BOLA J. CRAVAO C/ 06 UNID", "un": "KT", "barras": ""}, {"id": 76, "codigo": "5264", "nome": "BOLA J. CRAVAO UNID", "un": "UN", "barras": ""}, {"id": 77, "codigo": "405", "nome": "BOLA J. CRAVINHO MINI C/12 UNID", "un": "KT", "barras": ""}, {"id": 78, "codigo": "2233", "nome": "BOLA J. CRAVINHO MINI C/24 UNID.", "un": "KT", "barras": ""}, {"id": 79, "codigo": "5604", "nome": "BOLA J. CRAVINHO MINI UNID 164572", "un": "UN", "barras": "7898920679436"}, {"id": 80, "codigo": "407", "nome": "BOLA J. CRAVINHO PEQUENA C/12 UNID", "un": "KT", "barras": ""}, {"id": 81, "codigo": "3923", "nome": "BOLA J. CRAVINHO PEQUENA UNID", "un": "UN", "barras": ""}, {"id": 82, "codigo": "1662", "nome": "BOLA J. EMOCOES C/12 UNID", "un": "KT", "barras": ""}, {"id": 83, "codigo": "4316", "nome": "BOLA J. FUTEBOL AMERICANO GRANDE UNID", "un": "UN", "barras": ""}, {"id": 84, "codigo": "4317", "nome": "BOLA J. MARMORIZADA GIGANTE UNID", "un": "UN", "barras": ""}, {"id": 85, "codigo": "2241", "nome": "BOLA J. PORTA PETISCO GD FRISADA UNID", "un": "UN", "barras": ""}, {"id": 86, "codigo": "4191", "nome": "BOLA J. PQ C/PENA E GUISO C/02 UNID", "un": "UN", "barras": "7898409302336"}, {"id": 87, "codigo": "3724", "nome": "BOLA J. PQ C/PENA E GUISO KIT 24 UNID", "un": "KT", "barras": ""}, {"id": 88, "codigo": "411", "nome": "BOLA J. SINO GRANDE C/ 12 UNID", "un": "KT", "barras": ""}, {"id": 89, "codigo": "4192", "nome": "BOLA J. SINO GRANDE UNID", "un": "UN", "barras": "7898409301070"}, {"id": 90, "codigo": "410", "nome": "BOLA J. SINO MINI C/ 12 UNID", "un": "KT", "barras": ""}, {"id": 91, "codigo": "3924", "nome": "BOLA J. SINO MINI UNID", "un": "UN", "barras": "7898596140148"}, {"id": 92, "codigo": "651", "nome": "BOLA JO389 PATAS GD UNID", "un": "UN", "barras": ""}, {"id": 93, "codigo": "595", "nome": "BOLA JO643 CRAVO FELIZ UNID", "un": "UN", "barras": ""}, {"id": 94, "codigo": "661", "nome": "BOLA JO772 BIG DOG FELIZ UNID", "un": "UN", "barras": ""}, {"id": 95, "codigo": "670", "nome": "BOLA JO940 RAVE UNID", "un": "UN", "barras": ""}, {"id": 96, "codigo": "1017", "nome": "BOLA KZ PISCANTE LED UNID", "un": "UN", "barras": ""}, {"id": 97, "codigo": "1713", "nome": "BOLA KZ47 LIMPA DENTE CX C/06 UNID", "un": "CX", "barras": ""}, {"id": 98, "codigo": "1708", "nome": "BOLA KZ47 LIMPA DENTE UNID", "un": "UN", "barras": ""}, {"id": 99, "codigo": "3482", "nome": "BOLA MACICA 55 MM CRAVO C/06 UNID", "un": "KT", "barras": ""}, {"id": 100, "codigo": "786", "nome": "BOLA MACICA 55 MM CRAVO UNID", "un": "UN", "barras": "7898521411381"}, {"id": 101, "codigo": "2215", "nome": "BOLA MACICA 55 MM LISA C/06 UNID", "un": "KT", "barras": ""}, {"id": 102, "codigo": "784", "nome": "BOLA MACICA 55 MM LISA UNID", "un": "UN", "barras": "7898521411206"}, {"id": 103, "codigo": "5142", "nome": "BOLA MACICA 75 MM CRAVO 2D COLOR C/04", "un": "KT", "barras": ""}, {"id": 104, "codigo": "4867", "nome": "BOLA MACICA 75 MM CRAVO 2D COLOR UNID", "un": "UN", "barras": "7898699310066"}, {"id": 105, "codigo": "5144", "nome": "BOLA MACICA 75 MM LISA 2D COLOR C/04", "un": "KT", "barras": ""}, {"id": 106, "codigo": "4868", "nome": "BOLA MACICA 75 MM LISA 2D COLOR UNID", "un": "UN", "barras": "7898699310813"}, {"id": 107, "codigo": "5149", "nome": "BOLA MACICA 95 MM CRAVO 2D BLACK C/04", "un": "KT", "barras": ""}, {"id": 108, "codigo": "4844", "nome": "BOLA MACICA 95 MM CRAVO 2D BLACK UNID", "un": "UN", "barras": ""}, {"id": 109, "codigo": "5182", "nome": "BOLA MACICA 95 MM CRAVO 2D COLOR C/04", "un": "KT", "barras": ""}, {"id": 110, "codigo": "5153", "nome": "BOLA MACICA 95 MM CRAVO 2D COLOR UNID", "un": "UN", "barras": ""}, {"id": 111, "codigo": "5155", "nome": "BOLA MACICA 95 MM LISA 2D COLOR UNID", "un": "UN", "barras": ""}, {"id": 112, "codigo": "8883", "nome": "BOLA MACICA PT 45 MM CRAVO C/12 UNID", "un": "UN", "barras": ""}, {"id": 113, "codigo": "8882", "nome": "BOLA MACICA PT 45 MM LISA C/12 UNID", "un": "UN", "barras": ""}, {"id": 114, "codigo": "8885", "nome": "BOLA MACICA PT 55 MM CRAVO C/12 UNID", "un": "UN", "barras": ""}, {"id": 115, "codigo": "8884", "nome": "BOLA MACICA PT 55 MM LISA C/12 UNID", "un": "UN", "barras": ""}, {"id": 116, "codigo": "8887", "nome": "BOLA MACICA PT 65 MM CRAVO C/08 UNID", "un": "UN", "barras": ""}, {"id": 117, "codigo": "8886", "nome": "BOLA MACICA PT 65 MM LISA C/08 UNID", "un": "UN", "barras": ""}, {"id": 118, "codigo": "5645", "nome": "BOLA OSSOCAO UNID 165444", "un": "UN", "barras": "7898929873972"}, {"id": 119, "codigo": "3485", "nome": "BOLA TENIS C/APITO BBPET GD UNID", "un": "UN", "barras": ""}, {"id": 120, "codigo": "4758", "nome": "BOLA TENIS XG HM UNID", "un": "UN", "barras": "7896176857677"}, {"id": 121, "codigo": "4707", "nome": "BR A GRANULADO MAD 15 KG C/12 UNID", "un": "FD", "barras": ""}, {"id": 122, "codigo": "3705", "nome": "BR A GRANULADO MAD 15 KG UNID", "un": "FD", "barras": "1324274893632"}, {"id": 123, "codigo": "3703", "nome": "BR A GRANULADO MAD 4KG FD C/06 UNID", "un": "FD", "barras": "7908492201376"}, {"id": 124, "codigo": "366", "nome": "BR A SILICA 1.6KG UNID.", "un": "UN", "barras": "7908492201260"}, {"id": 125, "codigo": "9049", "nome": "BR AREIA HIG. BIODEGRADAVEL TUPA 4 KG FD C/05 UNID", "un": "FD", "barras": ""}, {"id": 126, "codigo": "8975", "nome": "BR AREIA HIG. GATOS GATOMAN 4KG PC", "un": "PC", "barras": "7898222752035"}, {"id": 127, "codigo": "4042", "nome": "BR AREIA S C EXTRA FINA 4KG FD C/05 UN 266270", "un": "FD", "barras": "742832253567"}, {"id": 128, "codigo": "4783", "nome": "BR AREIA S C PREMIUM 4KG FD C/05 UN", "un": "FD", "barras": ""}, {"id": 129, "codigo": "4781", "nome": "BR AREIA S C TALCO 4KG FD C/05 UN", "un": "FD", "barras": "700083496393"}, {"id": 130, "codigo": "8757", "nome": "BR ARRA 551 CAT POSTE C/OBS AZUL", "un": "UN", "barras": ""}, {"id": 131, "codigo": "8756", "nome": "BR ARRA 551 CAT POSTE C/OBS CINZA", "un": "UN", "barras": ""}, {"id": 132, "codigo": "8760", "nome": "BR ARRA 551 CAT POSTE C/OBS CREME", "un": "UN", "barras": ""}, {"id": 133, "codigo": "8755", "nome": "BR ARRA 551 CAT POSTE C/OBS MARROM", "un": "UN", "barras": ""}, {"id": 134, "codigo": "8754", "nome": "BR ARRA 551 CAT POSTE C/OBS PRETO", "un": "UN", "barras": ""}, {"id": 135, "codigo": "8759", "nome": "BR ARRA 551 CAT POSTE C/OBS ROSA", "un": "UN", "barras": ""}, {"id": 136, "codigo": "8758", "nome": "BR ARRA 551 CAT POSTE C/OBS VERMELHO", "un": "UN", "barras": ""}, {"id": 137, "codigo": "8746", "nome": "BR ARRA 556 CAT 2A C/R CINZA/PRETO", "un": "UN", "barras": ""}, {"id": 138, "codigo": "8749", "nome": "BR ARRA 556 CAT 2A C/R CINZA/ROSA", "un": "UN", "barras": ""}, {"id": 139, "codigo": "8747", "nome": "BR ARRA 556 CAT 2A C/R MARR/CREME", "un": "UN", "barras": ""}, {"id": 140, "codigo": "1513", "nome": "BR ARRA 558 3 BASES C/ BOLINHA UNID", "un": "UN", "barras": ""}, {"id": 141, "codigo": "8752", "nome": "BR ARRA 578 CAT CASINHA TERREA CINZA/ROSA", "un": "UN", "barras": ""}, {"id": 142, "codigo": "8751", "nome": "BR ARRA 578 CAT CASINHA TERREA MARR/CREME", "un": "UN", "barras": ""}, {"id": 143, "codigo": "8778", "nome": "BR ARRA 580 CAT GATO C/POSTE AZUL", "un": "UN", "barras": ""}, {"id": 144, "codigo": "8781", "nome": "BR ARRA 580 CAT GATO C/POSTE CREME", "un": "UN", "barras": ""}, {"id": 145, "codigo": "8776", "nome": "BR ARRA 580 CAT GATO C/POSTE MARROM", "un": "UN", "barras": ""}, {"id": 146, "codigo": "8775", "nome": "BR ARRA 580 CAT GATO C/POSTE PRETO", "un": "UN", "barras": ""}, {"id": 147, "codigo": "8780", "nome": "BR ARRA 580 CAT GATO C/POSTE ROSA", "un": "UN", "barras": ""}, {"id": 148, "codigo": "8765", "nome": "BR ARRA 580 CAT GATO C/POSTE VERMELHO", "un": "UN", "barras": ""}, {"id": 149, "codigo": "8784", "nome": "BR ARRA 586 CAT CANTO SOFA CINZA", "un": "UN", "barras": ""}, {"id": 150, "codigo": "8783", "nome": "BR ARRA 586 CAT CANTO SOFA MARROM", "un": "UN", "barras": ""}, {"id": 151, "codigo": "8782", "nome": "BR ARRA 586 CAT CANTO SOFA PRETO", "un": "UN", "barras": ""}, {"id": 152, "codigo": "8771", "nome": "BR ARRA 871 CAT GD C/MOLA AZUL", "un": "UN", "barras": ""}, {"id": 153, "codigo": "8770", "nome": "BR ARRA 871 CAT GD C/MOLA CINZA", "un": "UN", "barras": ""}, {"id": 154, "codigo": "8769", "nome": "BR ARRA 871 CAT GD C/MOLA MARROM", "un": "UN", "barras": ""}, {"id": 155, "codigo": "8768", "nome": "BR ARRA 871 CAT GD C/MOLA PRETO", "un": "UN", "barras": ""}, {"id": 156, "codigo": "8773", "nome": "BR ARRA 871 CAT GD C/MOLA ROSA", "un": "UN", "barras": ""}, {"id": 157, "codigo": "2276", "nome": "BR ARRA A36 CAT DIVA UNID", "un": "UN", "barras": ""}, {"id": 158, "codigo": "4414", "nome": "BR ARRA BCAT066-1798 BOLINHA C/MOLA UN", "un": "UN", "barras": ""}, {"id": 159, "codigo": "5479", "nome": "BR ARRA ELP614 PLANK SCRATCHED UNID", "un": "UN", "barras": ""}, {"id": 160, "codigo": "5361", "nome": "BR BANDEJA GRANULADO 20 LTS CX C/12 UNID", "un": "UN", "barras": ""}, {"id": 161, "codigo": "5360", "nome": "BR BANDEJA GRANULADO 20LTS 620X360X140MM", "un": "UN", "barras": ""}, {"id": 162, "codigo": "2320", "nome": "BR BANDEJA GRANULADO CEC C/12 UNID", "un": "CX", "barras": ""}, {"id": 163, "codigo": "87", "nome": "BR BANDEJA GRANULADO CEC UNID", "un": "UN", "barras": ""}, {"id": 164, "codigo": "4822", "nome": "BR BANDEJA KIT COMED+PA 2D C/12 UNID", "un": "KT", "barras": ""}, {"id": 165, "codigo": "3790", "nome": "BR BANDEJA KIT COMED+PA AZUL 2D UNID", "un": "UN", "barras": ""}, {"id": 166, "codigo": "4138", "nome": "BR BANDEJA KIT COMED+PA PRETA 2D UNID", "un": "UN", "barras": ""}, {"id": 167, "codigo": "3827", "nome": "BR BANDEJA KIT COMED+PA VERMELHA 2D UNID", "un": "UN", "barras": ""}, {"id": 168, "codigo": "327", "nome": "BR CAT 152 KIT PEIXE UNID", "un": "UN", "barras": ""}, {"id": 169, "codigo": "3855", "nome": "BR CAT 339 KIT BOLAS DIVERTIDAS UNID", "un": "UN", "barras": ""}, {"id": 170, "codigo": "3856", "nome": "BR CAT 340 RATO AMARELO + BOLA LISTRADA", "un": "UN", "barras": ""}, {"id": 171, "codigo": "5272", "nome": "BR CAT C2065 FISH GUIZO UNID", "un": "UN", "barras": ""}, {"id": 172, "codigo": "5108", "nome": "BR CAT C2084 PESCA PESCA UNID", "un": "UN", "barras": ""}, {"id": 173, "codigo": "5118", "nome": "BR CAT C2093 CAT CRAZY LIZARD UNID", "un": "UN", "barras": ""}, {"id": 174, "codigo": "5120", "nome": "BR CAT C2100 CRAZY FISH UNID", "un": "UN", "barras": ""}, {"id": 175, "codigo": "5273", "nome": "BR CAT C2101 JABUTI UNID", "un": "UN", "barras": ""}, {"id": 176, "codigo": "5121", "nome": "BR CAT C2105 CRAZY RAT BOSS UNID", "un": "UN", "barras": ""}, {"id": 177, "codigo": "5122", "nome": "BR CAT C2107 CAT FROG LADIES UNID", "un": "UN", "barras": ""}, {"id": 178, "codigo": "5274", "nome": "BR CAT C2132 DOLPHIN POPIT UNID", "un": "UN", "barras": ""}, {"id": 179, "codigo": "5275", "nome": "BR CAT C2138 RATOGAIO UNID", "un": "UN", "barras": ""}, {"id": 180, "codigo": "5276", "nome": "BR CAT C2159 FROGJAMA UNID", "un": "UN", "barras": ""}, {"id": 181, "codigo": "1615", "nome": "BR CAT C8032 BOLA DIVERTIDA UNID", "un": "UN", "barras": ""}, {"id": 182, "codigo": "2337", "nome": "BR CAT C8033 BOLINHA GIRA GIRA UNID", "un": "UN", "barras": ""}, {"id": 183, "codigo": "4110", "nome": "BR CAT C8101 RATO EM PE C/ PORTA RACAO", "un": "UN", "barras": ""}, {"id": 184, "codigo": "3837", "nome": "BR CAT C8102 BOLAS SORTIDAS UNID", "un": "UN", "barras": ""}, {"id": 185, "codigo": "4409", "nome": "BR CAT C8118 BOLINHA C/GUIZO UNID", "un": "UN", "barras": ""}, {"id": 186, "codigo": "4588", "nome": "BR CAT C8155 BRINQ INTELIGENTE ESTRELA", "un": "UN", "barras": ""}, {"id": 187, "codigo": "4900", "nome": "BR CAT C8189 PET TURMA DO BARULHO UNID", "un": "UN", "barras": ""}, {"id": 188, "codigo": "4531", "nome": "BR CAT CAT069 RATO BCO PELUCIA C/VIBRACA", "un": "UN", "barras": ""}, {"id": 189, "codigo": "4527", "nome": "BR CAT CT CATNIP 6 X 2 GR", "un": "UN", "barras": ""}, {"id": 190, "codigo": "5367", "nome": "BR CAT ELP040 ELASTICO DIVERTIDO GATO UN", "un": "UN", "barras": ""}, {"id": 191, "codigo": "4627", "nome": "BR CAT ELP14 BOLA C/ GUIZO UN", "un": "KT", "barras": ""}, {"id": 192, "codigo": "4334", "nome": "BR CAT ELP155 TORRE DE GATO UNID", "un": "UN", "barras": ""}, {"id": 193, "codigo": "4304", "nome": "BR CAT ELP157 BOLA CORDA C/CATNIP UNID", "un": "UN", "barras": ""}, {"id": 194, "codigo": "4337", "nome": "BR CAT ELP159 RATINHO SISAL UNID", "un": "UN", "barras": ""}, {"id": 195, "codigo": "4365", "nome": "BR CAT ELP257 ESCOVA COCADINHA P/GATOS", "un": "UN", "barras": ""}, {"id": 196, "codigo": "1225", "nome": "BR CAT ELP307 TORRE BOLINHAS 4 NIVEIS UN", "un": "UN", "barras": ""}, {"id": 197, "codigo": "1207", "nome": "BR CAT ELP411 ABACATE CATNIP UNID", "un": "UN", "barras": ""}, {"id": 198, "codigo": "5232", "nome": "BR CAT ELP422 SQUEAK BALL CATNIP UNID", "un": "UN", "barras": ""}, {"id": 199, "codigo": "1208", "nome": "BR CAT ELP535 LAMBE LAMBE CATNIP UNID", "un": "UN", "barras": ""}, {"id": 200, "codigo": "1209", "nome": "BR CAT ELP579 MATATABI UNID", "un": "UN", "barras": ""}, {"id": 201, "codigo": "6684", "nome": "BR CAT ELP818 SANITARIO ORELINHA UNID", "un": "UN", "barras": ""}, {"id": 202, "codigo": "9046", "nome": "BR CAT ESPATULA RASPADEIRA ELP187 UNID", "un": "UN", "barras": "7895050956635"}, {"id": 203, "codigo": "4427", "nome": "BR CAT J1329 ELP371 LASER CAT CHAVEIRO", "un": "UN", "barras": ""}, {"id": 204, "codigo": "4906", "nome": "BR CAT J1500 POLVINHO SISAL C/ GUIZO UN", "un": "UN", "barras": ""}, {"id": 205, "codigo": "4883", "nome": "BR CAT J1501 POMPOM CAT UNID", "un": "UN", "barras": ""}, {"id": 206, "codigo": "4884", "nome": "BR CAT J1503 CAT BIANCO UNID", "un": "UN", "barras": ""}, {"id": 207, "codigo": "4886", "nome": "BR CAT J1506 POLVO CAT UNID", "un": "UN", "barras": "7629186815067"}, {"id": 208, "codigo": "4887", "nome": "BR CAT J1507 RATO PLUM UNID", "un": "UN", "barras": ""}, {"id": 209, "codigo": "4888", "nome": "BR CAT J1508 PEIXE SISAL UNID", "un": "UN", "barras": ""}, {"id": 210, "codigo": "4890", "nome": "BR CAT J1513 ROLIMA UNID", "un": "UN", "barras": ""}, {"id": 211, "codigo": "4893", "nome": "BR CAT J1519 CAT COLOR UNID", "un": "UN", "barras": ""}, {"id": 212, "codigo": "4895", "nome": "BR CAT J1522 CAT CHARME UNID", "un": "UN", "barras": ""}, {"id": 213, "codigo": "9016", "nome": "BR CAT J3078 CENTOPEIA ELASTICA PISCA PISCA UNID", "un": "UN", "barras": ""}, {"id": 214, "codigo": "4415", "nome": "BR CAT JO813 HAPPY CIRCLE UNID", "un": "UN", "barras": ""}, {"id": 215, "codigo": "1629", "nome": "BR CAT JO929 PESCA FISH UNID", "un": "UN", "barras": ""}, {"id": 216, "codigo": "2374", "nome": "BR CAT K11165 BOLA COLORIDA POMPOM", "un": "UN", "barras": ""}, {"id": 217, "codigo": "2376", "nome": "BR CAT KIT 2067 UNID", "un": "UN", "barras": "7898596140155"}, {"id": 218, "codigo": "582", "nome": "BR CAT KIT 2068 UNID", "un": "UN", "barras": ""}, {"id": 219, "codigo": "2378", "nome": "BR CAT KIT 2069 UNID", "un": "UN", "barras": ""}, {"id": 220, "codigo": "2379", "nome": "BR CAT KIT 2070 UNID", "un": "UN", "barras": ""}, {"id": 221, "codigo": "3540", "nome": "BR CAT KIT 2071 UNID", "un": "UN", "barras": ""}, {"id": 222, "codigo": "2380", "nome": "BR CAT KIT 2072 UNID", "un": "UN", "barras": "7898596140155"}, {"id": 223, "codigo": "2381", "nome": "BR CAT KIT 2073 UNID", "un": "UN", "barras": "7898596140155"}, {"id": 224, "codigo": "2383", "nome": "BR CAT KIT 2075 UNID", "un": "UN", "barras": ""}, {"id": 225, "codigo": "2384", "nome": "BR CAT KIT 2076 UNID", "un": "UN", "barras": ""}, {"id": 226, "codigo": "2385", "nome": "BR CAT KIT 2077 UNID", "un": "UN", "barras": ""}, {"id": 227, "codigo": "4288", "nome": "BR CAT KIT 2078 UNID", "un": "UN", "barras": "7898596140155"}, {"id": 228, "codigo": "555", "nome": "BR CAT KIT OSSOCAO GATO 1 (12+2)", "un": "KT", "barras": ""}, {"id": 229, "codigo": "1652", "nome": "BR CAT KZ BOLA EMOTIONS C/ PENA UNID", "un": "UN", "barras": "6976245090363"}, {"id": 230, "codigo": "1029", "nome": "BR CAT KZ GLOBO C/ RATINHO UNID", "un": "CT", "barras": "7908492200911"}, {"id": 231, "codigo": "2255", "nome": "BR CAT KZ PIRULITO MATATABI CATNIP UNID", "un": "UN", "barras": ""}, {"id": 232, "codigo": "9019", "nome": "BR CAT KZ TORRE DE GATO AMARELA UNID", "un": "UN", "barras": "6976245095252"}, {"id": 233, "codigo": "9020", "nome": "BR CAT KZ TORRE DE GATO AZUL UNID", "un": "UN", "barras": "6976245095207"}, {"id": 234, "codigo": "9018", "nome": "BR CAT KZ TORRE DE GATO ROSA UNID", "un": "UN", "barras": "6976245095184"}, {"id": 235, "codigo": "9017", "nome": "BR CAT KZ TORRE DE GATO ROXA UNID", "un": "UN", "barras": "6976245095191"}, {"id": 236, "codigo": "9021", "nome": "BR CAT KZ TORRE DE GATO VERDE UNID", "un": "UN", "barras": ""}, {"id": 237, "codigo": "5339", "nome": "BR CAT P GATEX ATUM C/04 UNID", "un": "UN", "barras": "7898727483151"}, {"id": 238, "codigo": "8835", "nome": "BR CAT P GATEX C/24 UNID", "un": "UN", "barras": ""}, {"id": 239, "codigo": "5349", "nome": "BR CAT P GATEX FRANGO C/04 UNID", "un": "UN", "barras": "7898727483113"}, {"id": 240, "codigo": "5356", "nome": "BR CAT P GATEX FRANGO/ATUM C/04 UNID", "un": "UN", "barras": "7898727483120"}, {"id": 241, "codigo": "5364", "nome": "BR CAT P GATEX MISTO PT 24UN", "un": "PT", "barras": ""}, {"id": 242, "codigo": "8874", "nome": "BR CAT P GATEX REFIL KIT C/ 24UN", "un": "UN", "barras": ""}, {"id": 243, "codigo": "8873", "nome": "BR CAT P GATEX REFIL KIT C/ 48UN", "un": "UN", "barras": ""}, {"id": 244, "codigo": "8872", "nome": "BR CAT P GATEX REFIL PT C/4 UN", "un": "UN", "barras": ""}, {"id": 245, "codigo": "5368", "nome": "BR CAT P GATEX SALMAO C/04 UNID", "un": "UN", "barras": ""}, {"id": 246, "codigo": "801", "nome": "BR CAT PARK PLAY C/ DUAS PISTAS UNID", "un": "UN", "barras": ""}, {"id": 247, "codigo": "2397", "nome": "BR CAT PT BOLA 63BB P/GATOS C/GUIZO 50", "un": "PT", "barras": ""}, {"id": 248, "codigo": "4767", "nome": "BR CAT PT BOLA NOISE 50 UNID. 1039", "un": "PT", "barras": ""}, {"id": 249, "codigo": "3829", "nome": "BR CAT PT BOLINHA C/GUIZO-20 UNID CAT026", "un": "PT", "barras": ""}, {"id": 250, "codigo": "4089", "nome": "BR CAT PT CILINDRO P/GATOS C/GUIZO 40 UN", "un": "PT", "barras": ""}, {"id": 251, "codigo": "569", "nome": "BR CAT PT RATINHO 50 UNID. CAT001-KZ", "un": "PT", "barras": ""}, {"id": 252, "codigo": "258", "nome": "BR CAT PT RATINHO COLOR C/ 50 UNID KZ", "un": "PT", "barras": ""}, {"id": 253, "codigo": "5199", "nome": "BR CAT R0505 RATO COLOR UNID", "un": "UN", "barras": ""}, {"id": 254, "codigo": "4798", "nome": "BR CAT RATINHO CINZA C/02 UNID", "un": "KT", "barras": ""}, {"id": 255, "codigo": "4624", "nome": "BR CAT RATINHO COLOR C/02 UNID", "un": "KT", "barras": ""}, {"id": 256, "codigo": "4169", "nome": "BR CAT VARINHA ELP126 VARETA C/PENA UN", "un": "UN", "barras": "6920192117345"}, {"id": 257, "codigo": "4701", "nome": "BR CAT VARINHA ELP127 RATINHO UNID", "un": "UN", "barras": ""}, {"id": 258, "codigo": "2367", "nome": "BR CAT VARINHA ELP128 GIGIO UNID", "un": "UN", "barras": ""}, {"id": 259, "codigo": "4303", "nome": "BR CAT VARINHA ELP163 COM BOLA UNID", "un": "UN", "barras": ""}, {"id": 260, "codigo": "991", "nome": "BR CAT VARINHA ELP214 VARINHAS C/12 SORTIDAS", "un": "UN", "barras": ""}, {"id": 261, "codigo": "4818", "nome": "BR CAT VARINHA ELP274 FITAS UNID", "un": "UN", "barras": "7892020712741"}, {"id": 262, "codigo": "4819", "nome": "BR CAT VARINHA ELP275 POMPOM PENAS UNID", "un": "UN", "barras": ""}, {"id": 263, "codigo": "4260", "nome": "BR CAT VARINHA J1188 CENTOPEIA UNI", "un": "UN", "barras": ""}, {"id": 264, "codigo": "4904", "nome": "BR CAT VARINHA J1531 RATINHO UNID", "un": "UN", "barras": ""}, {"id": 265, "codigo": "4905", "nome": "BR CAT VARINHA J1532 LOLLIPOP UNID", "un": "UN", "barras": ""}, {"id": 266, "codigo": "2360", "nome": "BR CAT VARINHA J2095 BALL UNID", "un": "UN", "barras": "7629186820955"}, {"id": 267, "codigo": "2358", "nome": "BR CAT VARINHA J2096 ESPIRAL UNID", "un": "UN", "barras": "7629186820962"}, {"id": 268, "codigo": "2366", "nome": "BR CAT VARINHA J2098 MIX UNID", "un": "UN", "barras": "7629186820986"}, {"id": 269, "codigo": "2409", "nome": "BR CAT VARINHA KZ  BOLINHA UNID", "un": "UN", "barras": ""}, {"id": 270, "codigo": "1981", "nome": "BR CAT VARINHA KZ C/ VENTOSA E PENA UNID", "un": "UN", "barras": ""}, {"id": 271, "codigo": "8871", "nome": "BR PA HIG H18PENEIRA METAL/PLAST P/AREIA GROSSA UN", "un": "UN", "barras": "6976245091636"}, {"id": 272, "codigo": "8984", "nome": "BR PA HIG. H17 PENEIRA METAL/PLAST P/AREIA FINA UN", "un": "UN", "barras": ""}, {"id": 273, "codigo": "73", "nome": "BR PA HIGIENICA CARA DE GATO JO610-CAT", "un": "UN", "barras": ""}, {"id": 274, "codigo": "3860", "nome": "BR PA HIGIENICA CARINHA C/12 UNID", "un": "CX", "barras": ""}, {"id": 275, "codigo": "2390", "nome": "BR PA HIGIENICA CARINHA UNID", "un": "UN", "barras": "7897936920327"}, {"id": 276, "codigo": "2393", "nome": "BR PA HIGIENICA CEC C/12 UNID", "un": "CX", "barras": ""}, {"id": 277, "codigo": "88", "nome": "BR PA HIGIENICA CEC UNID", "un": "UN", "barras": ""}, {"id": 278, "codigo": "1221", "nome": "BR PA HIGIENICA MMA CINZA UNID", "un": "UN", "barras": ""}, {"id": 279, "codigo": "1222", "nome": "BR PA HIGIENICA MMA CX C/12 UNID", "un": "UN", "barras": ""}, {"id": 280, "codigo": "1220", "nome": "BR PA HIGIENICA MMA ROSA UNID", "un": "UN", "barras": ""}, {"id": 281, "codigo": "4500", "nome": "BRINQ. 10137 HALTERES PATA OSSO GIGANTE", "un": "UN", "barras": ""}, {"id": 282, "codigo": "4733", "nome": "BRINQ. 10290 LEAOZINHO UNID", "un": "UN", "barras": ""}, {"id": 283, "codigo": "4508", "nome": "BRINQ. 10310 ZOO URSO UNID", "un": "UN", "barras": ""}, {"id": 284, "codigo": "4507", "nome": "BRINQ. 10311 ZOO TIGRE UNID", "un": "UN", "barras": ""}, {"id": 285, "codigo": "4496", "nome": "BRINQ. 10315 FAZENDINHA CACHORRO UNID", "un": "UN", "barras": ""}, {"id": 286, "codigo": "4498", "nome": "BRINQ. 10316 FAZENDINHA OVELHA UNID", "un": "UN", "barras": ""}, {"id": 287, "codigo": "4499", "nome": "BRINQ. 10317 FAZENDINHA PORCO UNID", "un": "UN", "barras": ""}, {"id": 288, "codigo": "4497", "nome": "BRINQ. 10318 FAZENDINHA CAVALO UNID", "un": "UN", "barras": ""}, {"id": 289, "codigo": "4495", "nome": "BRINQ. 10342 FAZENDINHA BOI UNID", "un": "UN", "barras": ""}, {"id": 290, "codigo": "1640", "nome": "BRINQ. 324 OSSO VINIL UNID", "un": "UN", "barras": ""}, {"id": 291, "codigo": "4324", "nome": "BRINQ. 360 MORDEDOR TRES PONTAS NYLON UN", "un": "UN", "barras": "7898590072278"}, {"id": 292, "codigo": "4327", "nome": "BRINQ. 362 MORDEDOR JACARE AZUL NYLON", "un": "UN", "barras": ""}, {"id": 293, "codigo": "5813", "nome": "BRINQ. 5006-MP0640 SANDUICHE VINIL166177", "un": "UN", "barras": "7898935433788"}, {"id": 294, "codigo": "764", "nome": "BRINQ. 59 HALTERES MEDIO MACICO UNID", "un": "UN", "barras": ""}, {"id": 295, "codigo": "1597", "nome": "BRINQ. 902 HALTERES OSSO PQ UNID", "un": "UN", "barras": ""}, {"id": 296, "codigo": "318", "nome": "BRINQ. CT8029 OSSO DE PEIXE 12 CM UNID", "un": "UN", "barras": ""}, {"id": 297, "codigo": "325", "nome": "BRINQ. CT8031 HALTERES 12.7X2.5 CM UNID", "un": "UN", "barras": ""}, {"id": 298, "codigo": "77", "nome": "BRINQ. CT8051 BASTAO DUO 17 CM UNID", "un": "UN", "barras": ""}, {"id": 299, "codigo": "323", "nome": "BRINQ. CT8195 OSSO DUPLO 11.5X8.5 CM UN", "un": "UN", "barras": ""}, {"id": 300, "codigo": "433", "nome": "BRINQ. DC068 PORCO PQ UNID", "un": "UN", "barras": ""}, {"id": 301, "codigo": "367", "nome": "BRINQ. DC069 VAQUINHA UNID", "un": "UN", "barras": ""}, {"id": 302, "codigo": "369", "nome": "BRINQ. DC070 HALTERES C/ BOLA TENIS UNID", "un": "UN", "barras": ""}, {"id": 303, "codigo": "434", "nome": "BRINQ. DC071 OSSO TPR FLUTUANTE UNID", "un": "UN", "barras": ""}, {"id": 304, "codigo": "3945", "nome": "BRINQ. DOG W12021-R0512 MORD OSSO SPIKE", "un": "UN", "barras": "7898665197066"}, {"id": 305, "codigo": "4829", "nome": "BRINQ. DOG W12023 MORD ALTERES SPIKE UN", "un": "UN", "barras": ""}, {"id": 306, "codigo": "5172", "nome": "BRINQ. DOG W12026-R9951 MORDEDOR COXA SL", "un": "UN", "barras": "7891071799510"}, {"id": 307, "codigo": "4111", "nome": "BRINQ. DOG W12027 N.MORDEDOR OSSO TORTO", "un": "UN", "barras": "7898665197103"}, {"id": 308, "codigo": "5109", "nome": "BRINQ. DOG W12045 MORD. AYBUBEN FIN UNID", "un": "UN", "barras": "7908464203100"}, {"id": 309, "codigo": "5111", "nome": "BRINQ. DOG W12047 MORD. XIN FINN UNID", "un": "UN", "barras": "7908464203124"}, {"id": 310, "codigo": "5112", "nome": "BRINQ. DOG W12048 MORD. JIA FINN UNID", "un": "UN", "barras": "7908464203131"}, {"id": 311, "codigo": "4646", "nome": "BRINQ. DOG W14033 MORDEDOR OSSO CLEAN UN", "un": "UN", "barras": "7898665191422"}, {"id": 312, "codigo": "3576", "nome": "BRINQ. DOG W6005 PICOLE ICE UNID", "un": "UN", "barras": "8525589060051"}, {"id": 313, "codigo": "2432", "nome": "BRINQ. DOG W6018 DOG HALTERES BOLA UNID", "un": "UN", "barras": "7450077060197"}, {"id": 314, "codigo": "2138", "nome": "BRINQ. DOG W6027 DOG OSSO VINIL UNID", "un": "UN", "barras": "7450077060279"}, {"id": 315, "codigo": "4861", "nome": "BRINQ. DOG W6065 MORDEDOR POLVO UNID", "un": "UN", "barras": "7898665190029"}, {"id": 316, "codigo": "4274", "nome": "BRINQ. DOG W9001 MORDEDOR OSSO BICOLORS", "un": "UN", "barras": "7908492201277"}, {"id": 317, "codigo": "3865", "nome": "BRINQ. DOG W9051 MORDEDOR SWEET TRIANG.", "un": "UN", "barras": "6935822790515"}, {"id": 318, "codigo": "4199", "nome": "BRINQ. DOG W9058 MORDEDOR SWEET ARGOLA", "un": "UN", "barras": "6935822790384"}, {"id": 319, "codigo": "5175", "nome": "BRINQ. DOG W9136 OSSO FLATTER BACON PQ", "un": "UN", "barras": "7908464201564"}, {"id": 320, "codigo": "2437", "nome": "BRINQ. DOG147 COXINHA  ASSADA UNID", "un": "UN", "barras": "7890001006209"}, {"id": 321, "codigo": "570", "nome": "BRINQ. DOG148 DOG BEER VINIL UNID", "un": "UN", "barras": "7890001006216"}, {"id": 322, "codigo": "574", "nome": "BRINQ. DOG149 JORNAL DO PET VINIL UNID", "un": "UN", "barras": "7898935433832"}, {"id": 323, "codigo": "4294", "nome": "BRINQ. DOG150 BOTA PEQUENA UNID", "un": "UN", "barras": "7890001006230"}, {"id": 324, "codigo": "4293", "nome": "BRINQ. DOG151 BOTA GRANDE UNID", "un": "UN", "barras": "7890001006247"}, {"id": 325, "codigo": "4290", "nome": "BRINQ. DOG152 CAO COLA UNID", "un": "UN", "barras": "7890001006254"}, {"id": 326, "codigo": "3502", "nome": "BRINQ. DOG153 MAMADEIRA UNID", "un": "UN", "barras": "7890001006322"}, {"id": 327, "codigo": "1606", "nome": "BRINQ. DOG154 HALTERES PATAS OSSO UNID", "un": "UN", "barras": "7890001006278"}, {"id": 328, "codigo": "296", "nome": "BRINQ. DOG155 HALTERES FUTEBOL UNID", "un": "UN", "barras": "7890001006292"}, {"id": 329, "codigo": "597", "nome": "BRINQ. DOG156 HALTERES 250 KG UNID", "un": "UN", "barras": "7890001006308"}, {"id": 330, "codigo": "571", "nome": "BRINQ. DOG157 OSSO NO UNID", "un": "UN", "barras": "7890001006285"}, {"id": 331, "codigo": "4292", "nome": "BRINQ. DOG160 CILINDRO UNID", "un": "UN", "barras": "7890001006315"}, {"id": 332, "codigo": "2443", "nome": "BRINQ. DOG165 OURICO UNID", "un": "UN", "barras": "7890001006544"}, {"id": 333, "codigo": "3871", "nome": "BRINQ. DOG167 CARANGUEJO C/ CORDA UNID", "un": "UN", "barras": "7890001006568"}, {"id": 334, "codigo": "443", "nome": "BRINQ. DOG169 HALTERES CRAVINHO UNID", "un": "UN", "barras": "7890001006605"}, {"id": 335, "codigo": "5131", "nome": "BRINQ. DOG252 MORD. ANEL TORCIDO TPR ROS", "un": "UN", "barras": "7908405902017"}, {"id": 336, "codigo": "5136", "nome": "BRINQ. DOG254 OSSO CINTILANTE COLOR UNID", "un": "UN", "barras": "7908405902031"}, {"id": 337, "codigo": "5138", "nome": "BRINQ. DOG261 PNEU AMARELO C/ AZUL TPR", "un": "UN", "barras": "7908405901973"}, {"id": 338, "codigo": "5137", "nome": "BRINQ. DOG287 OSSO CORES UNID", "un": "UN", "barras": "7908405902505"}, {"id": 339, "codigo": "3495", "nome": "BRINQ. DOG312 BISCOITO VINIL CORES UNID", "un": "UN", "barras": "7908405902758"}, {"id": 340, "codigo": "8951", "nome": "BRINQ. DOG316 HALTERES FUTEBOL UNID", "un": "UN", "barras": ""}, {"id": 341, "codigo": "8952", "nome": "BRINQ. DOG317 HALTERES BASQUETE UNID.", "un": "UN", "barras": ""}, {"id": 342, "codigo": "566", "nome": "BRINQ. DOG338 CAMALEAO UNID", "un": "UN", "barras": ""}, {"id": 343, "codigo": "5382", "nome": "BRINQ. DOG339 IGUANA UNID", "un": "UN", "barras": "7908405903144"}, {"id": 344, "codigo": "5383", "nome": "BRINQ. DOG341 JACARE UNID", "un": "UN", "barras": "7908405903168"}, {"id": 345, "codigo": "564", "nome": "BRINQ. EL8267 VAQUINHA SONORA UN", "un": "UN", "barras": "7890001002850"}, {"id": 346, "codigo": "4811", "nome": "BRINQ. EL8271 MORDEDOR OSSO UNID.", "un": "UN", "barras": "7908212162765"}, {"id": 347, "codigo": "4787", "nome": "BRINQ. EL8275 MORDEDOR PQ UNID.", "un": "UN", "barras": "7908212162840"}, {"id": 348, "codigo": "4918", "nome": "BRINQ. EL8276 MORDEDOR MD UNID.", "un": "UN", "barras": "7892017104443"}, {"id": 349, "codigo": "3953", "nome": "BRINQ. ELP02-ELP1394 COXA UNID", "un": "UN", "barras": "7892018120121"}, {"id": 350, "codigo": "8983", "nome": "BRINQ. ELP1085 MORDEDOR FIBRA DE ARROZ UNID", "un": "UN", "barras": ""}, {"id": 351, "codigo": "4208", "nome": "BRINQ. ELP12 BATATA FRITA UNID", "un": "UN", "barras": "7891607080129"}, {"id": 352, "codigo": "5403", "nome": "BRINQ. ELP129 MORDEDOR ABACAXI UN", "un": "UN", "barras": "7893032003490"}, {"id": 353, "codigo": "4656", "nome": "BRINQ. ELP129 MORDEDOR LARANJA UN", "un": "UN", "barras": ""}, {"id": 354, "codigo": "4655", "nome": "BRINQ. ELP129 MORDEDOR MELANCIA UN", "un": "UN", "barras": ""}, {"id": 355, "codigo": "4145", "nome": "BRINQ. ELP144 MORDEDOR HIG 11 CM PQ UN", "un": "UN", "barras": ""}, {"id": 356, "codigo": "4146", "nome": "BRINQ. ELP145 MORDEDOR HIG 14 CM MD UN", "un": "UN", "barras": "6920192111459"}, {"id": 357, "codigo": "4147", "nome": "BRINQ. ELP146 MORDEDOR HIG 18 CM GD UN", "un": "UN", "barras": "6920192111466"}, {"id": 358, "codigo": "4333", "nome": "BRINQ. ELP179 DONUTS GD UNID", "un": "UN", "barras": "7892019111791"}, {"id": 359, "codigo": "664", "nome": "BRINQ. ELP182 CHUPETA C/GUIZO GD UNID", "un": "UN", "barras": "745077010991"}, {"id": 360, "codigo": "5223", "nome": "BRINQ. ELP241 SORTIDOS C/12 UNID", "un": "CX", "barras": ""}, {"id": 361, "codigo": "4552", "nome": "BRINQ. ELP243 MACICO C/CORDA SORTIDOS UN", "un": "KT", "barras": "7890020202439"}, {"id": 362, "codigo": "4814", "nome": "BRINQ. ELP249 ARGOLA MACICA UNID", "un": "UN", "barras": ""}, {"id": 363, "codigo": "4816", "nome": "BRINQ. ELP250 ESTRELA MACICA UNID", "un": "UN", "barras": ""}, {"id": 364, "codigo": "4712", "nome": "BRINQ. ELP42 OSSO PQ UNID", "un": "UN", "barras": "789958100411"}, {"id": 365, "codigo": "4714", "nome": "BRINQ. ELP44 CACHORRO QUENTE PQ UNID", "un": "UN", "barras": "7629186814039"}, {"id": 366, "codigo": "4716", "nome": "BRINQ. ELP46 PNEU OFF ROAD UNID", "un": "UN", "barras": "7899958100534"}, {"id": 367, "codigo": "2153", "nome": "BRINQ. ELP537 PETISQUEIRAS MIX FRUTAS UN", "un": "UN", "barras": "7898701924137"}, {"id": 368, "codigo": "5405", "nome": "BRINQ. ELP544 MORDEDOR GELINHO UNID", "un": "UN", "barras": ""}, {"id": 369, "codigo": "5407", "nome": "BRINQ. ELP544 MORDEDOR PICOLE UNID", "un": "UN", "barras": ""}, {"id": 370, "codigo": "5406", "nome": "BRINQ. ELP544 MORDEDOR SORVETE UNID", "un": "UN", "barras": "7893032404808"}, {"id": 371, "codigo": "2146", "nome": "BRINQ. ELP553 MORDEDOR OSSO SABORIZADO", "un": "UN", "barras": "7898701924151"}, {"id": 372, "codigo": "5408", "nome": "BRINQ. ELP575 MORDEDOR OSSO LED UNID", "un": "UN", "barras": "7893031903081"}, {"id": 373, "codigo": "5474", "nome": "BRINQ. ELP607 MORDEDOR MADEIRA UNID", "un": "UN", "barras": "7893100915908"}, {"id": 374, "codigo": "3911", "nome": "BRINQ. ELP64 PEIXE UNID", "un": "UN", "barras": "7892018120640"}, {"id": 375, "codigo": "3912", "nome": "BRINQ. ELP65 SAPATINHO UNID", "un": "UN", "barras": "7892018120657"}, {"id": 376, "codigo": "5475", "nome": "BRINQ. ELP751 MORDEDOR MACACO UNID", "un": "UN", "barras": "7894040209362"}, {"id": 377, "codigo": "5161", "nome": "BRINQ. FRISBEE D2 C/06", "un": "KT", "barras": "7898699311056"}, {"id": 378, "codigo": "4570", "nome": "BRINQ. HM BOTA VINIL UNID.", "un": "UN", "barras": "7896176857462"}, {"id": 379, "codigo": "4882", "nome": "BRINQ. HM HALTERES OSSO BOLA DE TENIS UN", "un": "UN", "barras": "7896176857370"}, {"id": 380, "codigo": "4851", "nome": "BRINQ. HM OVO FRITO VINIL UNID", "un": "UN", "barras": "7896176857554"}, {"id": 381, "codigo": "4756", "nome": "BRINQ. HM PNEU VINIL UNID", "un": "UN", "barras": ""}, {"id": 382, "codigo": "1654", "nome": "BRINQ. J. BOLICHE UNID", "un": "UN", "barras": "7898920679566"}, {"id": 383, "codigo": "880", "nome": "BRINQ. J. DOG145 DISCO CARA DE CACHORRO", "un": "UN", "barras": "7898920679634"}, {"id": 384, "codigo": "882", "nome": "BRINQ. J. HALTERES UNID", "un": "UN", "barras": ""}, {"id": 385, "codigo": "881", "nome": "BRINQ. J. OSSO PLASTICO UNID", "un": "UN", "barras": "7898920679559"}, {"id": 386, "codigo": "4855", "nome": "BRINQ. J. PLAY DOG UNID", "un": "UN", "barras": ""}, {"id": 387, "codigo": "4258", "nome": "BRINQ. J1117B MORDEDOR STAR UNID", "un": "UN", "barras": "7629186811175"}, {"id": 388, "codigo": "4515", "nome": "BRINQ. J1312-DOG342 GELINHO UNID", "un": "UN", "barras": ""}, {"id": 389, "codigo": "5935", "nome": "BRINQ. J1313 PICOLE UNID", "un": "UN", "barras": "7629186813131"}, {"id": 390, "codigo": "4346", "nome": "BRINQ. J1392 COGUMELO UNID", "un": "UN", "barras": "7629186813926"}, {"id": 391, "codigo": "4907", "nome": "BRINQ. J1533 PATA CANDY UNID", "un": "UN", "barras": "7629186815333"}, {"id": 392, "codigo": "4908", "nome": "BRINQ. J1534 LOLLIPOP CANDY UNID", "un": "UN", "barras": "7629186815340"}, {"id": 393, "codigo": "4910", "nome": "BRINQ. J1536 DONUTS MINI UNID", "un": "UN", "barras": ""}, {"id": 394, "codigo": "4911", "nome": "BRINQ. J1539 OSSO BALL UNID", "un": "UN", "barras": "7629186815395"}, {"id": 395, "codigo": "5198", "nome": "BRINQ. JO001-R4039 GALINHA MINI C/12 UN", "un": "KT", "barras": ""}, {"id": 396, "codigo": "3873", "nome": "BRINQ. JO385 GALINHA MD C/ 06 UNID", "un": "KT", "barras": ""}, {"id": 397, "codigo": "602", "nome": "BRINQ. JO563-6100 FRISBEE UNID", "un": "UN", "barras": "7896779892174"}, {"id": 398, "codigo": "5951", "nome": "BRINQ. JO577 DOG MORDEDOR  173820", "un": "UN", "barras": "7898665194102"}, {"id": 399, "codigo": "3874", "nome": "BRINQ. JO616 GALINHA GD C/ 06 UNID", "un": "KT", "barras": ""}, {"id": 400, "codigo": "587", "nome": "BRINQ. JO616 GALINHA GD UNID", "un": "UN", "barras": "7629186808984"}, {"id": 401, "codigo": "1544", "nome": "BRINQ. JO641 OSSO DOG UNID", "un": "UN", "barras": ""}, {"id": 402, "codigo": "1609", "nome": "BRINQ. JO895 OSSINHO SPIKE BABY UNID", "un": "UN", "barras": ""}, {"id": 403, "codigo": "656", "nome": "BRINQ. JO896 OSSO MACICO PATAS UNID", "un": "UN", "barras": "7629186808960"}, {"id": 404, "codigo": "5959", "nome": "BRINQ. JO899-1826 PORCO MALHADO 261613", "un": "UN", "barras": "7629186808991"}, {"id": 405, "codigo": "8948", "nome": "BRINQ. KZ  MORDEDOR HALTERES UNID", "un": "UN", "barras": ""}, {"id": 406, "codigo": "1987", "nome": "BRINQ. KZ BERINGELA MORDEDOR C/ SOM UNID", "un": "UN", "barras": ""}, {"id": 407, "codigo": "1019", "nome": "BRINQ. KZ CENOURA MORDEDOR C/ SOM UNID", "un": "UN", "barras": ""}, {"id": 408, "codigo": "663", "nome": "BRINQ. MP3057 CHUPETA S/ GUIZO PQ UNID", "un": "UN", "barras": ""}, {"id": 409, "codigo": "2484", "nome": "BRINQ. PLAQUE ATTACKER GD PT C/10 UNID", "un": "UN", "barras": ""}, {"id": 410, "codigo": "2486", "nome": "BRINQ. PLAQUE ATTACKER MD PT C/20 UNID", "un": "UN", "barras": ""}, {"id": 411, "codigo": "2489", "nome": "BRINQ. PLAQUE ATTACKER PEQUENO PT C/30 UNID", "un": "UN", "barras": ""}, {"id": 412, "codigo": "1912", "nome": "BRINQ. PLAQUE ATTACKER PEQUENO UNID", "un": "UN", "barras": "7898920679344"}, {"id": 413, "codigo": "4689", "nome": "BRINQ. PM LIMP DENTE AROMAT BACON P", "un": "UN", "barras": ""}, {"id": 414, "codigo": "4673", "nome": "BRINQ. PM LIMP DENTE AROMAT BANANA P", "un": "UN", "barras": ""}, {"id": 415, "codigo": "4690", "nome": "BRINQ. PM LIMP DENTE AROMAT JABUTICABA P", "un": "UN", "barras": ""}, {"id": 416, "codigo": "4671", "nome": "BRINQ. PM LIMP DENTE AROMAT MENTA P", "un": "UN", "barras": ""}, {"id": 417, "codigo": "4672", "nome": "BRINQ. PM LIMP DENTE AROMAT TUTTI FRUT P", "un": "UN", "barras": ""}, {"id": 418, "codigo": "4638", "nome": "BRINQ. PNEU PESADO GD C/ CORDA COLOR UN", "un": "UN", "barras": ""}, {"id": 419, "codigo": "4311", "nome": "BRINQ. PNEU PESADO GD C/ CORDA PRETO UN", "un": "UN", "barras": ""}, {"id": 420, "codigo": "762", "nome": "BRINQ. PNEU PESADO GD PRETO E COLOR UNID", "un": "UN", "barras": "7898521415723"}, {"id": 421, "codigo": "4637", "nome": "BRINQ. PNEU PESADO MD C/ CORDA COLOR UN", "un": "UN", "barras": ""}, {"id": 422, "codigo": "4310", "nome": "BRINQ. PNEU PESADO MD C/ CORDA PRETO UN", "un": "UN", "barras": ""}, {"id": 423, "codigo": "767", "nome": "BRINQ. PNEU PESADO MD PRETO E COLOR UNID", "un": "UN", "barras": "7898521415587"}, {"id": 424, "codigo": "4636", "nome": "BRINQ. PNEU PESADO PQ C/ CORDA COLOR UN", "un": "UN", "barras": ""}, {"id": 425, "codigo": "4309", "nome": "BRINQ. PNEU PESADO PQ C/ CORDA PRETO UN", "un": "UN", "barras": ""}, {"id": 426, "codigo": "5386", "nome": "BRINQ. PS100 DISCO COLORIDO 12.8X2.8 CM", "un": "UN", "barras": ""}, {"id": 427, "codigo": "5401", "nome": "BRINQ. PS118 MORD. C/ CRAVOS MD 14 CM UN", "un": "UN", "barras": ""}, {"id": 428, "codigo": "5393", "nome": "BRINQ. PS122 OSSO C/ CRAVOS 17X8.5 UNID", "un": "UN", "barras": ""}, {"id": 429, "codigo": "5396", "nome": "BRINQ. PS131 OSSO ALTO RELEVO 14.5X5 CM", "un": "UN", "barras": ""}, {"id": 430, "codigo": "5395", "nome": "BRINQ. PS132 OSSO ALTO RELEVO 10.5X3 CM", "un": "UN", "barras": ""}, {"id": 431, "codigo": "5106", "nome": "BRINQ. PSL0060 MORD. MACICO FLUTUANTE TP", "un": "UN", "barras": "7890016020603"}, {"id": 432, "codigo": "8888", "nome": "BRINQ. PT BRINQUEDO C/12 UNID", "un": "UN", "barras": ""}, {"id": 433, "codigo": "5203", "nome": "BRINQ. R KIT C/12 UNIDADES", "un": "KT", "barras": ""}, {"id": 434, "codigo": "5202", "nome": "BRINQ. R KIT MOLDADO C/12 UNIDADES", "un": "KT", "barras": ""}, {"id": 435, "codigo": "4873", "nome": "BRINQ. R9943 MORDEDOR ARGOLA UNID", "un": "UN", "barras": "7891071799435"}, {"id": 436, "codigo": "4875", "nome": "BRINQ. R9945 MORDEDOR OSSO UNID", "un": "UN", "barras": "7891071799459"}, {"id": 437, "codigo": "4874", "nome": "BRINQ. R9946 MORDEDOR CURVO UNID", "un": "UN", "barras": "7891071799466"}, {"id": 438, "codigo": "4872", "nome": "BRINQ. R9952 MORDEDOR 10X12 CM UNID", "un": "UN", "barras": "7891071799527"}, {"id": 439, "codigo": "5995", "nome": "C CANELINHA DEF. TCHUCAO UNID 164774", "un": "UN", "barras": "7898932559535"}, {"id": 440, "codigo": "5234", "nome": "C CASCO BOVINO UNID", "un": "UN", "barras": ""}, {"id": 441, "codigo": "2502", "nome": "C CORDOSSO MINI UNID", "un": "UN", "barras": "7898939653045"}, {"id": 442, "codigo": "376", "nome": "C FEMUR DEF. OSSOCAO UNID", "un": "UN", "barras": "7898932559764"}, {"id": 443, "codigo": "5194", "nome": "C MISTO BOVINO 100 GR", "un": "UN", "barras": ""}, {"id": 444, "codigo": "8727", "nome": "C MISTO BOVINO 100 GR CX/ 14", "un": "UN", "barras": ""}, {"id": 445, "codigo": "8728", "nome": "C MISTO BOVINO 50 GR", "un": "UN", "barras": ""}, {"id": 446, "codigo": "8729", "nome": "C MISTO BOVINO 50 GR CX C/12", "un": "CX", "barras": ""}, {"id": 447, "codigo": "6012", "nome": "C ORELHA BOVINA UNID 347268", "un": "UN", "barras": "7908492201338"}, {"id": 448, "codigo": "5236", "nome": "C TRAQUEIA BOVINA C/02 UNID", "un": "UN", "barras": "7898339882126"}, {"id": 449, "codigo": "4472", "nome": "CA BOLSA CANGURU 30 X 18 ELP94 UNID", "un": "UN", "barras": "7896943244068"}, {"id": 450, "codigo": "4424", "nome": "CA BOLSA PQ BORBOLETA JO962 UNID", "un": "UN", "barras": ""}, {"id": 451, "codigo": "4349", "nome": "CA BOLSA PQ CORUJA JO935 UNID", "un": "UN", "barras": ""}, {"id": 452, "codigo": "7565", "nome": "CA BOLSA PQ ELO IMPORTS COLOR UNID", "un": "UN", "barras": ""}, {"id": 453, "codigo": "2010", "nome": "CA BOLSA T 0036 P/CAES E GATOS BEGE UN", "un": "UN", "barras": ""}, {"id": 454, "codigo": "2013", "nome": "CA BOLSA T 0057 P/ CAES E GATOS AZUL UN", "un": "UN", "barras": ""}, {"id": 455, "codigo": "2014", "nome": "CA BOLSA T 0057 P/ CAES E GATOS BORDO UN", "un": "UN", "barras": ""}, {"id": 456, "codigo": "2015", "nome": "CA BOLSA T 0057 P/ CAES E GATOS CINZA UN", "un": "UN", "barras": ""}, {"id": 457, "codigo": "2117", "nome": "CA BOLSA T 0063 PET MARRON UNID", "un": "UN", "barras": ""}, {"id": 458, "codigo": "2020", "nome": "CA BOLSA T 044 P/CAES E GATOS CINZA C/BE", "un": "UN", "barras": ""}, {"id": 459, "codigo": "2137", "nome": "CA BOLSA T 077 SACOLA P/ CAES AZUL UNID", "un": "UN", "barras": ""}, {"id": 460, "codigo": "4338", "nome": "CA BOLSA TRANSPORTE KIT 03 PCS KZ12", "un": "KT", "barras": ""}, {"id": 461, "codigo": "1136", "nome": "CA BOLSA TRANSPORTE MD OSSOCAO UNID", "un": "UN", "barras": "7898929873699"}, {"id": 462, "codigo": "1137", "nome": "CA BOLSA TRANSPORTE PQ OSSOCAO UNID", "un": "UN", "barras": "7898929873705"}, {"id": 463, "codigo": "3879", "nome": "CA COBERTOR GD OSSOCAO 70X100 12 UNID", "un": "CX", "barras": ""}, {"id": 464, "codigo": "3507", "nome": "CA COBERTOR GD OSSOCAO 70X100 UNID", "un": "UN", "barras": "7898929873743"}, {"id": 465, "codigo": "2528", "nome": "CA COBERTOR MD OSSOCAO 66X80 UNID", "un": "UN", "barras": ""}, {"id": 466, "codigo": "5365", "nome": "CA EDREDON OSSOCAO 90 X 70 UNID", "un": "UN", "barras": "7908492201697"}, {"id": 467, "codigo": "4196", "nome": "CA ESCADA COM 4 DEGRAUS UNID", "un": "UN", "barras": ""}, {"id": 468, "codigo": "4160", "nome": "CA ESCADA COM 5 DEGRAUS UNID", "un": "UN", "barras": ""}, {"id": 469, "codigo": "3973", "nome": "CA MANTA OSSOCAO -12 UNIDADES", "un": "KT", "barras": ""}, {"id": 470, "codigo": "8726", "nome": "CA MANTA OSSOCAO- 24 UNIDADES", "un": "KT", "barras": ""}, {"id": 471, "codigo": "603", "nome": "CA SACO DE DORMIR GD UNID", "un": "UN", "barras": "7908492201499"}, {"id": 472, "codigo": "600", "nome": "CA SACO DE DORMIR MD UNID", "un": "UN", "barras": "7908492201482"}, {"id": 473, "codigo": "591", "nome": "CA SACO DE DORMIR PQ UNID", "un": "UN", "barras": "7908492201478"}, {"id": 474, "codigo": "1337", "nome": "CABIDE P/EXPOSICAO UNID", "un": "UN", "barras": ""}, {"id": 475, "codigo": "1162", "nome": "CACHECOL OSSOCAO GD UNID", "un": "UN", "barras": ""}, {"id": 476, "codigo": "1180", "nome": "CACHECOL OSSOCAO MD UNID", "un": "UN", "barras": ""}, {"id": 477, "codigo": "1181", "nome": "CACHECOL OSSOCAO PQ UNID", "un": "UN", "barras": ""}, {"id": 478, "codigo": "992", "nome": "CALCINHA HIGIENICA JG C/ 04 UNID", "un": "JG", "barras": ""}, {"id": 479, "codigo": "1055", "nome": "CALCINHA HIGIENICA N 01 UNID", "un": "UN", "barras": ""}, {"id": 480, "codigo": "1056", "nome": "CALCINHA HIGIENICA N 02 UNID", "un": "UN", "barras": ""}, {"id": 481, "codigo": "1057", "nome": "CALCINHA HIGIENICA N 03 UNID", "un": "UN", "barras": ""}, {"id": 482, "codigo": "1058", "nome": "CALCINHA HIGIENICA N 04 UNID", "un": "UN", "barras": ""}, {"id": 483, "codigo": "2539", "nome": "CAMA EUROPA JOGO ONCA-5 PECAS", "un": "JG", "barras": ""}, {"id": 484, "codigo": "925", "nome": "CAMA EUROPA JOGO-5 PECAS", "un": "JG", "barras": ""}, {"id": 485, "codigo": "926", "nome": "CAMA EUROPA N 1 UNID", "un": "UN", "barras": ""}, {"id": 486, "codigo": "927", "nome": "CAMA EUROPA N 2 UNID", "un": "UN", "barras": "7898920679955"}, {"id": 487, "codigo": "928", "nome": "CAMA EUROPA N 3 UNID", "un": "UN", "barras": "7898920679962"}, {"id": 488, "codigo": "929", "nome": "CAMA EUROPA N 4 UNID", "un": "UN", "barras": "7898920679979"}, {"id": 489, "codigo": "930", "nome": "CAMA EUROPA N 5 UNID", "un": "UN", "barras": "7898920679986"}, {"id": 490, "codigo": "1066", "nome": "CAMA IGLU GD MODELO 1 UNID 60X38X37", "un": "UN", "barras": "7898920679399"}, {"id": 491, "codigo": "1088", "nome": "CAMA IGLU GD MODELO 2 UNID 60X38X37", "un": "UN", "barras": ""}, {"id": 492, "codigo": "1148", "nome": "CAMA IGLU GD MODELO 3 UNID 60X38X37", "un": "UN", "barras": ""}, {"id": 493, "codigo": "1053", "nome": "CAMA IGLU JG MODELO 1 3PC C/ZIPER", "un": "JG", "barras": ""}, {"id": 494, "codigo": "1054", "nome": "CAMA IGLU JG MODELO 2 C/PELUCIA 3 PECAS", "un": "JG", "barras": ""}, {"id": 495, "codigo": "1111", "nome": "CAMA IGLU JG MODELO 3 FLU FLU 3 PECAS", "un": "JG", "barras": ""}, {"id": 496, "codigo": "1065", "nome": "CAMA IGLU MD MODELO 1 UNID 48X31X32", "un": "UN", "barras": "7898929873514"}, {"id": 497, "codigo": "1087", "nome": "CAMA IGLU MD MODELO 2 UNID 48X31X32", "un": "UN", "barras": ""}, {"id": 498, "codigo": "1147", "nome": "CAMA IGLU MD MODELO 3 UNID 48X31X32", "un": "UN", "barras": ""}, {"id": 499, "codigo": "1064", "nome": "CAMA IGLU PQ MODELO 1 UNID 38X27X24", "un": "UN", "barras": ""}, {"id": 500, "codigo": "1090", "nome": "CAMA IGLU PQ MODELO 2 UNID 38X27X24", "un": "UN", "barras": "7908492200034"}, {"id": 501, "codigo": "1146", "nome": "CAMA IGLU PQ MODELO 3 UNID 38X27X24", "un": "UN", "barras": ""}, {"id": 502, "codigo": "4048", "nome": "CAMA IGLU STANDER 01- NOVA", "un": "UN", "barras": "7908492200683"}, {"id": 503, "codigo": "4045", "nome": "CAMA IGLU STANDER 02- NOVA", "un": "UN", "barras": "7898596140650"}, {"id": 504, "codigo": "3674", "nome": "CAMA IGLU STANDER 03- NOVA", "un": "UN", "barras": ""}, {"id": 505, "codigo": "4047", "nome": "CAMA IGLU STANDER 04- NOVA", "un": "UN", "barras": "7898929873477"}, {"id": 506, "codigo": "4043", "nome": "CAMA IGLU STANDER JOGO COM 4 PCS 1 AO 4", "un": "JG", "barras": ""}, {"id": 507, "codigo": "4835", "nome": "CAMA NUVEM OSSOCAO GD 66X66 UNID", "un": "UN", "barras": "7908492200089"}, {"id": 508, "codigo": "4836", "nome": "CAMA NUVEM OSSOCAO GG 80X80 UNID", "un": "UN", "barras": "7908492200096"}, {"id": 509, "codigo": "4834", "nome": "CAMA NUVEM OSSOCAO MD 61X61 UNID", "un": "UN", "barras": "7908492200072"}, {"id": 510, "codigo": "4833", "nome": "CAMA NUVEM OSSOCAO PQ 48X48 UNID", "un": "UN", "barras": ""}, {"id": 511, "codigo": "8844", "nome": "CAMA QUADRADA SORTIDA SAVANA UNID", "un": "UN", "barras": ""}, {"id": 512, "codigo": "3882", "nome": "CAMA QUEIJO OSSOCAO 3 UNID", "un": "KT", "barras": ""}, {"id": 513, "codigo": "1009", "nome": "CAMA QUEIJO OSSOCAO UNID", "un": "UN", "barras": "7898929873941"}, {"id": 514, "codigo": "3744", "nome": "CAMA REDONDA COLCH. SILICONE GD UNID", "un": "UN", "barras": ""}, {"id": 515, "codigo": "3745", "nome": "CAMA REDONDA COLCH. SILICONE GG UNID", "un": "UN", "barras": "7898929873682"}, {"id": 516, "codigo": "3723", "nome": "CAMA REDONDA COLCH. SILICONE JG 4UN", "un": "JG", "barras": ""}, {"id": 517, "codigo": "3743", "nome": "CAMA REDONDA COLCH. SILICONE MD UNID", "un": "UN", "barras": "7898920679276"}, {"id": 518, "codigo": "3742", "nome": "CAMA REDONDA COLCH. SILICONE PQ UNID", "un": "UN", "barras": ""}, {"id": 519, "codigo": "4540", "nome": "CAMA SILICONE ZIPER LUXO GD C/4 UN PROM.", "un": "KT", "barras": ""}, {"id": 520, "codigo": "4539", "nome": "CAMA SILICONE ZIPER LUXO GD UN 73X58", "un": "UN", "barras": "7908492200102"}, {"id": 521, "codigo": "3883", "nome": "CAMA SILICONE ZIPER LUXO MD C/4 UN PROM.", "un": "KT", "barras": ""}, {"id": 522, "codigo": "1037", "nome": "CAMA SILICONE ZIPER LUXO MD UN 60X52", "un": "UN", "barras": "7898596140551"}, {"id": 523, "codigo": "1067", "nome": "CAMA SILICONE ZIPER STANDER GD C/03 UNID", "un": "CX", "barras": ""}, {"id": 524, "codigo": "658", "nome": "CAMA SILICONE ZIPER STANDER GD UN 70X70", "un": "UN", "barras": ""}, {"id": 525, "codigo": "1228", "nome": "CAMA SILICONE ZIPER STANDER GG CX C/03", "un": "CX", "barras": ""}, {"id": 526, "codigo": "567", "nome": "CAMA SILICONE ZIPER STANDER GG UNID 1X1", "un": "UN", "barras": "7908492201758"}, {"id": 527, "codigo": "1622", "nome": "CAMA SILICONE ZIPER STANDER PQ C/03 UNID", "un": "CX", "barras": ""}, {"id": 528, "codigo": "1608", "nome": "CAMA SILICONE ZIPER STANDER PQ UNID", "un": "UN", "barras": ""}, {"id": 529, "codigo": "2416", "nome": "CAMA SUSPENSA PARA GATOS ELP415", "un": "UN", "barras": ""}, {"id": 530, "codigo": "8807", "nome": "CAMA TCHUCAO COLORS RET. C/03 UNID. PRETA C/ AMAR", "un": "JG", "barras": ""}, {"id": 531, "codigo": "8808", "nome": "CAMA TCHUCAO COLORS RET. C/03 UNID. PRETA C/ AZUL", "un": "JG", "barras": ""}, {"id": 532, "codigo": "8809", "nome": "CAMA TCHUCAO COLORS RET. C/03 UNID. PRETA C/ PINK", "un": "JG", "barras": ""}, {"id": 533, "codigo": "8806", "nome": "CAMA TCHUCAO COLORS RET. C/03 UNID. PRETA C/ VERM.", "un": "JG", "barras": ""}, {"id": 534, "codigo": "8804", "nome": "CAMA TCHUCAO SHERPA CARNEIRO UNID. 50X50", "un": "UN", "barras": ""}, {"id": 535, "codigo": "8811", "nome": "CAMA TCHUCAO TOCA 3 EM 1 LUXO C/03 UNID.", "un": "JG", "barras": ""}, {"id": 536, "codigo": "4621", "nome": "CAMA TOQUINHA GD UNID", "un": "UN", "barras": ""}, {"id": 537, "codigo": "4618", "nome": "CAMA TOQUINHA JG C/03 UNID", "un": "JG", "barras": ""}, {"id": 538, "codigo": "4620", "nome": "CAMA TOQUINHA MD UNID", "un": "UN", "barras": ""}, {"id": 539, "codigo": "4619", "nome": "CAMA TOQUINHA PQ UNID", "un": "UN", "barras": ""}, {"id": 540, "codigo": "1011", "nome": "CAMA TUNEL GD UNID 51 LARG X 30 ALT", "un": "UN", "barras": "7898929873989"}, {"id": 541, "codigo": "1010", "nome": "CAMA TUNEL MD UNID 43 LARG X 30 ALT", "un": "UN", "barras": "7898929873897"}, {"id": 542, "codigo": "1012", "nome": "CAMA TUNEL PQ UNID 36 LARG X 20 ALT", "un": "UN", "barras": "7898929873880"}, {"id": 543, "codigo": "3844", "nome": "CAMA VENEZA ALMOFADA SILICONE GD UNID", "un": "UN", "barras": ""}, {"id": 544, "codigo": "3842", "nome": "CAMA VENEZA ALMOFADA SILICONE JG C/3", "un": "JG", "barras": ""}, {"id": 545, "codigo": "3843", "nome": "CAMA VENEZA ALMOFADA SILICONE MD UNID", "un": "UN", "barras": ""}, {"id": 546, "codigo": "3884", "nome": "CAMA VENEZA ALMOFADA SILICONE PQ UNID", "un": "UN", "barras": ""}, {"id": 547, "codigo": "1203", "nome": "CAMA ZARA C/ ZIPER JOGO C/ 04 UNID", "un": "JG", "barras": ""}, {"id": 548, "codigo": "1235", "nome": "CAMA ZARA C/ ZIPER N 01 UNID", "un": "UN", "barras": ""}, {"id": 549, "codigo": "1227", "nome": "CAMA ZARA C/ ZIPER N 02 UNID", "un": "UN", "barras": "7898920679696"}, {"id": 550, "codigo": "1205", "nome": "CAMA ZARA C/ ZIPER N 03 UNID", "un": "UN", "barras": ""}, {"id": 551, "codigo": "1206", "nome": "CAMA ZARA C/ ZIPER N 04 UNID", "un": "UN", "barras": "7908492200782"}, {"id": 552, "codigo": "2557", "nome": "CAMA ZIPER JOGO ONCA-4 PECAS", "un": "JG", "barras": "7897556764042"}, {"id": 553, "codigo": "1030", "nome": "CAMA ZIPER JOGO-4 PECAS", "un": "JG", "barras": ""}, {"id": 554, "codigo": "1060", "nome": "CAMA ZIPER N 1 UNID", "un": "UN", "barras": "7898929873309"}, {"id": 555, "codigo": "1061", "nome": "CAMA ZIPER N 2 UNID", "un": "UN", "barras": "7898929873316"}, {"id": 556, "codigo": "1062", "nome": "CAMA ZIPER N 3 UNID", "un": "UN", "barras": "7898929873323"}, {"id": 557, "codigo": "1063", "nome": "CAMA ZIPER N 4 UNID", "un": "UN", "barras": "7898929873439"}, {"id": 558, "codigo": "1142", "nome": "CAMA ZIPER N 5 UNID 76X52", "un": "UN", "barras": "7898920679023"}, {"id": 559, "codigo": "1094", "nome": "CAMA ZIPER N 6 UNID 95X65", "un": "UN", "barras": "7898596140346"}, {"id": 560, "codigo": "4929", "nome": "CAPA PARA BANCO DE CARRO JO736", "un": "UN", "barras": ""}, {"id": 561, "codigo": "714", "nome": "CARRINHO DE PASSEIO PET AZUL UNID", "un": "UN", "barras": ""}, {"id": 562, "codigo": "5754", "nome": "CARRINHO DE PASSEIO PET ROSA UNID", "un": "UN", "barras": ""}, {"id": 563, "codigo": "659", "nome": "CARRINHO DE PASSEIO PET UNID", "un": "UN", "barras": ""}, {"id": 564, "codigo": "713", "nome": "CARRINHO DE PASSEIO PET VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 565, "codigo": "5271", "nome": "CHIQUEIRINHO PET ELP256 MD UNID", "un": "UN", "barras": ""}, {"id": 566, "codigo": "518", "nome": "CLICKER S5073 70426 UNID", "un": "UN", "barras": ""}, {"id": 567, "codigo": "959", "nome": "COLAR CIRURGICO JOGO C/10 UNID", "un": "JG", "barras": ""}, {"id": 568, "codigo": "949", "nome": "COLAR CIRURGICO N 01 UNID", "un": "UN", "barras": "7898929873019"}, {"id": 569, "codigo": "950", "nome": "COLAR CIRURGICO N 02 UNID", "un": "UN", "barras": "7898929873026"}, {"id": 570, "codigo": "965", "nome": "COLAR CIRURGICO N 03 UNID", "un": "UN", "barras": "7898929873033"}, {"id": 571, "codigo": "966", "nome": "COLAR CIRURGICO N 04 UNID", "un": "UN", "barras": "7898929873040"}, {"id": 572, "codigo": "967", "nome": "COLAR CIRURGICO N 05 UNID", "un": "UN", "barras": "7898929873057"}, {"id": 573, "codigo": "968", "nome": "COLAR CIRURGICO N 06 UNID", "un": "UN", "barras": "7898929873064"}, {"id": 574, "codigo": "969", "nome": "COLAR CIRURGICO N 07 UNID", "un": "UN", "barras": "7898929873071"}, {"id": 575, "codigo": "970", "nome": "COLAR CIRURGICO N 08 UNID", "un": "UN", "barras": "7898929873088"}, {"id": 576, "codigo": "971", "nome": "COLAR CIRURGICO N 09 UNID", "un": "UN", "barras": "7898929873095"}, {"id": 577, "codigo": "972", "nome": "COLAR CIRURGICO N 10 UNID", "un": "UN", "barras": "7898929873101"}, {"id": 578, "codigo": "1157", "nome": "COLAR CIRURGICO N 11 UNID", "un": "UN", "barras": "7908492200669"}, {"id": 579, "codigo": "1158", "nome": "COLAR CIRURGICO N 12 UNID", "un": "UN", "barras": "7898920679030"}, {"id": 580, "codigo": "9023", "nome": "COLAR CIRURGICO P/GATO", "un": "UN", "barras": ""}, {"id": 581, "codigo": "2608", "nome": "COLAR DE GATO C/12 UNID", "un": "KT", "barras": "7898929873804"}, {"id": 582, "codigo": "999", "nome": "COLAR DE GATO UNID", "un": "UN", "barras": ""}, {"id": 583, "codigo": "438", "nome": "COLAR ELIZABETANO -TAM 01 37X74 CM UNID", "un": "UN", "barras": ""}, {"id": 584, "codigo": "439", "nome": "COLAR ELIZABETANO -TAM 02 34,5X68 CM UNID", "un": "UN", "barras": ""}, {"id": 585, "codigo": "440", "nome": "COLAR ELIZABETANO -TAM 03 31,5X62 CM UNID", "un": "UN", "barras": ""}, {"id": 586, "codigo": "441", "nome": "COLAR ELIZABETANO -TAM 04 25,5X50 CM UNID", "un": "UN", "barras": ""}, {"id": 587, "codigo": "481", "nome": "COLAR ELIZABETANO -TAM 06 42X21 CM UNID", "un": "UN", "barras": ""}, {"id": 588, "codigo": "502", "nome": "COLAR ELIZABETANO -TAM 07 18X36 CM UNID", "un": "UN", "barras": ""}, {"id": 589, "codigo": "504", "nome": "COLAR ELIZABETANO -TAM 08 15X29 CM UNID", "un": "UN", "barras": ""}, {"id": 590, "codigo": "507", "nome": "COLAR ELIZABETANO -TAM 09 13,5X26 CM UNID", "un": "UN", "barras": ""}, {"id": 591, "codigo": "2610", "nome": "COLAR ELO 60CM 3.5MM CORRENTE UNID", "un": "UN", "barras": "7899525404744"}, {"id": 592, "codigo": "2611", "nome": "COLAR ELO 70 CM 4MM CORRENTE UNID", "un": "UN", "barras": "7899525404935"}, {"id": 593, "codigo": "2612", "nome": "COLAR ENF. 2.5X30 CHATO UNID", "un": "UN", "barras": "7899525406977"}, {"id": 594, "codigo": "2613", "nome": "COLAR ENF. 2.5X40 CHATO UNID", "un": "UN", "barras": "7899525406991"}, {"id": 595, "codigo": "2614", "nome": "COLAR ENF. 2.5X50 CHATO UNID", "un": "UN", "barras": "7899525407011"}, {"id": 596, "codigo": "2616", "nome": "COLAR ENF. 2.5X60 CHATO TRIPLO UNID", "un": "UN", "barras": "7899525408414"}, {"id": 597, "codigo": "860", "nome": "COLAR ENF. 2.5X60 CHATO UNID", "un": "UN", "barras": "7899525407035"}, {"id": 598, "codigo": "857", "nome": "COLAR ENF. 2.5X80 CHATO ARG. E MOSQ. UNI", "un": "UN", "barras": ""}, {"id": 599, "codigo": "846", "nome": "COLAR ENF. 3.5X50 CHATO UNID", "un": "UN", "barras": "7899525407226"}, {"id": 600, "codigo": "869", "nome": "COLAR ENF. 3.5X60 CHATO TRIPLO UNID", "un": "UN", "barras": "7899525408513"}, {"id": 601, "codigo": "843", "nome": "COLAR ENF. 3.5X60 CHATO UNID", "un": "UN", "barras": "7899525407240"}, {"id": 602, "codigo": "848", "nome": "COLAR ENF. 3.5X70 CHATO UNID", "un": "UN", "barras": "7899525407264"}, {"id": 603, "codigo": "845", "nome": "COLAR ENF. 3.5X80 CHATO UNID", "un": "UN", "barras": "7899525407288"}, {"id": 604, "codigo": "842", "nome": "COLAR ENF. 4.0X60 CHATO UNID", "un": "UN", "barras": "7899525407332"}, {"id": 605, "codigo": "2623", "nome": "COLAR ENF. 4.0X70 CHATO UNID", "un": "UN", "barras": "7899525407356"}, {"id": 606, "codigo": "2624", "nome": "COLAR ENF. 4.0X80 CHATO UNID", "un": "UN", "barras": "78995407370"}, {"id": 607, "codigo": "841", "nome": "COLAR GARRA FILA UNID", "un": "UN", "barras": "7898920679245"}, {"id": 608, "codigo": "4537", "nome": "COLCHONETE ESPUMA S/ ZIPER 01 AO 05", "un": "JG", "barras": ""}, {"id": 609, "codigo": "601", "nome": "COLCHONETE ESPUMA S/ ZIPER N 01 UNID", "un": "UN", "barras": ""}, {"id": 610, "codigo": "674", "nome": "COLCHONETE ESPUMA S/ ZIPER N 02 UNID", "un": "UN", "barras": ""}, {"id": 611, "codigo": "675", "nome": "COLCHONETE ESPUMA S/ ZIPER N 03 UNID", "un": "UN", "barras": ""}, {"id": 612, "codigo": "676", "nome": "COLCHONETE ESPUMA S/ ZIPER N 04 UNID", "un": "UN", "barras": ""}, {"id": 613, "codigo": "677", "nome": "COLCHONETE ESPUMA S/ ZIPER N 05 UNID", "un": "UN", "barras": ""}, {"id": 614, "codigo": "1075", "nome": "COLCHONETE FLOCOS JG C/ 05 UNID", "un": "JG", "barras": ""}, {"id": 615, "codigo": "1068", "nome": "COLCHONETE FLOCOS N 01 UNID", "un": "UN", "barras": ""}, {"id": 616, "codigo": "1069", "nome": "COLCHONETE FLOCOS N 02 UNID", "un": "UN", "barras": ""}, {"id": 617, "codigo": "1070", "nome": "COLCHONETE FLOCOS N 03 UNID", "un": "UN", "barras": ""}, {"id": 618, "codigo": "1071", "nome": "COLCHONETE FLOCOS N 04 UNID", "un": "UN", "barras": ""}, {"id": 619, "codigo": "1072", "nome": "COLCHONETE FLOCOS N 05 UNID", "un": "UN", "barras": ""}, {"id": 620, "codigo": "1052", "nome": "COLCHONETE FLOCOS UNID (1.20 X 90 CM)", "un": "UN", "barras": "7898929873576"}, {"id": 621, "codigo": "5189", "nome": "COLCHONETE NUVEM JOGO 01 AO 05", "un": "JG", "barras": ""}, {"id": 622, "codigo": "5284", "nome": "COLCHONETE NUVEM N 0 UNID", "un": "UN", "barras": ""}, {"id": 623, "codigo": "5184", "nome": "COLCHONETE NUVEM N 01 UNID", "un": "UN", "barras": ""}, {"id": 624, "codigo": "5185", "nome": "COLCHONETE NUVEM N 02 UNID", "un": "UN", "barras": ""}, {"id": 625, "codigo": "5186", "nome": "COLCHONETE NUVEM N 03 UNID", "un": "UN", "barras": "7908492200997"}, {"id": 626, "codigo": "5187", "nome": "COLCHONETE NUVEM N 04 UNID", "un": "UN", "barras": "7908492201000"}, {"id": 627, "codigo": "5188", "nome": "COLCHONETE NUVEM N 05 UNID", "un": "UN", "barras": "7908492201017"}, {"id": 628, "codigo": "1033", "nome": "COLCHONETE SILICONE GGG 64X91 CM", "un": "UN", "barras": "7898929873903"}, {"id": 629, "codigo": "1006", "nome": "COLCHONETE SILICONE MD 46.5X66 CM", "un": "UN", "barras": "7898929873965"}, {"id": 630, "codigo": "6208", "nome": "COLCHONETE SILICONE PQ 37X54 CM 165351", "un": "UN", "barras": "7898929873958"}, {"id": 631, "codigo": "980", "nome": "COLCHONETE ZIPER JG", "un": "JG", "barras": ""}, {"id": 632, "codigo": "3986", "nome": "COLCHONETE ZIPER N 0 12 UNID", "un": "KT", "barras": ""}, {"id": 633, "codigo": "1032", "nome": "COLCHONETE ZIPER N 0 UNID 46X36", "un": "UN", "barras": ""}, {"id": 634, "codigo": "981", "nome": "COLCHONETE ZIPER N 01 UNID 65X43", "un": "UN", "barras": ""}, {"id": 635, "codigo": "982", "nome": "COLCHONETE ZIPER N 02 UNID 74X48", "un": "UN", "barras": "7898929873767"}, {"id": 636, "codigo": "983", "nome": "COLCHONETE ZIPER N 03 UNID 84X53", "un": "UN", "barras": "7898929873774"}, {"id": 637, "codigo": "984", "nome": "COLCHONETE ZIPER N 04 UNID 95X59", "un": "UN", "barras": "7898929873781"}, {"id": 638, "codigo": "985", "nome": "COLCHONETE ZIPER N 05 UNID 103X69", "un": "UN", "barras": "7898929873798"}, {"id": 639, "codigo": "1122", "nome": "COLEIRA C/ MEDALHA 40 CM UNID", "un": "UN", "barras": "7908492200874"}, {"id": 640, "codigo": "1123", "nome": "COLEIRA C/ MEDALHA 50 CM UNID", "un": "UN", "barras": "7908492200881"}, {"id": 641, "codigo": "1124", "nome": "COLEIRA C/ MEDALHA 60 CM UNID", "un": "UN", "barras": ""}, {"id": 642, "codigo": "3987", "nome": "COLEIRA C/ REG. E MEDALHA GD C/06 UNID", "un": "KT", "barras": ""}, {"id": 643, "codigo": "1132", "nome": "COLEIRA C/ REG. E MEDALHA GD UNID", "un": "UN", "barras": "7898920679337"}, {"id": 644, "codigo": "3988", "nome": "COLEIRA C/ REG. E MEDALHA MD C/06 UNID", "un": "KT", "barras": ""}, {"id": 645, "codigo": "1133", "nome": "COLEIRA C/ REG. E MEDALHA MD UNID", "un": "UN", "barras": "7898920679320"}, {"id": 646, "codigo": "4222", "nome": "COLEIRA C/ REG. E MEDALHA PQ C/06 UNID", "un": "KT", "barras": ""}, {"id": 647, "codigo": "4136", "nome": "COLEIRA C/ REG. E MEDALHA PQ UNID", "un": "UN", "barras": "7898929873583"}, {"id": 648, "codigo": "4223", "nome": "COLEIRA GATO LADY CAT UNID", "un": "UN", "barras": "7898929873859"}, {"id": 649, "codigo": "2665", "nome": "COLEIRA OSSOCAO GD C/ 06 UNID", "un": "KT", "barras": ""}, {"id": 650, "codigo": "964", "nome": "COLEIRA OSSOCAO GD UNID 71 CM", "un": "UN", "barras": "7898929873194"}, {"id": 651, "codigo": "2667", "nome": "COLEIRA OSSOCAO MD C/ 06 UNID", "un": "KT", "barras": ""}, {"id": 652, "codigo": "2669", "nome": "COLEIRA OSSOCAO PQ C/ 06 UNID", "un": "KT", "barras": ""}, {"id": 653, "codigo": "4224", "nome": "COLEIRA P/ COLAR CIRURGICO N 03 34 CM UN", "un": "UN", "barras": ""}, {"id": 654, "codigo": "4225", "nome": "COLEIRA P/ COLAR CIRURGICO N 04 38 CM UN", "un": "UN", "barras": ""}, {"id": 655, "codigo": "4226", "nome": "COLEIRA P/ COLAR CIRURGICO N 05 42 CM UN", "un": "UN", "barras": ""}, {"id": 656, "codigo": "4227", "nome": "COLEIRA P/ COLAR CIRURGICO N 06 46 CM UN", "un": "UN", "barras": ""}, {"id": 657, "codigo": "4228", "nome": "COLEIRA P/ COLAR CIRURGICO N 07 50 CM UN", "un": "UN", "barras": ""}, {"id": 658, "codigo": "4229", "nome": "COLEIRA P/ COLAR CIRURGICO N 08 54 CM UN", "un": "UN", "barras": ""}, {"id": 659, "codigo": "4230", "nome": "COLEIRA P/ COLAR CIRURGICO N 09 58 CM UN", "un": "UN", "barras": ""}, {"id": 660, "codigo": "4231", "nome": "COLEIRA P/ COLAR CIRURGICO N 10 65 CM UN", "un": "UN", "barras": ""}, {"id": 661, "codigo": "9003", "nome": "COLEIRA P/ COLAR CIRURGICO N 11 70 CM UN", "un": "UN", "barras": ""}, {"id": 662, "codigo": "8939", "nome": "COLEIRA P/ COLAR CIRURGICO N 11 UN", "un": "UN", "barras": ""}, {"id": 663, "codigo": "9004", "nome": "COLEIRA P/ COLAR CIRURGICO N 12 75 CM UN", "un": "UN", "barras": ""}, {"id": 664, "codigo": "8940", "nome": "COLEIRA P/ COLAR CIRURGICO N 12 UN", "un": "UN", "barras": ""}, {"id": 665, "codigo": "8938", "nome": "COLEIRA P/COLAR CIRURGICO N 11", "un": "UN", "barras": ""}, {"id": 666, "codigo": "2693", "nome": "COLONIA DOVE 140 ML UNID", "un": "UN", "barras": ""}, {"id": 667, "codigo": "2708", "nome": "COLONIA KAIAK 140 ML UNID", "un": "UN", "barras": ""}, {"id": 668, "codigo": "6275", "nome": "COLONIA MELANCIA 140 ML UNID", "un": "UN", "barras": ""}, {"id": 669, "codigo": "2728", "nome": "COLONIA POLO 140 ML UNID", "un": "UN", "barras": "7898929873330"}, {"id": 670, "codigo": "5253", "nome": "COMEDOURO 1046 MELAMINA MINI TIGELA ACO", "un": "UN", "barras": "7892017105662"}, {"id": 671, "codigo": "791", "nome": "COMEDOURO A F GATO 150ML UNID", "un": "UN", "barras": ""}, {"id": 672, "codigo": "2734", "nome": "COMEDOURO A F GATO C/06 UNID", "un": "KT", "barras": ""}, {"id": 673, "codigo": "795", "nome": "COMEDOURO A F GRANDE-4 1500ML UNID", "un": "UN", "barras": ""}, {"id": 674, "codigo": "2735", "nome": "COMEDOURO A F GRANDE-4 C/06 UNID", "un": "KT", "barras": ""}, {"id": 675, "codigo": "794", "nome": "COMEDOURO A F MEDIO-3 800ML UNID", "un": "UN", "barras": ""}, {"id": 676, "codigo": "2736", "nome": "COMEDOURO A F MEDIO-3 C/06 UNID", "un": "KT", "barras": ""}, {"id": 677, "codigo": "792", "nome": "COMEDOURO A F MINI-1 300ML UNID", "un": "UN", "barras": ""}, {"id": 678, "codigo": "2737", "nome": "COMEDOURO A F MINI-1 C/06 UNID", "un": "KT", "barras": ""}, {"id": 679, "codigo": "793", "nome": "COMEDOURO A F PEQUENO-2 600ML UNID", "un": "UN", "barras": ""}, {"id": 680, "codigo": "2738", "nome": "COMEDOURO A F PEQUENO-2 C/06 UNID", "un": "KT", "barras": ""}, {"id": 681, "codigo": "64", "nome": "COMEDOURO CEC DUPLO GRANDE UNID", "un": "UN", "barras": "7898929873491"}, {"id": 682, "codigo": "63", "nome": "COMEDOURO CEC DUPLO PQ UNID", "un": "UN", "barras": "7898929873484"}, {"id": 683, "codigo": "60", "nome": "COMEDOURO CEC GRANDE 2700ML UNID 164583", "un": "UN", "barras": "7898920679160"}, {"id": 684, "codigo": "2755", "nome": "COMEDOURO CEC GRANDE C/12 UNID", "un": "KT", "barras": ""}, {"id": 685, "codigo": "58", "nome": "COMEDOURO CEC MEDIO 1850ML UNID 164355", "un": "UN", "barras": "7898920679108"}, {"id": 686, "codigo": "2757", "nome": "COMEDOURO CEC MEDIO C/12 UNID", "un": "KT", "barras": ""}, {"id": 687, "codigo": "56", "nome": "COMEDOURO CEC MINI 380ML UNID 164354", "un": "UN", "barras": "7898920679122"}, {"id": 688, "codigo": "2759", "nome": "COMEDOURO CEC MINI C/ 25 UNID", "un": "KT", "barras": ""}, {"id": 689, "codigo": "57", "nome": "COMEDOURO CEC PEQUENO 1200ML UNID 164365", "un": "UN", "barras": ""}, {"id": 690, "codigo": "2761", "nome": "COMEDOURO CEC PEQUENO C/12 UNID", "un": "KT", "barras": "7898920679146"}, {"id": 691, "codigo": "5162", "nome": "COMEDOURO COMILAO 600 ML", "un": "UN", "barras": ""}, {"id": 692, "codigo": "5163", "nome": "COMEDOURO COMILAO 600 ML C/06 UNID", "un": "KT", "barras": ""}, {"id": 693, "codigo": "1848", "nome": "COMEDOURO DOG FLEX AGUA E RACAO AZUL UN", "un": "UN", "barras": ""}, {"id": 694, "codigo": "5327", "nome": "COMEDOURO DP PATA FORTE Nº 01 PRETO UNID", "un": "UN", "barras": "7898657610702"}, {"id": 695, "codigo": "5755", "nome": "COMEDOURO DP PATA FORTE Nº 01 UNID", "un": "UN", "barras": ""}, {"id": 696, "codigo": "5326", "nome": "COMEDOURO DP PATA FORTE Nº 01 VERM UNID", "un": "UN", "barras": "7898657610696"}, {"id": 697, "codigo": "5330", "nome": "COMEDOURO DP PATA FORTE Nº 02 AZUL UNID", "un": "UN", "barras": "7898657610719"}, {"id": 698, "codigo": "5333", "nome": "COMEDOURO DP PATA FORTE Nº 02 PRETO UNID", "un": "UN", "barras": "7898657610740"}, {"id": 699, "codigo": "5332", "nome": "COMEDOURO DP PATA FORTE Nº 02 VERM UNID", "un": "UN", "barras": "7898657610733"}, {"id": 700, "codigo": "5335", "nome": "COMEDOURO DP PATA FORTE Nº 03 AZUL UNID", "un": "UN", "barras": "7898657610764"}, {"id": 701, "codigo": "5338", "nome": "COMEDOURO DP PATA FORTE Nº 03 PRETO UNID", "un": "UN", "barras": "7898657610795"}, {"id": 702, "codigo": "5336", "nome": "COMEDOURO DP PATA FORTE Nº 03 ROSA UNID", "un": "UN", "barras": "7898657610771"}, {"id": 703, "codigo": "5337", "nome": "COMEDOURO DP PATA FORTE Nº 03 VERM UNID", "un": "UN", "barras": "7898657610788"}, {"id": 704, "codigo": "4612", "nome": "COMEDOURO DUPLO DE INOX ELP280 UNID", "un": "UN", "barras": ""}, {"id": 705, "codigo": "1648", "nome": "COMEDOURO DUPLO INOX ELP52 UNID", "un": "UN", "barras": "7898701924670"}, {"id": 706, "codigo": "1647", "nome": "COMEDOURO E BEB. ELP120 CAMINHA ROSA UNI", "un": "UN", "barras": "7893031903470"}, {"id": 707, "codigo": "736", "nome": "COMEDOURO E BEB. ELP45 GATO TRIPLO AZUL", "un": "UN", "barras": ""}, {"id": 708, "codigo": "2145", "nome": "COMEDOURO E BEB. ELP45 GATO TRIPLO ROSA", "un": "UN", "barras": ""}, {"id": 709, "codigo": "799", "nome": "COMEDOURO E BEB. ELP45 GATO TRIPLO VERDE", "un": "UN", "barras": ""}, {"id": 710, "codigo": "1516", "nome": "COMEDOURO E BEBEDOURO DECOR 600 ML", "un": "UN", "barras": ""}, {"id": 711, "codigo": "2765", "nome": "COMEDOURO E BEBEDOURO DP AUT AZUL UNID", "un": "UN", "barras": ""}, {"id": 712, "codigo": "2766", "nome": "COMEDOURO E BEBEDOURO DP AUT ROSA UNID", "un": "UN", "barras": ""}, {"id": 713, "codigo": "2767", "nome": "COMEDOURO E BEBEDOURO DP AUT VERMELHO UN", "un": "UN", "barras": ""}, {"id": 714, "codigo": "5347", "nome": "COMEDOURO E BEBEDOURO POP STAR BEGE UNID", "un": "UN", "barras": ""}, {"id": 715, "codigo": "5345", "nome": "COMEDOURO E BEBEDOURO POP STAR ROSA UNID", "un": "UN", "barras": ""}, {"id": 716, "codigo": "8615", "nome": "COMEDOURO E BEBEDOURO POP STAR UN", "un": "UN", "barras": ""}, {"id": 717, "codigo": "5346", "nome": "COMEDOURO E BEBEDOURO POP STAR VINHO UN", "un": "UN", "barras": ""}, {"id": 718, "codigo": "8847", "nome": "COMEDOURO ECONOMICO P/ GATO 120ML", "un": "PC", "barras": ""}, {"id": 719, "codigo": "5139", "nome": "COMEDOURO ELP34 MELAMINA GATO UNID", "un": "UN", "barras": ""}, {"id": 720, "codigo": "4470", "nome": "COMEDOURO ELP35 DUPLO MELAMINA UNID", "un": "UN", "barras": ""}, {"id": 721, "codigo": "8785", "nome": "COMEDOURO ELP364 GATINHO ELEVADO UNID", "un": "UN", "barras": ""}, {"id": 722, "codigo": "8845", "nome": "COMEDOURO ELP382 TIGELA DUPLA ORELINHA UNID", "un": "PC", "barras": "7898701923901"}, {"id": 723, "codigo": "3994", "nome": "COMEDOURO ELP70-MP919 COMA MEL PQ UNID", "un": "UN", "barras": ""}, {"id": 724, "codigo": "3996", "nome": "COMEDOURO ELP71-MP918 COMA MEL MD UNID", "un": "UN", "barras": ""}, {"id": 725, "codigo": "5166", "nome": "COMEDOURO ERGONOMICO GATO 150 ML", "un": "UN", "barras": ""}, {"id": 726, "codigo": "5167", "nome": "COMEDOURO ERGONOMICO GATO 150 ML C/06", "un": "KT", "barras": ""}, {"id": 727, "codigo": "5165", "nome": "COMEDOURO ERGONOMICO GATO 80 ML C/06", "un": "KT", "barras": ""}, {"id": 728, "codigo": "5164", "nome": "COMEDOURO ERGONOMICO GATO 80ML", "un": "UN", "barras": ""}, {"id": 729, "codigo": "3641", "nome": "COMEDOURO INOX KZ01 200 ML UNID", "un": "UN", "barras": ""}, {"id": 730, "codigo": "3642", "nome": "COMEDOURO INOX KZ02 300 ML UNID", "un": "UN", "barras": ""}, {"id": 731, "codigo": "3643", "nome": "COMEDOURO INOX KZ03 500 ML UNID", "un": "UN", "barras": ""}, {"id": 732, "codigo": "3644", "nome": "COMEDOURO INOX KZ04 800 ML UNID", "un": "UN", "barras": ""}, {"id": 733, "codigo": "572", "nome": "COMEDOURO INTERATIVO SILICONE ELP228", "un": "UN", "barras": ""}, {"id": 734, "codigo": "679", "nome": "COMEDOURO JO920-278 MELAMINA CAT UNID", "un": "UN", "barras": ""}, {"id": 735, "codigo": "2372", "nome": "COMEDOURO KZ57 DUPLO SAPINHO AZUL UNID", "un": "UN", "barras": ""}, {"id": 736, "codigo": "2373", "nome": "COMEDOURO KZ57 DUPLO SAPINHO ROSA UNID", "un": "UN", "barras": ""}, {"id": 737, "codigo": "1665", "nome": "COMEDOURO MELAMINA RG0112 LARANJA 730ML", "un": "UN", "barras": ""}, {"id": 738, "codigo": "1672", "nome": "COMEDOURO PESADO GRANDE 2000ML UNID", "un": "UN", "barras": ""}, {"id": 739, "codigo": "1671", "nome": "COMEDOURO PESADO MEDIO 1800ML UNID", "un": "UN", "barras": ""}, {"id": 740, "codigo": "1669", "nome": "COMEDOURO PESADO PEQUENO 700ML UNID", "un": "UN", "barras": ""}, {"id": 741, "codigo": "2790", "nome": "COMEDOURO PZ GRANDE AZUL 2.500ML UNID", "un": "UN", "barras": ""}, {"id": 742, "codigo": "2791", "nome": "COMEDOURO PZ GRANDE ROSA 2.500ML UNID", "un": "UN", "barras": ""}, {"id": 743, "codigo": "2792", "nome": "COMEDOURO PZ GRANDE VERM 2.500ML UNID", "un": "UN", "barras": "7897936921997"}, {"id": 744, "codigo": "2795", "nome": "COMEDOURO PZ MEDIO ROSA 1.500ML UNID", "un": "UN", "barras": ""}, {"id": 745, "codigo": "2796", "nome": "COMEDOURO PZ MEDIO VERM 1.500ML UNID", "un": "UN", "barras": "7897936921966"}, {"id": 746, "codigo": "2140", "nome": "COMEDOURO PZ MINI FILHOT AZUL 300ML UNID", "un": "UN", "barras": ""}, {"id": 747, "codigo": "2786", "nome": "COMEDOURO PZ MINI FILHOT ROSA 300ML UNID", "un": "UN", "barras": ""}, {"id": 748, "codigo": "2787", "nome": "COMEDOURO PZ MINI FILHOT VERM 300ML UNID", "un": "UN", "barras": "7897936921782"}, {"id": 749, "codigo": "3990", "nome": "COMEDOURO PZ MINI GATO AZUL 120ML UNID", "un": "UN", "barras": ""}, {"id": 750, "codigo": "3992", "nome": "COMEDOURO PZ MINI GATO VERMELHO 120ML UNID.", "un": "UN", "barras": ""}, {"id": 751, "codigo": "6358", "nome": "COMEDOURO PZ PEQUENO 1.000ML UNID 171356", "un": "UN", "barras": ""}, {"id": 752, "codigo": "2799", "nome": "COMEDOURO PZ PEQUENO AZUL 1.000ML UNID", "un": "UN", "barras": "7897936921911"}, {"id": 753, "codigo": "2800", "nome": "COMEDOURO PZ PEQUENO ROSA 1.000ML UNID", "un": "UN", "barras": "7897936921928"}, {"id": 754, "codigo": "2801", "nome": "COMEDOURO PZ PEQUENO VERM 1.000ML UNID", "un": "UN", "barras": "7897936921935"}, {"id": 755, "codigo": "2802", "nome": "CONCHA DOSADORA CEC C/12 UNID", "un": "UN", "barras": ""}, {"id": 756, "codigo": "89", "nome": "CONCHA DOSADORA CEC UNID", "un": "UN", "barras": ""}, {"id": 757, "codigo": "1442", "nome": "CREME DENTAL BUCAL 80GR CARNE UNID", "un": "UN", "barras": ""}, {"id": 758, "codigo": "2804", "nome": "CREME GEL DENTAL MENTA 60GR UNID", "un": "UN", "barras": "7898348685446"}, {"id": 759, "codigo": "3526", "nome": "CREME GEL DENTAL MORANGO 60GR UNID", "un": "UN", "barras": "7898348685453"}, {"id": 760, "codigo": "2805", "nome": "CREME GEL DENTAL TUTTI FRUTTI 60GR UNID", "un": "UN", "barras": "7898348685460"}, {"id": 761, "codigo": "5480", "nome": "CT COLEIRA C/REG.. C/PIG. E GUIA C/10 UN", "un": "CT", "barras": ""}, {"id": 762, "codigo": "1144", "nome": "CT COLEIRA C/REGULAGEM E PIGENTE C/10 UN", "un": "CT", "barras": "7908492200652"}, {"id": 763, "codigo": "4367", "nome": "CT COLEIRA COCKER MISTA P/ M/ G", "un": "CT", "barras": "7908492200836"}, {"id": 764, "codigo": "2134", "nome": "CT COLEIRA DE MISTA P/ M/ G", "un": "CT", "barras": "7908492200843"}, {"id": 765, "codigo": "1083", "nome": "CT COLEIRA FILHOTE C/10 UNID", "un": "CT", "barras": ""}, {"id": 766, "codigo": "4002", "nome": "CT COLEIRA GATO ELASTICA 4 CARTELAS", "un": "KT", "barras": ""}, {"id": 767, "codigo": "1028", "nome": "CT COLEIRA GATO ELASTICA C/10 UNID", "un": "CT", "barras": ""}, {"id": 768, "codigo": "4429", "nome": "CT COLEIRA GATO LADY CAT JO977 C/10 UNID", "un": "CT", "barras": "7629186809776"}, {"id": 769, "codigo": "4313", "nome": "CT COLEIRA GATO REFLEXOS J1173 C/10 UNID", "un": "CT", "barras": "7629186811731"}, {"id": 770, "codigo": "1979", "nome": "CT COLEIRA KZ C/ GUIZO SEM ELASTICO C/10", "un": "UN", "barras": ""}, {"id": 771, "codigo": "1031", "nome": "CT COLEIRA SEDA GD C/10 UNID", "un": "CT", "barras": ""}, {"id": 772, "codigo": "2829", "nome": "CT COLEIRA SEDA MD C/10 UNID", "un": "CT", "barras": ""}, {"id": 773, "codigo": "2830", "nome": "CT COLEIRA SEDA PQ C/10 UNID", "un": "CT", "barras": ""}, {"id": 774, "codigo": "9022", "nome": "CT. PEITORAL OSSO PATINHA KZ C/12", "un": "CT", "barras": ""}, {"id": 775, "codigo": "5286", "nome": "CX TRANSP. MMA Nº0 AZUL C33 X L27 X A24", "un": "UN", "barras": ""}, {"id": 776, "codigo": "5290", "nome": "CX TRANSP. MMA Nº0 LILAS C33 X L27 X A24", "un": "UN", "barras": ""}, {"id": 777, "codigo": "5287", "nome": "CX TRANSP. MMA Nº0 ROSA C33 X L27 X A24", "un": "UN", "barras": ""}, {"id": 778, "codigo": "5291", "nome": "CX TRANSP. MMA Nº0 VERDE C33 X L27 X A24", "un": "UN", "barras": ""}, {"id": 779, "codigo": "5289", "nome": "CX TRANSP. MMA Nº0 VINHO C33 X L27 X A24", "un": "UN", "barras": ""}, {"id": 780, "codigo": "5295", "nome": "CX TRANSP. MMA Nº01 AZUL C44 X L31 X A27", "un": "UN", "barras": ""}, {"id": 781, "codigo": "5297", "nome": "CX TRANSP. MMA Nº01 CINZA C44 X L31 X A2", "un": "UN", "barras": "7898657610122"}, {"id": 782, "codigo": "5299", "nome": "CX TRANSP. MMA Nº01 LILAS C44 X L31 X A2", "un": "UN", "barras": ""}, {"id": 783, "codigo": "5296", "nome": "CX TRANSP. MMA Nº01 ROSA C44 X L31 X A27", "un": "UN", "barras": ""}, {"id": 784, "codigo": "5301", "nome": "CX TRANSP. MMA Nº01 VERDE C44 X L31 X A2", "un": "UN", "barras": ""}, {"id": 785, "codigo": "5298", "nome": "CX TRANSP. MMA Nº01 VINHO C44 X L31 X A2", "un": "UN", "barras": "7898657610139"}, {"id": 786, "codigo": "5307", "nome": "CX TRANSP. MMA Nº02 LILAS C48 X L34 X A2", "un": "UN", "barras": "7898657610207"}, {"id": 787, "codigo": "5304", "nome": "CX TRANSP. MMA Nº02 ROSA C48 X L34 X A29", "un": "UN", "barras": ""}, {"id": 788, "codigo": "5308", "nome": "CX TRANSP. MMA Nº02 VERDE C48 X L34 X A2", "un": "UN", "barras": "7898657610214"}, {"id": 789, "codigo": "5310", "nome": "CX TRANSP. MMA Nº03 AZUL C54 X L38 X A34", "un": "UN", "barras": "7898657610221"}, {"id": 790, "codigo": "5312", "nome": "CX TRANSP. MMA Nº03 CINZA C54 X L38 X A3", "un": "UN", "barras": "7898657610245"}, {"id": 791, "codigo": "5314", "nome": "CX TRANSP. MMA Nº03 LILAS C54 X L38 X A3", "un": "UN", "barras": "7898657610269"}, {"id": 792, "codigo": "5311", "nome": "CX TRANSP. MMA Nº03 ROSA C54 X L38 X A34", "un": "UN", "barras": "7898657610238"}, {"id": 793, "codigo": "5315", "nome": "CX TRANSP. MMA Nº03 VERDE C54 X L38 X A3", "un": "UN", "barras": "7898657610276"}, {"id": 794, "codigo": "5313", "nome": "CX TRANSP. MMA Nº03 VINHO C54 X L38 X A3", "un": "UN", "barras": ""}, {"id": 795, "codigo": "5317", "nome": "CX TRANSP. MMA Nº04 AZUL C62 X L44 X A40", "un": "UN", "barras": "7898657610559"}, {"id": 796, "codigo": "5319", "nome": "CX TRANSP. MMA Nº04 CINZA C62 X L44 X A4", "un": "UN", "barras": "7898657610580"}, {"id": 797, "codigo": "5322", "nome": "CX TRANSP. MMA Nº04 LILAS C62 X L44 X A4", "un": "UN", "barras": ""}, {"id": 798, "codigo": "5318", "nome": "CX TRANSP. MMA Nº04 ROSA C62 X L44 X A40", "un": "UN", "barras": ""}, {"id": 799, "codigo": "5323", "nome": "CX TRANSP. MMA Nº04 VERDE C62 X L44 X A4", "un": "UN", "barras": ""}, {"id": 800, "codigo": "5321", "nome": "CX TRANSP. MMA Nº04 VINHO C62 X L44 X A4", "un": "UN", "barras": ""}, {"id": 801, "codigo": "681", "nome": "CX TRANSPORTE  MEGA FACIL 01 45X30X27", "un": "UN", "barras": ""}, {"id": 802, "codigo": "682", "nome": "CX TRANSPORTE  MEGA FACIL 02 48X32X28", "un": "UN", "barras": ""}, {"id": 803, "codigo": "683", "nome": "CX TRANSPORTE  MEGA FACIL 03 57X36X30", "un": "UN", "barras": ""}, {"id": 804, "codigo": "4514", "nome": "DENTAL 040 PEQUENO 17CMX15MM UNID", "un": "UN", "barras": "7898635690192"}, {"id": 805, "codigo": "1755", "nome": "DENTAL 044 GRANDE 24CMX20MM UNID", "un": "UN", "barras": "7898940944286"}, {"id": 806, "codigo": "1759", "nome": "DENTAL 045 EXTRA GRANDE 45CMX20MM UNID", "un": "UN", "barras": "7898634690154"}, {"id": 807, "codigo": "4474", "nome": "DENTAL 300 CORDA TRANCADA INFINITO UNID", "un": "UN", "barras": ""}, {"id": 808, "codigo": "6420", "nome": "DENTAL 3012 CORDA C/ NO NAS EXTREMIDADES 166166", "un": "UN", "barras": ""}, {"id": 809, "codigo": "4006", "nome": "DENTAL 312 BOLA PONTAS UNID", "un": "UN", "barras": ""}, {"id": 810, "codigo": "3794", "nome": "DENTAL 345 TRANCA SANFONADA LAR./AZUL UN", "un": "UN", "barras": ""}, {"id": 811, "codigo": "4476", "nome": "DENTAL 346 CORDA MORDEDOR OSSO AZUL UNID", "un": "UN", "barras": ""}, {"id": 812, "codigo": "4477", "nome": "DENTAL 346A CORDA MORDEDOR OSSO LARANJA", "un": "UN", "barras": ""}, {"id": 813, "codigo": "3792", "nome": "DENTAL 347 TRANCA C/ NO E BOLA AMERIC UN", "un": "UN", "barras": ""}, {"id": 814, "codigo": "3793", "nome": "DENTAL 348 TRANCA NO E BOLA AMAR/LAR UN", "un": "UN", "barras": ""}, {"id": 815, "codigo": "4008", "nome": "DENTAL 349 TRANCA JUMBO ROSA/BRANCO UNID", "un": "UN", "barras": ""}, {"id": 816, "codigo": "5280", "nome": "DENTAL BBPET 1281 C/BOLA SMALL UNID", "un": "UN", "barras": ""}, {"id": 817, "codigo": "66", "nome": "DENTAL CT8054 BOLA CORDA UNID", "un": "UN", "barras": ""}, {"id": 818, "codigo": "293", "nome": "DENTAL DOG038 CORDA C/ BOLINHA UNID 166167", "un": "UN", "barras": "7890001004847"}, {"id": 819, "codigo": "294", "nome": "DENTAL DOG039-MP0358 CORDA C/ OSSINHO", "un": "UN", "barras": ""}, {"id": 820, "codigo": "295", "nome": "DENTAL DOG052 PUXADOR COM OSSINHO UNID", "un": "UN", "barras": ""}, {"id": 821, "codigo": "5134", "nome": "DENTAL DOG234 CORDA CRUZADA UNID", "un": "UN", "barras": "2790884059018"}, {"id": 822, "codigo": "5133", "nome": "DENTAL DOG250 CORDA ET PQ AZUL UNID", "un": "UN", "barras": "7908405901966"}, {"id": 823, "codigo": "5218", "nome": "DENTAL ELP323 CORDA OSSINHO UNID", "un": "UN", "barras": "7892062409364"}, {"id": 824, "codigo": "1018", "nome": "DENTAL ELP541 PUXADOR CORDA C/ BOLA UN", "un": "UN", "barras": ""}, {"id": 825, "codigo": "4841", "nome": "DENTAL ELP80 CORDA 8 UNID", "un": "UN", "barras": ""}, {"id": 826, "codigo": "4915", "nome": "DENTAL FRESH OSSOCAO 60GR C/20 UNID", "un": "CX", "barras": ""}, {"id": 827, "codigo": "4914", "nome": "DENTAL FRESH OSSOCAO 60GR UNID", "un": "UN", "barras": "7898596140704"}, {"id": 828, "codigo": "4297", "nome": "DENTAL HM BOLA TPR COLOR UNID", "un": "UN", "barras": ""}, {"id": 829, "codigo": "4239", "nome": "DENTAL J1162 CORDA PULLER PQ UNID", "un": "UN", "barras": ""}, {"id": 830, "codigo": "4307", "nome": "DENTAL J3022 CORDA SORTIDO UNID", "un": "UN", "barras": ""}, {"id": 831, "codigo": "1525", "nome": "DENTAL JO355 CORDA C/ BOLA DE TENIS UNID", "un": "UN", "barras": ""}, {"id": 832, "codigo": "2867", "nome": "DENTAL JO356 CORDA 8 ANEL UNID", "un": "UN", "barras": ""}, {"id": 833, "codigo": "1578", "nome": "DENTAL JO773 CORDA COM BOLA UNID", "un": "UN", "barras": ""}, {"id": 834, "codigo": "6686", "nome": "DENTAL JO981 CORDA UNID", "un": "UN", "barras": ""}, {"id": 835, "codigo": "1219", "nome": "DENTAL JW10227 DOG CORDA UNID", "un": "UN", "barras": ""}, {"id": 836, "codigo": "1724", "nome": "DESEMBOLADOR CB PLASTICO DOG021-ELP405 UNID", "un": "UN", "barras": ""}, {"id": 837, "codigo": "6474", "nome": "ELIMINADOR 2 LTS UNID.164646", "un": "UN", "barras": ""}, {"id": 838, "codigo": "2887", "nome": "ELIMINADOR CITRONELA 2 LTS CX C/06-INDIV", "un": "CX", "barras": ""}, {"id": 839, "codigo": "1309", "nome": "ELIMINADOR CITRONELA 5 LTS (VERDE)", "un": "UN", "barras": ""}, {"id": 840, "codigo": "2890", "nome": "ELIMINADOR FLORAL 2 LTS CX C/ 06-INDIV.", "un": "CX", "barras": ""}, {"id": 841, "codigo": "2891", "nome": "ELIMINADOR FLORAL 2 LTS UNID.", "un": "UN", "barras": ""}, {"id": 842, "codigo": "2892", "nome": "ELIMINADOR FLORAL 5 LT (ROSA)", "un": "UN", "barras": ""}, {"id": 843, "codigo": "2893", "nome": "ELIMINADOR LAVANDA 2 LTS CX C/ 06-INDIV.", "un": "CX", "barras": ""}, {"id": 844, "codigo": "2894", "nome": "ELIMINADOR LAVANDA 2 LTS UNID.", "un": "UN", "barras": "7898920679801"}, {"id": 845, "codigo": "2895", "nome": "ELIMINADOR LAVANDA 5 LT (AZUL)", "un": "UN", "barras": ""}, {"id": 846, "codigo": "2897", "nome": "ESCOVA CEC ALCA REGULAVEL C/12 UNID", "un": "KT", "barras": ""}, {"id": 847, "codigo": "83", "nome": "ESCOVA CEC ALCA REGULAVEL UNID", "un": "UN", "barras": ""}, {"id": 848, "codigo": "4010", "nome": "ESCOVA CEC PLASTICA RASTELO C/12 UNID", "un": "KT", "barras": ""}, {"id": 849, "codigo": "6483", "nome": "ESCOVA CEC PLASTICA RASTELO UNID 164571", "un": "UN", "barras": ""}, {"id": 850, "codigo": "71", "nome": "ESCOVA DENTAL ASTES JO630-403 S5017 C/02", "un": "UN", "barras": "7629186806300"}, {"id": 851, "codigo": "1931", "nome": "ESCOVA DENTAL DEDAL BBPET PT C/ 50 UNID", "un": "UN", "barras": ""}, {"id": 852, "codigo": "1929", "nome": "ESCOVA DENTAL DP-PT C/ 50 UNID DOG022-BB", "un": "PT", "barras": ""}, {"id": 853, "codigo": "727", "nome": "ESCOVA DOG009 CB DE MADEIRA MD UNID", "un": "UN", "barras": ""}, {"id": 854, "codigo": "711", "nome": "ESCOVA DOG010 CB DE MADEIRA GD UNID", "un": "UN", "barras": "7890001002300"}, {"id": 855, "codigo": "2906", "nome": "ESCOVA DOG011 CB DE MADEIRA DP PQ UNID", "un": "UN", "barras": ""}, {"id": 856, "codigo": "2907", "nome": "ESCOVA DOG012 CB DE MADEIRA DP MD UNID", "un": "UN", "barras": ""}, {"id": 857, "codigo": "34", "nome": "ESCOVA DOG013 CB DE MADEIRA DP GD UNID", "un": "UN", "barras": "7890000100233"}, {"id": 858, "codigo": "3591", "nome": "ESCOVA ELP112 DUPLA PRO 22X6.5CM UNID", "un": "UN", "barras": ""}, {"id": 859, "codigo": "8881", "nome": "ESCOVA KZ MADEIRA MD S/ BOLINHA UNID", "un": "UN", "barras": ""}, {"id": 860, "codigo": "8880", "nome": "ESCOVA KZ MADEIRA PQ S/ BOLINHA UNID", "un": "UN", "barras": ""}, {"id": 861, "codigo": "4282", "nome": "F BOMBA FONTE UNID", "un": "UN", "barras": ""}, {"id": 862, "codigo": "3836", "nome": "FILTRO FONTE DURACATS CARVAO ATIVO UNID", "un": "UN", "barras": ""}, {"id": 863, "codigo": "1985", "nome": "FLEX NO DUPLO NAPOLITANO KG", "un": "KG", "barras": ""}, {"id": 864, "codigo": "2980", "nome": "FLEX PALITO EXTRA FINO 6/5 CARNE 100 GR", "un": "UN", "barras": ""}, {"id": 865, "codigo": "2029", "nome": "FLEX PALITO EXTRA FINO 6/5 COLOR 500GR", "un": "GR", "barras": "7899718621231"}, {"id": 866, "codigo": "6593", "nome": "FLEX PALITO FINO 8/5 MENTA 100 GR 167658", "un": "UN", "barras": ""}, {"id": 867, "codigo": "6583", "nome": "FLEX PALITO FINO 8/5 SABORES 100 GR 166318", "un": "UN", "barras": "7898596140070"}, {"id": 868, "codigo": "2031", "nome": "FLEX PALITO LEITE 100 GR", "un": "UN", "barras": "7898929873620"}, {"id": 869, "codigo": "6600", "nome": "FLEX PALITO LEITE 500GR", "un": "GR", "barras": ""}, {"id": 870, "codigo": "2061", "nome": "FLEX PALITO LEITE KG", "un": "KG", "barras": ""}, {"id": 871, "codigo": "2080", "nome": "FLEX ROLO BIFE KG", "un": "KG", "barras": ""}, {"id": 872, "codigo": "3027", "nome": "FLEX TORCIDINHO 100 GR", "un": "UN", "barras": "7898920679771"}, {"id": 873, "codigo": "2082", "nome": "FLEX TUBO CARNE 500GR", "un": "GR", "barras": "7896086427489"}, {"id": 874, "codigo": "960", "nome": "FOCINHEIRA JG C/ 05", "un": "JG", "barras": ""}, {"id": 875, "codigo": "973", "nome": "FOCINHEIRA N 01", "un": "UN", "barras": ""}, {"id": 876, "codigo": "974", "nome": "FOCINHEIRA N 02", "un": "UN", "barras": ""}, {"id": 877, "codigo": "975", "nome": "FOCINHEIRA N 03", "un": "UN", "barras": ""}, {"id": 878, "codigo": "976", "nome": "FOCINHEIRA N 04", "un": "UN", "barras": ""}, {"id": 879, "codigo": "977", "nome": "FOCINHEIRA N 05", "un": "UN", "barras": ""}, {"id": 880, "codigo": "4579", "nome": "FOCINHEIRA PLASTICA Nº 01 UNID", "un": "UN", "barras": ""}, {"id": 881, "codigo": "4580", "nome": "FOCINHEIRA PLASTICA Nº 02 UNID", "un": "UN", "barras": ""}, {"id": 882, "codigo": "4581", "nome": "FOCINHEIRA PLASTICA Nº 03 UNID", "un": "UN", "barras": ""}, {"id": 883, "codigo": "4582", "nome": "FOCINHEIRA PLASTICA Nº 05 UNID", "un": "UN", "barras": ""}, {"id": 884, "codigo": "4583", "nome": "FOCINHEIRA PLASTICA Nº 06 UNID", "un": "UN", "barras": ""}, {"id": 885, "codigo": "1022", "nome": "FOCINHEIRA PLASTICA Nº 07 UNID", "un": "UN", "barras": ""}, {"id": 886, "codigo": "987", "nome": "FONTE DURACATS BIV. 2.5L AZUL C/ FILTRO", "un": "UN", "barras": ""}, {"id": 887, "codigo": "990", "nome": "FONTE DURACATS BIV. 2.5L C/ FILTRO C/03", "un": "KT", "barras": ""}, {"id": 888, "codigo": "988", "nome": "FONTE DURACATS BIV. 2.5L ROSA C/ FILTRO", "un": "UN", "barras": ""}, {"id": 889, "codigo": "989", "nome": "FONTE DURACATS BIV. 2.5L VERM. C/ FILTRO", "un": "UN", "barras": ""}, {"id": 890, "codigo": "3801", "nome": "FONTE PARA CAES E GATOS DURAFONTE AZUL", "un": "UN", "barras": ""}, {"id": 891, "codigo": "3825", "nome": "FONTE PARA CAES E GATOS DURAFONTE ROSA", "un": "UN", "barras": ""}, {"id": 892, "codigo": "8623", "nome": "FONTE PARA CAES E GATOS DURAFONTE UN", "un": "UN", "barras": ""}, {"id": 893, "codigo": "3824", "nome": "FONTE PARA CAES E GATOS DURAFONTE VERM", "un": "UN", "barras": ""}, {"id": 894, "codigo": "5350", "nome": "FONTE PARA CAES E GATOS MMA 110V AZUL UN", "un": "UN", "barras": ""}, {"id": 895, "codigo": "5353", "nome": "FONTE PARA CAES E GATOS MMA 110V CAFE UN", "un": "UN", "barras": ""}, {"id": 896, "codigo": "5354", "nome": "FONTE PARA CAES E GATOS MMA 110V PRETA UN", "un": "UN", "barras": ""}, {"id": 897, "codigo": "5351", "nome": "FONTE PARA CAES E GATOS MMA 110V ROSA UN", "un": "UN", "barras": ""}, {"id": 898, "codigo": "8624", "nome": "FONTE PARA CAES E GATOS MMA 110V UN", "un": "UN", "barras": ""}, {"id": 899, "codigo": "5352", "nome": "FONTE PARA CAES E GATOS MMA 110V VERM UN", "un": "UN", "barras": ""}, {"id": 900, "codigo": "5171", "nome": "GRAVATA GD UNID", "un": "UN", "barras": ""}, {"id": 901, "codigo": "5170", "nome": "GRAVATA PQ UNID", "un": "UN", "barras": ""}, {"id": 902, "codigo": "938", "nome": "GUIA C GARRA C/AMORT. 40CM UNID", "un": "UN", "barras": "7898920679672"}, {"id": 903, "codigo": "939", "nome": "GUIA C GARRA C/AMORT. 60CM UNID", "un": "UN", "barras": ""}, {"id": 904, "codigo": "940", "nome": "GUIA C GARRA C/AMORT. 80CM UNID", "un": "UN", "barras": "7898920679689"}, {"id": 905, "codigo": "3623", "nome": "GUIA CINTO DUPLA UNID", "un": "UN", "barras": ""}, {"id": 906, "codigo": "3054", "nome": "GUIA CINTO NYLON C/12 UNID", "un": "KT", "barras": ""}, {"id": 907, "codigo": "3055", "nome": "GUIA CINTO NYLON UNID", "un": "UN", "barras": ""}, {"id": 908, "codigo": "3056", "nome": "GUIA CINTO SEDA C/12 UNID", "un": "KT", "barras": ""}, {"id": 909, "codigo": "1001", "nome": "GUIA CINTO SEDA UNID", "un": "UN", "barras": "7898929873521"}, {"id": 910, "codigo": "3059", "nome": "GUIA CORDA 40 CM C/06 UNID", "un": "KT", "barras": "7898920679054"}, {"id": 911, "codigo": "952", "nome": "GUIA CORDA 40 CM UNID", "un": "UN", "barras": ""}, {"id": 912, "codigo": "3061", "nome": "GUIA CORDA 60 CM C/06 UNID", "un": "KT", "barras": ""}, {"id": 913, "codigo": "953", "nome": "GUIA CORDA 60 CM UNID", "un": "UN", "barras": "7898920679078"}, {"id": 914, "codigo": "3063", "nome": "GUIA CORDA 80 CM C/06 UNID", "un": "KT", "barras": "7898920679092"}, {"id": 915, "codigo": "955", "nome": "GUIA CORDA 80 CM UNID", "un": "UN", "barras": ""}, {"id": 916, "codigo": "3065", "nome": "GUIA CORDA C/ AMORT. 40 CM C/06 UNID", "un": "KT", "barras": ""}, {"id": 917, "codigo": "954", "nome": "GUIA CORDA C/ AMORT. 40CM UNID", "un": "UN", "barras": "7898920679061"}, {"id": 918, "codigo": "3067", "nome": "GUIA CORDA C/ AMORT. 60 CM C/06 UNID", "un": "KT", "barras": ""}, {"id": 919, "codigo": "956", "nome": "GUIA CORDA C/ AMORT. 60 CM UNID", "un": "UN", "barras": "7898920679085"}, {"id": 920, "codigo": "3069", "nome": "GUIA CORDA C/ AMORT. 80 CM C/ 06 UNID", "un": "KT", "barras": ""}, {"id": 921, "codigo": "957", "nome": "GUIA CORDA C/ AMORT. 80CM UNID", "un": "UN", "barras": "7898920679153"}, {"id": 922, "codigo": "3727", "nome": "GUIA CORDA C/ ARGOLA 1.50 MT 10MM UNID", "un": "UN", "barras": ""}, {"id": 923, "codigo": "1093", "nome": "GUIA CORDA C/ ARGOLA 1.50 MT 14MM UNID", "un": "UN", "barras": "7908492200904"}, {"id": 924, "codigo": "3072", "nome": "GUIA CORDA EXTRA FINA C/ 12 UNID", "un": "KT", "barras": ""}, {"id": 925, "codigo": "1145", "nome": "GUIA CORDA EXTRA FINA DUPLA UNID", "un": "UN", "barras": "7898596140315"}, {"id": 926, "codigo": "1125", "nome": "GUIA CORDA EXTRA FINA TRIPLA UNID", "un": "UN", "barras": "7898596140322"}, {"id": 927, "codigo": "1089", "nome": "GUIA CORDA EXTRA FINA UNID", "un": "UN", "barras": "7898596140339"}, {"id": 928, "codigo": "3076", "nome": "GUIA CORDA FINA C/ 12 UNID", "un": "KT", "barras": ""}, {"id": 929, "codigo": "1073", "nome": "GUIA CORDA FINA DUPLA UNID", "un": "UN", "barras": "7898596140292"}, {"id": 930, "codigo": "1128", "nome": "GUIA CORDA FINA TRIPLA UNID", "un": "UN", "barras": "7898596140308"}, {"id": 931, "codigo": "1004", "nome": "GUIA CORRENTE C/ MOSQUETAO UNID", "un": "UN", "barras": "7898929873507"}, {"id": 932, "codigo": "936", "nome": "GUIA CURTA 2.5 TRIPLO C/ AMORT. UNID", "un": "UN", "barras": "7898920679283"}, {"id": 933, "codigo": "935", "nome": "GUIA CURTA 3.5 TRIPLO C/AMORT. UNID", "un": "UN", "barras": ""}, {"id": 934, "codigo": "933", "nome": "GUIA CURTA C/ COLAR DE GARRA UNID", "un": "UN", "barras": "7898920679252"}, {"id": 935, "codigo": "6671", "nome": "GUIA CURTA C/ MOLA E MOSQUETAO UNID 165957", "un": "UN", "barras": "7898920679931"}, {"id": 936, "codigo": "3646", "nome": "GUIA CURTA C/ MOSQUETAO UNID", "un": "UN", "barras": ""}, {"id": 937, "codigo": "6675", "nome": "GUIA CURTA ENFORCADOR C/A 0.70 4MM UNID 165958", "un": "UN", "barras": "7898920679269"}, {"id": 938, "codigo": "1187", "nome": "GUIA CURTA ENFORCADOR C/A 0.70 ELO COMUM", "un": "UN", "barras": "7898929873637"}, {"id": 939, "codigo": "943", "nome": "GUIA ENF. C/AMORT. 40CM UNID", "un": "UN", "barras": "7898920679733"}, {"id": 940, "codigo": "996", "nome": "GUIA ENF. C/AMORT. 60CM C/ELO RETO UNID", "un": "UN", "barras": ""}, {"id": 941, "codigo": "944", "nome": "GUIA ENF. C/AMORT. 60CM UNID", "un": "UN", "barras": "7898920679740"}, {"id": 942, "codigo": "945", "nome": "GUIA ENF. C/AMORT. 80 CM UNID", "un": "UN", "barras": "7898920679757"}, {"id": 943, "codigo": "1189", "nome": "GUIA FITA 1.0 MT C/ ARGOLA UNID", "un": "UN", "barras": ""}, {"id": 944, "codigo": "1190", "nome": "GUIA FITA 1.0 MT C/ MOSQUETAO UNID", "un": "UN", "barras": "7898929873675"}, {"id": 945, "codigo": "1008", "nome": "GUIA FITA 1.5 MT C/ ARGOLA UNID", "un": "UN", "barras": ""}, {"id": 946, "codigo": "4860", "nome": "GUIA FITA 1.5 MT C/ MOSQ. C/TRAVA UNID", "un": "UN", "barras": "7898596140438"}, {"id": 947, "codigo": "1191", "nome": "GUIA FITA 1.5 MT C/ MOSQUETAO UNID", "un": "UN", "barras": ""}, {"id": 948, "codigo": "1077", "nome": "GUIA FITA 2.0 MT C/ ARGOLA UNID", "un": "UN", "barras": ""}, {"id": 949, "codigo": "4592", "nome": "GUIA FITA 2.0 MT C/ MOSQ. C/TRAVA UNID", "un": "UN", "barras": ""}, {"id": 950, "codigo": "1192", "nome": "GUIA FITA 2.0 MT C/ MOSQUETAO UNID", "un": "UN", "barras": ""}, {"id": 951, "codigo": "4871", "nome": "GUIA FITA 3.0 MT C/ MOSQ. C/TRAVA UNID", "un": "UN", "barras": ""}, {"id": 952, "codigo": "4870", "nome": "GUIA FITA 3.0 MT C/ MOSQUETAO UNID", "un": "UN", "barras": ""}, {"id": 953, "codigo": "1193", "nome": "GUIA FITA 60 CM C/ AMORT. UNID", "un": "UN", "barras": ""}, {"id": 954, "codigo": "3791", "nome": "GUIA OSSOCAO SEDA MOSQUETAO TRAVA 20MM", "un": "UN", "barras": "7898596140131"}, {"id": 955, "codigo": "3735", "nome": "GUIA OSSOCAO SEDA MOSQUETAO TRAVA 25MM", "un": "UN", "barras": "7898920679412"}, {"id": 956, "codigo": "1126", "nome": "GUIA PEITORAL COMUM UNID", "un": "UN", "barras": ""}, {"id": 957, "codigo": "1194", "nome": "GUIA PEITORAL PORTE UNID", "un": "UN", "barras": ""}, {"id": 958, "codigo": "1134", "nome": "GUIA PEITORAL SEDA OU COSTURADA UNID", "un": "UN", "barras": ""}, {"id": 959, "codigo": "4708", "nome": "GUIA RETRATIL DOG125 10KG AZUL UNID", "un": "UN", "barras": ""}, {"id": 960, "codigo": "5477", "nome": "GUIA RETRATIL ELP413 UNID 5M", "un": "UN", "barras": ""}, {"id": 961, "codigo": "5478", "nome": "GUIA RETRATIL ELP644 MULTI/ CATA CACA 5M", "un": "UN", "barras": ""}, {"id": 962, "codigo": "2524", "nome": "GUIA RETRATIL KZ ESTAMPA 5M UNID", "un": "UN", "barras": "6920192117260"}, {"id": 963, "codigo": "3764", "nome": "GUIA TX CURTA COM MOSQUETAO E AMORT UN", "un": "UN", "barras": ""}, {"id": 964, "codigo": "693", "nome": "K ADESTRADOR AFASTA GATOS 500 ML UNID", "un": "UN", "barras": ""}, {"id": 965, "codigo": "375", "nome": "K ADESTRADOR XIXI PODE 30 ML UNID", "un": "UN", "barras": ""}, {"id": 966, "codigo": "4278", "nome": "KIT ADESTRADOR PODE NAO PODE 500ML/20M CX C/12 UNI", "un": "UN", "barras": ""}, {"id": 967, "codigo": "6725", "nome": "KIT ADESTRADOR PODE NAO PODE 500ML/20ML 266284", "un": "UN", "barras": "7908492201239"}, {"id": 968, "codigo": "8870", "nome": "KIT BIF. BARRA OSSOCAO 500 GR + OSSO NO BACON 4/5", "un": "GR", "barras": ""}, {"id": 969, "codigo": "3758", "nome": "KIT ESCOVA + CREME DENTAL OSSOCAO UNID", "un": "UN", "barras": ""}, {"id": 970, "codigo": "4702", "nome": "KIT HIG CATA CACA ELP234 UNID", "un": "UN", "barras": ""}, {"id": 971, "codigo": "4750", "nome": "KIT HIG E REFIL CATA CACA ELP139 C/12 UN", "un": "KT", "barras": ""}, {"id": 972, "codigo": "1587", "nome": "KIT HIG E REFIL CATA CACA ELP139 UNID", "un": "KT", "barras": "7898949682417"}, {"id": 973, "codigo": "3908", "nome": "KIT HIG REFIL ELP41 C/03 UND", "un": "UN", "barras": "7892018710131"}, {"id": 974, "codigo": "4015", "nome": "KIT HIG REFIL ELP41 C/12 UN", "un": "KT", "barras": ""}, {"id": 975, "codigo": "8889", "nome": "KIT HIG. REFIL J2169 3 PCS BIODEGRADAVEL", "un": "PC", "barras": ""}, {"id": 976, "codigo": "515", "nome": "KIT MAMADEIRA DOG092 UNID", "un": "KT", "barras": ""}, {"id": 977, "codigo": "4376", "nome": "KIT MAMADEIRA ELP130 120ML UNID", "un": "KT", "barras": ""}, {"id": 978, "codigo": "997", "nome": "LIMPA PATAS UNID", "un": "UN", "barras": ""}, {"id": 979, "codigo": "4210", "nome": "LUVA MAGNETICA TIRA PELO AZUL C/06 UNID", "un": "KT", "barras": ""}, {"id": 980, "codigo": "4092", "nome": "LUVA MAGNETICA TIRA PELO AZUL UNID", "un": "UN", "barras": "7891607082017"}, {"id": 981, "codigo": "1086", "nome": "MACACAO CIRURGICO 0 AO 08 JG", "un": "JG", "barras": ""}, {"id": 982, "codigo": "1121", "nome": "MACACAO CIRURGICO N 0 25 CM", "un": "UN", "barras": ""}, {"id": 983, "codigo": "1113", "nome": "MACACAO CIRURGICO N 01 29 CM", "un": "UN", "barras": ""}, {"id": 984, "codigo": "1114", "nome": "MACACAO CIRURGICO N 02 30 CM", "un": "UN", "barras": ""}, {"id": 985, "codigo": "1115", "nome": "MACACAO CIRURGICO N 03 34 CM", "un": "UN", "barras": ""}, {"id": 986, "codigo": "1116", "nome": "MACACAO CIRURGICO N 04 36 CM", "un": "UN", "barras": ""}, {"id": 987, "codigo": "1117", "nome": "MACACAO CIRURGICO N 05 42 CM", "un": "UN", "barras": ""}, {"id": 988, "codigo": "1118", "nome": "MACACAO CIRURGICO N 06 47 CM", "un": "UN", "barras": ""}, {"id": 989, "codigo": "1119", "nome": "MACACAO CIRURGICO N 07 48 CM", "un": "UN", "barras": ""}, {"id": 990, "codigo": "1120", "nome": "MACACAO CIRURGICO N 08 55 CM", "un": "UN", "barras": ""}, {"id": 991, "codigo": "1239", "nome": "MACACAO CIRURGICO N 09 61 CM", "un": "UN", "barras": ""}, {"id": 992, "codigo": "1240", "nome": "MACACAO CIRURGICO N 10 67 CM", "un": "UN", "barras": ""}, {"id": 993, "codigo": "4095", "nome": "MEIA PET WZ10314 PQ UNID", "un": "UN", "barras": ""}, {"id": 994, "codigo": "1160", "nome": "MEIA PET WZ10315 MD UNID", "un": "UN", "barras": ""}, {"id": 995, "codigo": "2057", "nome": "MOCHILA TRANSPORTE PET 035 ROSA UNID", "un": "UN", "barras": ""}, {"id": 996, "codigo": "6772", "nome": "MOCHILA TRANSPORTE PET AZUL UNID", "un": "UN", "barras": ""}, {"id": 997, "codigo": "710", "nome": "MOCHILA TRANSPORTE PET LARANJA  UNID", "un": "UN", "barras": ""}, {"id": 998, "codigo": "668", "nome": "MOCHILA TRANSPORTE PET PRETO UNID", "un": "UN", "barras": ""}, {"id": 999, "codigo": "8945", "nome": "OCULOS KZ AVIADOR UNID", "un": "UN", "barras": "6976245091513"}, {"id": 1000, "codigo": "3547", "nome": "OSSO DONUTS PQ KG Q+-16 UNID", "un": "KG", "barras": ""}, {"id": 1001, "codigo": "1356", "nome": "OSSO FANTASIA COXINHA RIGIDA LLPET KG", "un": "KG", "barras": ""}, {"id": 1002, "codigo": "3756", "nome": "OSSO MOLDADO NATURAL KG UNID", "un": "PT", "barras": ""}, {"id": 1003, "codigo": "8730", "nome": "OSSO NO BACON COURO 3/4 KG", "un": "UN", "barras": ""}, {"id": 1004, "codigo": "8731", "nome": "OSSO NO BACON COURO 4/5 KG", "un": "UN", "barras": ""}, {"id": 1005, "codigo": "8732", "nome": "OSSO NO BACON COURO 7/8 KG", "un": "UN", "barras": ""}, {"id": 1006, "codigo": "815", "nome": "PALITO 8/5 KG COURO BRANCO", "un": "KG", "barras": "7898591350023"}, {"id": 1007, "codigo": "3178", "nome": "PEITORAL COCKER FOR./SEDA MEDIO C/06 UN", "un": "KT", "barras": ""}, {"id": 1008, "codigo": "3180", "nome": "PEITORAL COCKER FOR./SEDA PEQUENO C/06", "un": "KT", "barras": ""}, {"id": 1009, "codigo": "1150", "nome": "PEITORAL COCKER FOR./SEDA PEQUENO UNID", "un": "UN", "barras": ""}, {"id": 1010, "codigo": "4242", "nome": "PEITORAL COCKER PATAS FOR./SEDA GD C/06", "un": "KT", "barras": ""}, {"id": 1011, "codigo": "4106", "nome": "PEITORAL COCKER PATAS FOR./SEDA GD UNID", "un": "UN", "barras": "7898929873132"}, {"id": 1012, "codigo": "3186", "nome": "PEITORAL COCKER PATAS FOR./SEDA MD C/06", "un": "KT", "barras": ""}, {"id": 1013, "codigo": "1153", "nome": "PEITORAL COCKER PATAS FOR./SEDA MD UNID", "un": "UN", "barras": "7898920679917"}, {"id": 1014, "codigo": "3188", "nome": "PEITORAL COCKER PATAS FOR./SEDA PQ C/06", "un": "KT", "barras": ""}, {"id": 1015, "codigo": "1154", "nome": "PEITORAL COCKER PATAS FOR./SEDA PQ UNID", "un": "UN", "barras": "7898920679900"}, {"id": 1016, "codigo": "3195", "nome": "PEITORAL E GUIA FORRADO/SEDA C/ 24 UNID", "un": "KT", "barras": ""}, {"id": 1017, "codigo": "961", "nome": "PEITORAL E GUIA FORRADO/SEDA Nº00 AO 04 164569", "un": "UN", "barras": "7898920679115"}, {"id": 1018, "codigo": "3198", "nome": "PEITORAL E GUIA FORRADO/SEDA Nº000 UNID", "un": "UN", "barras": ""}, {"id": 1019, "codigo": "2254", "nome": "PEITORAL E GUIA KZ NEON C/12 UNID", "un": "CX", "barras": ""}, {"id": 1020, "codigo": "4243", "nome": "PEITORAL E GUIA OSSOCAO 25MM TV GD C/06", "un": "KT", "barras": ""}, {"id": 1021, "codigo": "4134", "nome": "PEITORAL E GUIA OSSOCAO 25MM TV GD UN", "un": "UN", "barras": "7898596140612"}, {"id": 1022, "codigo": "4244", "nome": "PEITORAL E GUIA OSSOCAO 25MM TV MD C/06", "un": "UN", "barras": ""}, {"id": 1023, "codigo": "4135", "nome": "PEITORAL E GUIA OSSOCAO 25MM TV MD UN", "un": "UN", "barras": "7898596140605"}, {"id": 1024, "codigo": "4245", "nome": "PEITORAL E GUIA OSSOCAO 25MM TV PQ C/06", "un": "KT", "barras": ""}, {"id": 1025, "codigo": "4133", "nome": "PEITORAL E GUIA OSSOCAO 25MM TV PQ UN", "un": "UN", "barras": "7898929873866"}, {"id": 1026, "codigo": "5089", "nome": "PEITORAL E GUIA OSSOCAO H GD UNID", "un": "UN", "barras": ""}, {"id": 1027, "codigo": "5088", "nome": "PEITORAL E GUIA OSSOCAO H MD UNID", "un": "UN", "barras": ""}, {"id": 1028, "codigo": "5086", "nome": "PEITORAL E GUIA OSSOCAO H PP UNID", "un": "UN", "barras": ""}, {"id": 1029, "codigo": "5087", "nome": "PEITORAL E GUIA OSSOCAO H PQ UNID", "un": "UN", "barras": ""}, {"id": 1030, "codigo": "3204", "nome": "PEITORAL E GUIA PATAS FOR./SEDA C/24 UN", "un": "KT", "barras": ""}, {"id": 1031, "codigo": "3206", "nome": "PEITORAL E GUIA PATAS FOR./SEDA PP/P/M/G", "un": "UN", "barras": "7898929873255"}, {"id": 1032, "codigo": "941", "nome": "PEITORAL E GUIA PORTE GG", "un": "UN", "barras": "7898920679702"}, {"id": 1033, "codigo": "1127", "nome": "PEITORAL E GUIA PORTE GGG", "un": "UN", "barras": "7898596140353"}, {"id": 1034, "codigo": "947", "nome": "PEITORAL E GUIA PORTE MD", "un": "UN", "barras": "7898920679856"}, {"id": 1035, "codigo": "942", "nome": "PEITORAL E GUIA PORTE PQ", "un": "UN", "barras": "7898920679726"}, {"id": 1036, "codigo": "3209", "nome": "PEITORAL E GUIA TCHUCAO C/24 UNID", "un": "KT", "barras": ""}, {"id": 1037, "codigo": "3210", "nome": "PEITORAL E GUIA TCHUCAO C/48 UNID", "un": "KT", "barras": ""}, {"id": 1038, "codigo": "9005", "nome": "PEITORAL E GUIA TCHUCAO Nº0", "un": "UN", "barras": ""}, {"id": 1039, "codigo": "1155", "nome": "PEITORAL E GUIA TCHUCAO Nº0 A 05 UNID", "un": "UN", "barras": ""}, {"id": 1040, "codigo": "9006", "nome": "PEITORAL E GUIA TCHUCAO Nº1", "un": "UN", "barras": ""}, {"id": 1041, "codigo": "9007", "nome": "PEITORAL E GUIA TCHUCAO Nº2", "un": "UN", "barras": ""}, {"id": 1042, "codigo": "9008", "nome": "PEITORAL E GUIA TCHUCAO Nº3", "un": "UN", "barras": ""}, {"id": 1043, "codigo": "9009", "nome": "PEITORAL E GUIA TCHUCAO Nº4", "un": "UN", "barras": ""}, {"id": 1044, "codigo": "9010", "nome": "PEITORAL E GUIA TCHUCAO Nº5", "un": "UN", "barras": ""}, {"id": 1045, "codigo": "3207", "nome": "PEITORAL GATO KATZEN JO931 PSL0020 R4023", "un": "UN", "barras": "7629186809318"}, {"id": 1046, "codigo": "4166", "nome": "PEITORAL GATO LISO ELP51 UNID", "un": "UN", "barras": "6976245090349"}, {"id": 1047, "codigo": "8954", "nome": "PEITORAL K9 GD AZUL UNID", "un": "UN", "barras": ""}, {"id": 1048, "codigo": "8956", "nome": "PEITORAL K9 GD PRETO UNID", "un": "UN", "barras": ""}, {"id": 1049, "codigo": "8955", "nome": "PEITORAL K9 GD VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1050, "codigo": "5410", "nome": "PEITORAL K9 MD AZUL UNID", "un": "UN", "barras": ""}, {"id": 1051, "codigo": "8957", "nome": "PEITORAL K9 MD CAMUFLADO UNID", "un": "UN", "barras": ""}, {"id": 1052, "codigo": "8959", "nome": "PEITORAL K9 MD PRETO UNID", "un": "UN", "barras": ""}, {"id": 1053, "codigo": "8958", "nome": "PEITORAL K9 MD VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1054, "codigo": "8961", "nome": "PEITORAL K9 PQ AZUL UNID", "un": "UN", "barras": ""}, {"id": 1055, "codigo": "8960", "nome": "PEITORAL K9 PQ CAMUFLADO UNID", "un": "UN", "barras": ""}, {"id": 1056, "codigo": "8962", "nome": "PEITORAL K9 PQ PRETO UNID", "un": "UN", "barras": ""}, {"id": 1057, "codigo": "1213", "nome": "PEITORAL K9 PQ VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1058, "codigo": "1944", "nome": "PEITORAL KZ COLETE GD AZUL UNID", "un": "UN", "barras": ""}, {"id": 1059, "codigo": "1947", "nome": "PEITORAL KZ COLETE GD PRETO UNID", "un": "UN", "barras": ""}, {"id": 1060, "codigo": "1957", "nome": "PEITORAL KZ COLETE GD ROSA UNID", "un": "UN", "barras": ""}, {"id": 1061, "codigo": "1976", "nome": "PEITORAL KZ COLETE GD VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1062, "codigo": "1943", "nome": "PEITORAL KZ COLETE MD AZUL UNID", "un": "UN", "barras": ""}, {"id": 1063, "codigo": "1883", "nome": "PEITORAL KZ COLETE MD PINK UNID", "un": "UN", "barras": ""}, {"id": 1064, "codigo": "1946", "nome": "PEITORAL KZ COLETE MD PRETO UNID", "un": "UN", "barras": ""}, {"id": 1065, "codigo": "1956", "nome": "PEITORAL KZ COLETE MD ROSA UNID", "un": "UN", "barras": ""}, {"id": 1066, "codigo": "1965", "nome": "PEITORAL KZ COLETE MD VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1067, "codigo": "1907", "nome": "PEITORAL KZ COLETE PQ AZUL UNID", "un": "UN", "barras": ""}, {"id": 1068, "codigo": "1945", "nome": "PEITORAL KZ COLETE PQ PRETO UNID", "un": "UN", "barras": ""}, {"id": 1069, "codigo": "1948", "nome": "PEITORAL KZ COLETE PQ ROSA UNID", "un": "UN", "barras": ""}, {"id": 1070, "codigo": "1958", "nome": "PEITORAL KZ COLETE PQ VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1071, "codigo": "1880", "nome": "PEITORAL KZ LAIKA GD AZUL UNID", "un": "UN", "barras": ""}, {"id": 1072, "codigo": "1996", "nome": "PEITORAL KZ LAIKA GD CINZA UNID", "un": "UN", "barras": ""}, {"id": 1073, "codigo": "1772", "nome": "PEITORAL KZ LAIKA GD PINK UNID", "un": "UN", "barras": ""}, {"id": 1074, "codigo": "1852", "nome": "PEITORAL KZ LAIKA GD VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1075, "codigo": "1881", "nome": "PEITORAL KZ LAIKA GG AZUL UNID", "un": "UN", "barras": ""}, {"id": 1076, "codigo": "1997", "nome": "PEITORAL KZ LAIKA GG CINZA UNID", "un": "UN", "barras": ""}, {"id": 1077, "codigo": "1773", "nome": "PEITORAL KZ LAIKA GG PINK UNID", "un": "UN", "barras": ""}, {"id": 1078, "codigo": "1862", "nome": "PEITORAL KZ LAIKA GG VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1079, "codigo": "1864", "nome": "PEITORAL KZ LAIKA MD AZUL UNID", "un": "UN", "barras": ""}, {"id": 1080, "codigo": "1993", "nome": "PEITORAL KZ LAIKA MD CINZA UNID", "un": "UN", "barras": ""}, {"id": 1081, "codigo": "1796", "nome": "PEITORAL KZ LAIKA MD VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1082, "codigo": "1863", "nome": "PEITORAL KZ LAIKA PQ AZUL UNID", "un": "UN", "barras": ""}, {"id": 1083, "codigo": "1991", "nome": "PEITORAL KZ LAIKA PQ CINZA UNID", "un": "UN", "barras": ""}, {"id": 1084, "codigo": "365", "nome": "PEITORAL KZ LAIKA PQ PINK UNID", "un": "UN", "barras": ""}, {"id": 1085, "codigo": "1774", "nome": "PEITORAL KZ LAIKA PQ PRETO UNID", "un": "UN", "barras": ""}, {"id": 1086, "codigo": "1793", "nome": "PEITORAL KZ LAIKA PQ VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1087, "codigo": "4397", "nome": "PEITORAL O COLETE MASTER GD", "un": "UN", "barras": ""}, {"id": 1088, "codigo": "4398", "nome": "PEITORAL O COLETE MASTER GG", "un": "UN", "barras": ""}, {"id": 1089, "codigo": "4396", "nome": "PEITORAL O COLETE MASTER MD", "un": "UN", "barras": ""}, {"id": 1090, "codigo": "4395", "nome": "PEITORAL O COLETE MASTER PQ", "un": "UN", "barras": ""}, {"id": 1091, "codigo": "4393", "nome": "PEITORAL O COLETE STANDER GD", "un": "UN", "barras": ""}, {"id": 1092, "codigo": "4394", "nome": "PEITORAL O COLETE STANDER GG", "un": "UN", "barras": ""}, {"id": 1093, "codigo": "4392", "nome": "PEITORAL O COLETE STANDER MD", "un": "UN", "barras": ""}, {"id": 1094, "codigo": "4391", "nome": "PEITORAL O COLETE STANDER PQ", "un": "UN", "barras": ""}, {"id": 1095, "codigo": "1036", "nome": "PEITORAL TRACAO UNID", "un": "UN", "barras": ""}, {"id": 1096, "codigo": "3215", "nome": "PELUCIA 02 BOLA OSSOCAO UNID", "un": "UN", "barras": "7898920679429"}, {"id": 1097, "codigo": "3216", "nome": "PELUCIA 04 DADINHO OSSOCAO UNID", "un": "UN", "barras": "7898596140476"}, {"id": 1098, "codigo": "255", "nome": "PELUCIA 06 HALTERES OSSOCAO UNID", "un": "UN", "barras": "7898904626265"}, {"id": 1099, "codigo": "229", "nome": "PELUCIA 08 MANOPLA OSSOCAO UNID", "un": "UN", "barras": "7898904626197"}, {"id": 1100, "codigo": "3244", "nome": "PELUCIA 12 PIRAMIDE OSSOCAO UNID", "un": "UN", "barras": "7898904626272"}, {"id": 1101, "codigo": "3549", "nome": "PELUCIA 14 SPINNER OSSOCAO UNID", "un": "UN", "barras": ""}, {"id": 1102, "codigo": "6876", "nome": "PELUCIA 16 MACACO OSSOCAO UNID 166169", "un": "UN", "barras": "7898491030872"}, {"id": 1103, "codigo": "4534", "nome": "PELUCIA 18 PORCO OSSOCAO UNID", "un": "UN", "barras": "7898491030873"}, {"id": 1104, "codigo": "4533", "nome": "PELUCIA 20 SAPO OSSOCAO UNID", "un": "UN", "barras": "7898491030874"}, {"id": 1105, "codigo": "4535", "nome": "PELUCIA 22 CACHORRO OSSOCAO UNID", "un": "UN", "barras": "7898491030875"}, {"id": 1106, "codigo": "4585", "nome": "PELUCIA 24 URSO OSSOCAO UNID", "un": "UN", "barras": "7898491030876"}, {"id": 1107, "codigo": "8786", "nome": "PELUCIA 26 VACA BRANCA MUMU UNID", "un": "UN", "barras": ""}, {"id": 1108, "codigo": "4590", "nome": "PELUCIA 26 VACA OSSOCAO UNID", "un": "UN", "barras": "7898491030877"}, {"id": 1109, "codigo": "9029", "nome": "PELUCIA B44040 PATO UNID", "un": "UN", "barras": "7890010440407"}, {"id": 1110, "codigo": "9028", "nome": "PELUCIA B44220 JACARE UNID.", "un": "UN", "barras": "7890010442203"}, {"id": 1111, "codigo": "4799", "nome": "PELUCIA BW15016 COELHO COLOR UNID", "un": "UN", "barras": ""}, {"id": 1112, "codigo": "4800", "nome": "PELUCIA BW2038 MAMYS UNID", "un": "UN", "barras": ""}, {"id": 1113, "codigo": "9025", "nome": "PELUCIA DOG450 BIG DUCK UNID", "un": "UN", "barras": "7908405905209"}, {"id": 1114, "codigo": "3221", "nome": "PELUCIA ELP215-KZ DOG LINGUICA UNID", "un": "UN", "barras": ""}, {"id": 1115, "codigo": "3968", "nome": "PELUCIA ELP238 MONSTRINHOS UNID", "un": "UN", "barras": "789303230405"}, {"id": 1116, "codigo": "5412", "nome": "PELUCIA ELP345 PEIXINHOS UNID", "un": "UN", "barras": ""}, {"id": 1117, "codigo": "4843", "nome": "PELUCIA ELP48 FLORESTA UNID", "un": "UN", "barras": ""}, {"id": 1118, "codigo": "5268", "nome": "PELUCIA ELP521 CHAMPAGNE UNID", "un": "UN", "barras": ""}, {"id": 1119, "codigo": "5266", "nome": "PELUCIA ELP522 MORDEDOR SNACK UNID", "un": "UN", "barras": ""}, {"id": 1120, "codigo": "5267", "nome": "PELUCIA ELP523 MORDEDOR LATINHA REFRI UN", "un": "UN", "barras": ""}, {"id": 1121, "codigo": "5269", "nome": "PELUCIA ELP524 GARRAFA PET UNID", "un": "UN", "barras": ""}, {"id": 1122, "codigo": "1177", "nome": "PELUCIA ELP659 FOOD MD C/ 06 UNID.", "un": "CX", "barras": ""}, {"id": 1123, "codigo": "1224", "nome": "PELUCIA ELP78 ABOBORA UNID", "un": "UN", "barras": ""}, {"id": 1124, "codigo": "1214", "nome": "PELUCIA ELP78 BANANA UNID", "un": "UN", "barras": ""}, {"id": 1125, "codigo": "4246", "nome": "PELUCIA ELP78 BERINGELA UNID", "un": "UN", "barras": ""}, {"id": 1126, "codigo": "4694", "nome": "PELUCIA ELP78 CENOURA UNID", "un": "UN", "barras": ""}, {"id": 1127, "codigo": "4743", "nome": "PELUCIA ELP78 DOG RIBS UNID", "un": "UN", "barras": ""}, {"id": 1128, "codigo": "4097", "nome": "PELUCIA ELP78 DONUTS UNID", "un": "UN", "barras": ""}, {"id": 1129, "codigo": "4098", "nome": "PELUCIA ELP78 ESTRELINHA UNID", "un": "UN", "barras": ""}, {"id": 1130, "codigo": "9027", "nome": "PELUCIA ELP78 LUA UNID", "un": "UN", "barras": ""}, {"id": 1131, "codigo": "3802", "nome": "PELUCIA ELP78 MAMADEIRA UNID", "un": "UN", "barras": "7893032304047"}, {"id": 1132, "codigo": "4247", "nome": "PELUCIA ELP78 MELANCIA UNID", "un": "UN", "barras": "7890016020375"}, {"id": 1133, "codigo": "1782", "nome": "PELUCIA ELP78 MORANGO UNID", "un": "UN", "barras": ""}, {"id": 1134, "codigo": "4099", "nome": "PELUCIA ELP78 NUVEM UNID", "un": "UN", "barras": ""}, {"id": 1135, "codigo": "1951", "nome": "PELUCIA ELP78 OSSINHO COLOR UNID", "un": "UN", "barras": ""}, {"id": 1136, "codigo": "4100", "nome": "PELUCIA ELP78 PIRULITO UNID", "un": "UN", "barras": ""}, {"id": 1137, "codigo": "9026", "nome": "PELUCIA ELP78 SORVETE UNID", "un": "UN", "barras": ""}, {"id": 1138, "codigo": "4752", "nome": "PELUCIA HM ALCE LISTRADO UNID", "un": "UN", "barras": "7896176802608"}, {"id": 1139, "codigo": "4878", "nome": "PELUCIA HM ELEFANTINHO ROXO UNID", "un": "UN", "barras": ""}, {"id": 1140, "codigo": "4877", "nome": "PELUCIA HM ELEFANTINHO UNID", "un": "UN", "barras": ""}, {"id": 1141, "codigo": "4753", "nome": "PELUCIA HM PANDA UNID", "un": "UN", "barras": "7896176827816"}, {"id": 1142, "codigo": "3521", "nome": "PELUCIA J1018 DINOSSAURO UNID", "un": "UN", "barras": ""}, {"id": 1143, "codigo": "3227", "nome": "PELUCIA J1019 DOGUINHO UNID", "un": "UN", "barras": ""}, {"id": 1144, "codigo": "3895", "nome": "PELUCIA J1083 LION AFRICA PET UNID", "un": "UN", "barras": ""}, {"id": 1145, "codigo": "3896", "nome": "PELUCIA J1084 GUEPARDO AFRICA PET UNID", "un": "UN", "barras": ""}, {"id": 1146, "codigo": "3917", "nome": "PELUCIA J1085 DONA GIRAFA AFRICA PET UN", "un": "UN", "barras": ""}, {"id": 1147, "codigo": "4404", "nome": "PELUCIA J1363 PATINHO PLUSH UNID", "un": "UN", "barras": ""}, {"id": 1148, "codigo": "4405", "nome": "PELUCIA J1364-2196 CAOZINHO PLUSH UNID", "un": "UN", "barras": ""}, {"id": 1149, "codigo": "5216", "nome": "PELUCIA J1372 ELEFANTE UNID", "un": "UN", "barras": ""}, {"id": 1150, "codigo": "4801", "nome": "PELUCIA J1373 FLAMINGO UNID", "un": "UN", "barras": ""}, {"id": 1151, "codigo": "654", "nome": "PELUCIA J1716 VAQUINHA HAPPY", "un": "UN", "barras": ""}, {"id": 1152, "codigo": "3228", "nome": "PELUCIA J1717 DOG FELIZ UNID", "un": "UN", "barras": ""}, {"id": 1153, "codigo": "8787", "nome": "PELUCIA J1781 CANGURU UNID", "un": "UN", "barras": ""}, {"id": 1154, "codigo": "4407", "nome": "PELUCIA J1782 ELEFANTE PLUSH UNID", "un": "UN", "barras": ""}, {"id": 1155, "codigo": "2411", "nome": "PELUCIA J2195 SAPINHO PLUSH UNID", "un": "UN", "barras": ""}, {"id": 1156, "codigo": "2132", "nome": "PELUCIA JO876 GIRAFA UNID", "un": "UN", "barras": ""}, {"id": 1157, "codigo": "8921", "nome": "PELUCIA KZ01 DINO SONORO UNID", "un": "UN", "barras": "6976245092343"}, {"id": 1158, "codigo": "4876", "nome": "PELUCIA R1812 BICHINHOS UNID", "un": "UN", "barras": ""}, {"id": 1159, "codigo": "85", "nome": "PENTE DOG015 CABO PLASTICO 20 DENTES UN", "un": "UN", "barras": ""}, {"id": 1160, "codigo": "1721", "nome": "PENTE DOG016 CABO PLASTICO 32 DENTES UN", "un": "UN", "barras": ""}, {"id": 1161, "codigo": "3252", "nome": "PENTE DOG017 32 DENTES UNID", "un": "UN", "barras": ""}, {"id": 1162, "codigo": "1612", "nome": "PENTE DOG018 CABO PLASTICO 40 DENTES UN.", "un": "UN", "barras": ""}, {"id": 1163, "codigo": "3250", "nome": "PENTE DOG019-ELP184 DUPLO UNID", "un": "UN", "barras": ""}, {"id": 1164, "codigo": "136", "nome": "PENTE DOG102 ACO UNID", "un": "UN", "barras": "7899800305797"}, {"id": 1165, "codigo": "1210", "nome": "PENTE ELP74 PULGA UNID", "un": "UN", "barras": ""}, {"id": 1166, "codigo": "78", "nome": "PENTE JO422 PATINHAS UNID", "un": "UN", "barras": ""}, {"id": 1167, "codigo": "1712", "nome": "PENTE KZ TIRA PULGAS UNID", "un": "UN", "barras": ""}, {"id": 1168, "codigo": "3729", "nome": "PIJAMA VETERINARIO TAMANHO GD UNID", "un": "UN", "barras": ""}, {"id": 1169, "codigo": "3708", "nome": "PIJAMA VETERINARIO TAMANHO MD UNID", "un": "UN", "barras": ""}, {"id": 1170, "codigo": "3277", "nome": "PLACA DE IDENTIFICACAO (PINGENTE) GD", "un": "UN", "barras": ""}, {"id": 1171, "codigo": "3278", "nome": "PLACA DE IDENTIFICACAO (PINGENTE) PQ", "un": "UN", "barras": ""}, {"id": 1172, "codigo": "106", "nome": "PLACA DECOR. ELP331 MDF SORTIDAS UNID.", "un": "UN", "barras": ""}, {"id": 1173, "codigo": "1212", "nome": "PULVERIZADOR ELU40 UNID", "un": "UN", "barras": ""}, {"id": 1174, "codigo": "8306", "nome": "RASQUEADEIRA 044 BBPE PLASTICA GD UNID", "un": "UN", "barras": ""}, {"id": 1175, "codigo": "699", "nome": "RASQUEADEIRA DOG001 MADEIRA PQ", "un": "UN", "barras": ""}, {"id": 1176, "codigo": "698", "nome": "RASQUEADEIRA DOG002 MADEIRA MD", "un": "UN", "barras": ""}, {"id": 1177, "codigo": "697", "nome": "RASQUEADEIRA DOG003 MADEIRA GD", "un": "UN", "barras": ""}, {"id": 1178, "codigo": "696", "nome": "RASQUEADEIRA DOG004 MADEIRA GG", "un": "UN", "barras": "7890001002249"}, {"id": 1179, "codigo": "4039", "nome": "RASQUEADEIRA DOG008-JO341 PLAST. MD C/12", "un": "KT", "barras": ""}, {"id": 1180, "codigo": "728", "nome": "RASQUEADEIRA DOG008-JO341 PLASTICA MD", "un": "UN", "barras": "7890001002287"}, {"id": 1181, "codigo": "4266", "nome": "RASQUEADEIRA DOG202B PL PROF N.02 UNID", "un": "UN", "barras": ""}, {"id": 1182, "codigo": "5192", "nome": "RASQUEADEIRA ELP240-KZ AUTO LIMPANTE UNID", "un": "UN", "barras": ""}, {"id": 1183, "codigo": "3809", "nome": "RASQUEADEIRA ELP262 FULMINEITOR UNID", "un": "UN", "barras": ""}, {"id": 1184, "codigo": "4572", "nome": "RASQUEADEIRA HM CLASSICA 2 UNID.", "un": "UN", "barras": ""}, {"id": 1185, "codigo": "4573", "nome": "RASQUEADEIRA HM CLASSICA 3 UNID.", "un": "UN", "barras": ""}, {"id": 1186, "codigo": "4529", "nome": "RASQUEADEIRA JO345-ELP113 AUTO LIMPANTE", "un": "UN", "barras": ""}, {"id": 1187, "codigo": "3938", "nome": "RASQUEADEIRA JO421 C/ BOLINHA MD UNID", "un": "UN", "barras": ""}, {"id": 1188, "codigo": "8946", "nome": "RASQUEADEIRA KZ PLASTICA GD UNID", "un": "UN", "barras": "6976245090059"}, {"id": 1189, "codigo": "4840", "nome": "RASQUEADEIRA S5057 METAL CB BORRACHA PQ", "un": "UN", "barras": ""}, {"id": 1190, "codigo": "4269", "nome": "RASQUEADEIRA S5058 METAL CB BORRACHA MD", "un": "UN", "barras": ""}, {"id": 1191, "codigo": "4101", "nome": "RASQUEADEIRA S5059 METAL CB BORRACHA GD", "un": "UN", "barras": ""}, {"id": 1192, "codigo": "915", "nome": "RATOEIRA ADESIVA OSSOCAO CX 20 UNID", "un": "CX", "barras": ""}, {"id": 1193, "codigo": "4706", "nome": "RESIDUO DE COLAR", "un": "KG", "barras": ""}, {"id": 1194, "codigo": "313", "nome": "ROUPA MOLETON C/ BOTAO ROSA MD UNID", "un": "UN", "barras": ""}, {"id": 1195, "codigo": "304", "nome": "ROUPA MOLETON C/ BOTAO ROSA PQ UNID", "un": "UN", "barras": ""}, {"id": 1196, "codigo": "1645", "nome": "ROUPA MOLETON C/ CAPUZ AZUL GD UNID", "un": "UN", "barras": ""}, {"id": 1197, "codigo": "8602", "nome": "ROUPA MOLETON C/ CAPUZ AZUL GG UNID", "un": "UN", "barras": ""}, {"id": 1198, "codigo": "1601", "nome": "ROUPA MOLETON C/ CAPUZ AZUL MD UNID", "un": "UN", "barras": ""}, {"id": 1199, "codigo": "781", "nome": "ROUPA MOLETON C/ CAPUZ AZUL PQ UNID", "un": "UN", "barras": ""}, {"id": 1200, "codigo": "1646", "nome": "ROUPA MOLETON C/ CAPUZ CINZA GD UNID", "un": "UN", "barras": ""}, {"id": 1201, "codigo": "8603", "nome": "ROUPA MOLETON C/ CAPUZ CINZA GG UNID", "un": "UN", "barras": ""}, {"id": 1202, "codigo": "1630", "nome": "ROUPA MOLETON C/ CAPUZ CINZA MD UNID", "un": "UN", "barras": ""}, {"id": 1203, "codigo": "1405", "nome": "ROUPA MOLETON C/ CAPUZ CINZA PQ UNID", "un": "UN", "barras": ""}, {"id": 1204, "codigo": "1631", "nome": "ROUPA MOLETON C/ CAPUZ PRETA GD UNID", "un": "UN", "barras": ""}, {"id": 1205, "codigo": "8604", "nome": "ROUPA MOLETON C/ CAPUZ PRETA GG UNID", "un": "UN", "barras": ""}, {"id": 1206, "codigo": "1538", "nome": "ROUPA MOLETON C/ CAPUZ PRETA MD UNID", "un": "UN", "barras": ""}, {"id": 1207, "codigo": "488", "nome": "ROUPA MOLETON C/ CAPUZ PRETA PQ UNID", "un": "UN", "barras": ""}, {"id": 1208, "codigo": "8605", "nome": "ROUPA MOLETON C/ CAPUZ ROSA GD UNID", "un": "UN", "barras": ""}, {"id": 1209, "codigo": "8606", "nome": "ROUPA MOLETON C/ CAPUZ ROSA GG UNID", "un": "UN", "barras": ""}, {"id": 1210, "codigo": "1570", "nome": "ROUPA MOLETON C/ CAPUZ ROSA MD UNID", "un": "PT", "barras": ""}, {"id": 1211, "codigo": "678", "nome": "ROUPA MOLETON C/ CAPUZ ROSA PQ UNID", "un": "UN", "barras": ""}, {"id": 1212, "codigo": "8607", "nome": "ROUPA MOLETON C/ CAPUZ VERMELHA GD UNID", "un": "UN", "barras": ""}, {"id": 1213, "codigo": "8608", "nome": "ROUPA MOLETON C/ CAPUZ VERMELHA GG UNID", "un": "UN", "barras": ""}, {"id": 1214, "codigo": "130", "nome": "ROUPA MOLETON C/ CAPUZ VERMELHA MD UNID", "un": "UN", "barras": ""}, {"id": 1215, "codigo": "72", "nome": "ROUPA MOLETON C/ CAPUZ VERMELHA PQ UNID", "un": "UN", "barras": ""}, {"id": 1216, "codigo": "155", "nome": "ROUPA MOLETON HERO AZUL GD UNID", "un": "UN", "barras": ""}, {"id": 1217, "codigo": "153", "nome": "ROUPA MOLETON HERO ROSA GD UNID", "un": "UN", "barras": ""}, {"id": 1218, "codigo": "314", "nome": "ROUPA MOLETON LISTRADA AZUL MD UNID", "un": "UN", "barras": ""}, {"id": 1219, "codigo": "395", "nome": "ROUPA MOLETON LISTRADA PRETA GD UNID", "un": "UN", "barras": ""}, {"id": 1220, "codigo": "368", "nome": "ROUPA MOLETON LISTRADA PRETA MD UNID", "un": "UN", "barras": "7896447101782"}, {"id": 1221, "codigo": "9048", "nome": "ROUPA MOLETON LISTRADA PRETA PQ UNID", "un": "UN", "barras": ""}, {"id": 1222, "codigo": "5243", "nome": "ROUPA MOLETON N 01 UNID", "un": "UN", "barras": ""}, {"id": 1223, "codigo": "5244", "nome": "ROUPA MOLETON N 02 UNID", "un": "UN", "barras": "7908492201130"}, {"id": 1224, "codigo": "5245", "nome": "ROUPA MOLETON N 03 UNID", "un": "UN", "barras": ""}, {"id": 1225, "codigo": "5246", "nome": "ROUPA MOLETON N 04 UNID", "un": "UN", "barras": "7908492201154"}, {"id": 1226, "codigo": "5247", "nome": "ROUPA MOLETON N 05 UNID", "un": "UN", "barras": ""}, {"id": 1227, "codigo": "5248", "nome": "ROUPA MOLETON N 06 UNID", "un": "UN", "barras": "7908492201178"}, {"id": 1228, "codigo": "5249", "nome": "ROUPA MOLETON N 07 UNID", "un": "UN", "barras": ""}, {"id": 1229, "codigo": "5250", "nome": "ROUPA MOLETON N 08 UNID", "un": "UN", "barras": ""}, {"id": 1230, "codigo": "315", "nome": "ROUPA MOLETON N 10 UNID", "un": "UN", "barras": ""}, {"id": 1231, "codigo": "316", "nome": "ROUPA MOLETON N 12 UNID", "un": "UN", "barras": ""}, {"id": 1232, "codigo": "1173", "nome": "ROUPA SOFT C/ VELCRON 27CM N 01 UNID", "un": "UN", "barras": ""}, {"id": 1233, "codigo": "1174", "nome": "ROUPA SOFT C/ VELCRON 29CM N 02 UNID", "un": "UN", "barras": "7898929873415"}, {"id": 1234, "codigo": "1167", "nome": "ROUPA SOFT C/ VELCRON 33CM N 03 UNID", "un": "UN", "barras": ""}, {"id": 1235, "codigo": "1175", "nome": "ROUPA SOFT C/ VELCRON 38CM N 04 UNID", "un": "UN", "barras": "7898929873446"}, {"id": 1236, "codigo": "1168", "nome": "ROUPA SOFT C/ VELCRON 39CM N 05 UNID", "un": "UN", "barras": ""}, {"id": 1237, "codigo": "1176", "nome": "ROUPA SOFT C/ VELCRON 41CM N 06 UNID", "un": "UN", "barras": "7898596140414"}, {"id": 1238, "codigo": "1195", "nome": "ROUPA SOFT C/ VELCRON 43CM N 07 UNID", "un": "UN", "barras": ""}, {"id": 1239, "codigo": "1196", "nome": "ROUPA SOFT C/ VELCRON 44CM N 08 UNID", "un": "UN", "barras": "7898596140469"}, {"id": 1240, "codigo": "3331", "nome": "ROUPA SOFT C/ VELCRON N 10 UNID", "un": "UN", "barras": ""}, {"id": 1241, "codigo": "3332", "nome": "ROUPA SOFT C/ VELCRON N 12 UNID", "un": "UN", "barras": ""}, {"id": 1242, "codigo": "3333", "nome": "ROUPA SOFT C/ VELCRON N 16 UNID", "un": "UN", "barras": ""}, {"id": 1243, "codigo": "5369", "nome": "ROUPA SOFT TRAD MACHO N 05 C39X46L  UNID", "un": "UN", "barras": ""}, {"id": 1244, "codigo": "5370", "nome": "ROUPA SOFT TRAD MACHO N 06 C40X50L  UNID", "un": "UN", "barras": ""}, {"id": 1245, "codigo": "5371", "nome": "ROUPA SOFT TRAD MACHO N 07 C43X56L  UNID", "un": "UN", "barras": ""}, {"id": 1246, "codigo": "5376", "nome": "ROUPA SOFT TRAD MACHO N 08 C48XL60 UNID", "un": "UN", "barras": ""}, {"id": 1247, "codigo": "4460", "nome": "ROUPA SOFT TRAD MACHO N 10 53CX76L UNID", "un": "UN", "barras": ""}, {"id": 1248, "codigo": "4461", "nome": "ROUPA SOFT TRAD MACHO N 12 56CX80L UNID", "un": "UN", "barras": ""}, {"id": 1249, "codigo": "4462", "nome": "ROUPA SOFT TRAD MACHO N 14 60CX84L UNID", "un": "UN", "barras": ""}, {"id": 1250, "codigo": "4463", "nome": "ROUPA SOFT TRAD MACHO N 16 65CX91L UNID", "un": "UN", "barras": ""}, {"id": 1251, "codigo": "4464", "nome": "ROUPA SOFT TRAD MACHO N 18 74CX96L UNID", "un": "UN", "barras": ""}, {"id": 1252, "codigo": "4421", "nome": "ROUPA SOFT TRAD MACHO N 20 83CX100L UNID", "un": "UN", "barras": ""}, {"id": 1253, "codigo": "733", "nome": "ROUPA SOFT TRADICIONAL N 0 UNID", "un": "UN", "barras": ""}, {"id": 1254, "codigo": "1197", "nome": "ROUPA SOFT TRADICIONAL N 01 UNID", "un": "UN", "barras": ""}, {"id": 1255, "codigo": "1163", "nome": "ROUPA SOFT TRADICIONAL N 02 UNID", "un": "UN", "barras": "7898596140490"}, {"id": 1256, "codigo": "1198", "nome": "ROUPA SOFT TRADICIONAL N 03 UNID", "un": "UN", "barras": ""}, {"id": 1257, "codigo": "1164", "nome": "ROUPA SOFT TRADICIONAL N 04 UNID", "un": "UN", "barras": "7898596140643"}, {"id": 1258, "codigo": "1179", "nome": "ROUPA SOFT TRADICIONAL N 05 UNID", "un": "UN", "barras": ""}, {"id": 1259, "codigo": "1165", "nome": "ROUPA SOFT TRADICIONAL N 06 UNID", "un": "UN", "barras": "7898596140674"}, {"id": 1260, "codigo": "1178", "nome": "ROUPA SOFT TRADICIONAL N 07 UNID", "un": "UN", "barras": ""}, {"id": 1261, "codigo": "1166", "nome": "ROUPA SOFT TRADICIONAL N 08 UNID", "un": "UN", "barras": "7898596140698"}, {"id": 1262, "codigo": "1242", "nome": "ROUPA SOFT TRADICIONAL N 10 UNID", "un": "UN", "barras": ""}, {"id": 1263, "codigo": "1243", "nome": "ROUPA SOFT TRADICIONAL N 12 UNID", "un": "UN", "barras": ""}, {"id": 1264, "codigo": "1244", "nome": "ROUPA SOFT TRADICIONAL N 16 UNID", "un": "UN", "barras": ""}, {"id": 1265, "codigo": "1201", "nome": "ROUPA SOFT VESTIDO N 07 UNID", "un": "UN", "barras": ""}, {"id": 1266, "codigo": "1202", "nome": "ROUPA SOFT VESTIDO N 08 UNID", "un": "UN", "barras": ""}, {"id": 1267, "codigo": "3553", "nome": "ROUPA SOFT VESTIDO N 10 UNID", "un": "UN", "barras": ""}, {"id": 1268, "codigo": "3554", "nome": "ROUPA SOFT VESTIDO N 12 UNID", "un": "UN", "barras": ""}, {"id": 1269, "codigo": "1273", "nome": "S B BANHO A SECO ULTRA CAES 300ML UNID", "un": "UN", "barras": ""}, {"id": 1270, "codigo": "1283", "nome": "S B BANHO A SECO ULTRA GATOS 300ML UNID", "un": "UN", "barras": ""}, {"id": 1271, "codigo": "8363", "nome": "S B CREME DENTAL BUCAL 80GR MENTA UNID", "un": "UN", "barras": ""}, {"id": 1272, "codigo": "8364", "nome": "S B CREME DENTAL BUCAL 80GR MORANGO UNID", "un": "UN", "barras": ""}, {"id": 1273, "codigo": "1307", "nome": "S B HIDRATANTE PATINHAS 80GR UNID", "un": "UN", "barras": ""}, {"id": 1274, "codigo": "1290", "nome": "S B LIMPA AURICULAR 300ML UNID", "un": "UN", "barras": ""}, {"id": 1275, "codigo": "1310", "nome": "S B LIMPA AURICULAR 80ML UNID", "un": "UN", "barras": ""}, {"id": 1276, "codigo": "1380", "nome": "S B LIMPA FACE 80ML UNID", "un": "UN", "barras": ""}, {"id": 1277, "codigo": "1543", "nome": "S B PERFUME AMOR DE MAE 80 ML UNID", "un": "UN", "barras": ""}, {"id": 1278, "codigo": "1536", "nome": "S B PERFUME AMOR DE PAI 80 ML UNID", "un": "UN", "barras": ""}, {"id": 1279, "codigo": "1545", "nome": "S B PERFUME BONS SONHOS 80 ML UNID", "un": "UN", "barras": ""}, {"id": 1280, "codigo": "2171", "nome": "S B PERFUME CHEIRINHO DE BANHO 300 ML", "un": "UN", "barras": ""}, {"id": 1281, "codigo": "1550", "nome": "S B PERFUME CHEIRINHO DE BANHO 80 ML UN", "un": "UN", "barras": ""}, {"id": 1282, "codigo": "1551", "nome": "S B PERFUME DOCES LEMBRANCAS 80 ML UNID", "un": "UN", "barras": ""}, {"id": 1283, "codigo": "1558", "nome": "S B PERFUME FOFURA DA CASA 80 ML UNID", "un": "UN", "barras": ""}, {"id": 1284, "codigo": "1559", "nome": "S B PERFUME GATOS 80 ML UNID", "un": "UN", "barras": ""}, {"id": 1285, "codigo": "1301", "nome": "SABONETE CHOCOLATE C/ 06 UNID", "un": "PT", "barras": ""}, {"id": 1286, "codigo": "7045", "nome": "SABONETE COCO C/ 06 UNID 164647", "un": "PT", "barras": ""}, {"id": 1287, "codigo": "1298", "nome": "SABONETE ESPECIAL C/ 06 UNID", "un": "PT", "barras": ""}, {"id": 1288, "codigo": "7047", "nome": "SABONETE GLICERINADO C/ 06 UNID 164683", "un": "PT", "barras": ""}, {"id": 1289, "codigo": "1304", "nome": "SABONETE MEL C/ PROPOLIS C/ 06 UNID", "un": "PT", "barras": ""}, {"id": 1290, "codigo": "4402", "nome": "SANITARIO 2D PACOTE C/12 UNID", "un": "UN", "barras": ""}, {"id": 1291, "codigo": "774", "nome": "SANITARIO 2D XIXI DOG AZUL UNID", "un": "PC", "barras": ""}, {"id": 1292, "codigo": "4137", "nome": "SANITARIO 2D XIXI DOG PRETO UNID", "un": "PC", "barras": ""}, {"id": 1293, "codigo": "3374", "nome": "SANITARIO 2D XIXI DOG ROSA UNID", "un": "UN", "barras": ""}, {"id": 1294, "codigo": "3375", "nome": "SANITARIO 2D XIXI DOG VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1295, "codigo": "4565", "nome": "SANITARIO DURAPETS XIXI AZUL UNID", "un": "UN", "barras": ""}, {"id": 1296, "codigo": "4566", "nome": "SANITARIO DURAPETS XIXI VERMELHO UNID", "un": "UN", "barras": ""}, {"id": 1297, "codigo": "1529", "nome": "SH B CAES 5 EM 1 5 LTS UNID", "un": "UN", "barras": ""}, {"id": 1298, "codigo": "1580", "nome": "SH B FILHOTES 500ML UNID", "un": "UN", "barras": ""}, {"id": 1299, "codigo": "1524", "nome": "SH B NEUTRO 500ML UNID", "un": "UN", "barras": ""}, {"id": 1300, "codigo": "1526", "nome": "SH B NEUTRO 5LTS UNID", "un": "UN", "barras": ""}, {"id": 1301, "codigo": "1505", "nome": "SH B PRE LAVAGEM 5LTS UNID", "un": "UN", "barras": ""}, {"id": 1302, "codigo": "1897", "nome": "SH GALAO  ANTI PULGA 5 LT", "un": "UN", "barras": ""}, {"id": 1303, "codigo": "4054", "nome": "SH PREVEMPET A.P 500 ML CX C/12 UNID", "un": "CX", "barras": ""}, {"id": 1304, "codigo": "3841", "nome": "SH PREVEMPET A.P 500 ML UNID", "un": "UN", "barras": "7896210540268"}, {"id": 1305, "codigo": "3702", "nome": "SH S ALISA PET 1 LT UNID", "un": "UN", "barras": ""}, {"id": 1306, "codigo": "3619", "nome": "SH S CLAREADOR 10 LT UNID", "un": "UN", "barras": ""}, {"id": 1307, "codigo": "831", "nome": "SH S COCO 05 LTS UNID", "un": "UN", "barras": ""}, {"id": 1308, "codigo": "3664", "nome": "SH S CONDICIONADOR 10 LT UNID", "un": "UN", "barras": ""}, {"id": 1309, "codigo": "931", "nome": "SH S LIMPEZA PROFUNDA 5 LTS UNID", "un": "UN", "barras": ""}, {"id": 1310, "codigo": "5123", "nome": "SH S MASCARA HIDR. A+E AMENDOA 490 GR UN", "un": "UN", "barras": ""}, {"id": 1311, "codigo": "3585", "nome": "SH S MASCARA HIDRATANTE A+E 490 GR UNID", "un": "UN", "barras": ""}, {"id": 1312, "codigo": "3618", "nome": "SH S NEUTRALIZADOR DE ODORES 10 LT UNID", "un": "UN", "barras": ""}, {"id": 1313, "codigo": "3682", "nome": "SH S NEUTRO 10 LT UNID", "un": "UN", "barras": ""}, {"id": 1314, "codigo": "3672", "nome": "SH S OLEO DE NEEM 10 LT UNID", "un": "UN", "barras": ""}, {"id": 1315, "codigo": "5435", "nome": "SH VEGANO 5X1 ABACAXI 500ML", "un": "UN", "barras": ""}, {"id": 1316, "codigo": "5431", "nome": "SH VEGANO 5X1 ACAI 500ML", "un": "UN", "barras": ""}, {"id": 1317, "codigo": "5424", "nome": "SH VEGANO 5X1 MACA VERDE 500ML", "un": "UN", "barras": ""}, {"id": 1318, "codigo": "5427", "nome": "SH VEGANO 5X1 MELANCIA 500ML", "un": "UN", "barras": ""}, {"id": 1319, "codigo": "5429", "nome": "SH VEGANO 5X1 MELAO 500ML", "un": "UN", "barras": ""}, {"id": 1320, "codigo": "5433", "nome": "SH VEGANO 5X1 MORANGO 500ML", "un": "UN", "barras": ""}, {"id": 1321, "codigo": "5432", "nome": "SH VEGANO 5X1 PESSEGO 500ML", "un": "UN", "barras": ""}, {"id": 1322, "codigo": "5126", "nome": "SPRAY P/ HALITO MENTA 80 ML UP CLEAN UNID", "un": "UN", "barras": "7898051391498"}, {"id": 1323, "codigo": "3799", "nome": "T FRALDA DESCARTAVEL GD DOG205 C/ 12 UN", "un": "PC", "barras": ""}, {"id": 1324, "codigo": "3784", "nome": "T FRALDA DESCARTAVEL MD DOG204 C/ 12 UN", "un": "PC", "barras": ""}, {"id": 1325, "codigo": "3798", "nome": "T FRALDA DESCARTAVEL PQ DOG203 C/ 12 UN", "un": "PC", "barras": ""}, {"id": 1326, "codigo": "5228", "nome": "T FRALDA DESCARTAVEL TEC PQ PCT 5 UNID", "un": "UN", "barras": ""}, {"id": 1327, "codigo": "4386", "nome": "T FRALDA HARD FEMININA GG C/ 06 UNID.", "un": "PC", "barras": ""}, {"id": 1328, "codigo": "4382", "nome": "T FRALDA HARD FEMININA PP C/ 06 UNID.", "un": "PC", "barras": ""}, {"id": 1329, "codigo": "4526", "nome": "T FRALDA HARD MASCULINA GD C/ 06 UNID.", "un": "PC", "barras": "7899800308316"}, {"id": 1330, "codigo": "4525", "nome": "T FRALDA HARD MASCULINA MD C/ 06 UNID.", "un": "PC", "barras": "7899800308309"}, {"id": 1331, "codigo": "4524", "nome": "T FRALDA HARD MASCULINA PQ C/ 06 UNID.", "un": "PC", "barras": "7899800308293"}, {"id": 1332, "codigo": "3429", "nome": "T TAPETE GELADO 50X65 UND", "un": "UN", "barras": ""}, {"id": 1333, "codigo": "3427", "nome": "T TAPETE GELADO 60X90 UND", "un": "UN", "barras": ""}, {"id": 1334, "codigo": "4927", "nome": "TAPETE HIG. PET K9 C/ 30 UNID (60X55)", "un": "UN", "barras": ""}, {"id": 1335, "codigo": "1779", "nome": "TAPETE LAVAVEL OSSOCAO 60X50 UNID", "un": "UN", "barras": ""}, {"id": 1336, "codigo": "1777", "nome": "TAPETE LAVAVEL OSSOCAO 80X60 UNID", "un": "UN", "barras": ""}, {"id": 1337, "codigo": "3580", "nome": "TAPETE OSSOCAO C/ 28 UNID (60X55)", "un": "UN", "barras": "7898929873163"}, {"id": 1338, "codigo": "7145", "nome": "TAPETE OSSOCAO C/07 UNID (80X60) PRETO 281173", "un": "UN", "barras": "7908492200164"}, {"id": 1339, "codigo": "4060", "nome": "TAPETE OSSOCAO FD C/08 DE 28 UN (60X55)", "un": "CX", "barras": ""}, {"id": 1340, "codigo": "5093", "nome": "TAPETE OSSOCAO FD C/12 DE 07 UN (80X60)", "un": "CX", "barras": ""}, {"id": 1341, "codigo": "9024", "nome": "TAPETE PANDA ELP569 UNID", "un": "UN", "barras": ""}, {"id": 1342, "codigo": "4616", "nome": "TAPETE PARA PETS GD UNID", "un": "UN", "barras": ""}, {"id": 1343, "codigo": "4615", "nome": "TAPETE PARA PETS MD UNID", "un": "UN", "barras": ""}, {"id": 1344, "codigo": "4617", "nome": "TAPETE PARA PETS P/M/G C/03 UNID", "un": "KT", "barras": ""}, {"id": 1345, "codigo": "4614", "nome": "TAPETE PARA PETS PQ UNID", "un": "UN", "barras": ""}, {"id": 1346, "codigo": "1875", "nome": "TAPETE TAPECAO C/ 30 UNID (80X60)", "un": "PC", "barras": ""}, {"id": 1347, "codigo": "5366", "nome": "TELA DE PROTECAO ELP346 UNID", "un": "UN", "barras": "6015638651696"}, {"id": 1348, "codigo": "913", "nome": "TIRA PELOS GR004-RG0096 UNID", "un": "UN", "barras": "7908405901638"}];
 
-let timer    = null;
-let cd       = 30;
+let products   = PRODUCTS.map(p => ({...p, barras: p.barras || '', _edited: false}));
+let searchTerm = "";
+let filterMode = "all";
+let quaggaOn   = false;
+let modalProd  = null;
+let myName     = localStorage.getItem("userName") || "Usuário";
+let scanTarget = null; // produto alvo do scan
 
-async function load() {
-  document.getElementById('spin-icon').classList.remove('hidden');
+// ── RENDER ──────────────────────────────────────────────────
+function getFiltered() {
+  let list = products;
+  if (filterMode === 'pending') list = list.filter(p => !p.barras);
+  if (filterMode === 'scanned') list = list.filter(p =>  p.barras);
+  if (searchTerm) {
+    const t = searchTerm.toLowerCase();
+    list = list.filter(p =>
+      p.nome.toLowerCase().includes(t) ||
+      p.codigo.includes(t) ||
+      (p.barras && p.barras.includes(t))
+    );
+  }
+  return list;
+}
+
+function renderTable() {
+  const list = getFiltered();
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+
+  const done  = products.filter(p => p.barras).length;
+  document.getElementById('statDone').textContent  = done;
+  document.getElementById('statTotal').textContent = products.length;
+  document.getElementById('statPct').textContent   = Math.round(done/products.length*100) + '%';
+
+  if (list.length === 0) { tbody.innerHTML = ''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = list.map(p => `
+    <tr class="${p.barras ? 'scanned' : ''}" id="row-${p.id}">
+      <td class="cod">${p.codigo}</td>
+      <td class="nome" title="${p.nome}">${p.nome}</td>
+      <td class="un">${p.un}</td>
+      <td class="barras-cell">
+        ${p.barras
+          ? `<span class="badge-ok" onclick="openModal(${p.id})" title="Clique para editar">🔗 ${p.barras}</span>`
+          : `<span class="badge-empty" onclick="openModal(${p.id})">+ barras</span>`
+        }
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ── SEARCH / FILTER ──────────────────────────────────────────
+function onSearch(val) {
+  searchTerm = val;
+  renderTable();
+}
+
+function setFilter(mode) {
+  filterMode = mode;
+  ['all','pending','scanned'].forEach(m => {
+    document.getElementById('f-'+m).classList.toggle('active', m === mode);
+  });
+  renderTable();
+}
+
+// ── MODAL ────────────────────────────────────────────────────
+function openModal(id) {
+  modalProd = products.find(p => p.id === id);
+  if (!modalProd) return;
+  document.getElementById('modalTitle').textContent = modalProd.nome;
+  document.getElementById('modalDesc').textContent  = 'Código: ' + modalProd.codigo + ' | UN: ' + modalProd.un;
+  document.getElementById('modalInp').value = modalProd.barras || '';
+  document.getElementById('modalBg').classList.add('show');
+  setTimeout(() => document.getElementById('modalInp').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('show');
+  modalProd = null;
+}
+
+function confirmModal() {
+  if (!modalProd) return;
+  const val = document.getElementById('modalInp').value.trim();
+  modalProd.barras  = val;
+  modalProd._edited = true;
+  saveLocal();
+  closeModal();
+  renderTable();
+  showToast(val ? '✅ Código salvo!' : '🗑 Código removido!');
+}
+
+// ── SCANNER ──────────────────────────────────────────────────
+function toggleScanner() {
+  const wrap = document.getElementById('scannerWrap');
+  if (quaggaOn) { closeScanner(); return; }
+  wrap.classList.add('show');
+  startCamera();
+}
+
+function closeScanner() {
+  document.getElementById('scannerWrap').classList.remove('show');
+  if (quaggaOn) { Quagga.stop(); quaggaOn = false; }
+}
+
+function startCamera() {
+  Quagga.init({
+    inputStream: {
+      type: 'LiveStream',
+      target: document.getElementById('video'),
+      constraints: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    },
+    decoder: { readers: ['ean_reader','ean_8_reader','code_128_reader','code_39_reader','upc_reader','upc_e_reader'] },
+    locate: true
+  }, err => {
+    if (err) { showToast('❌ Câmera: ' + err.message); return; }
+    Quagga.start();
+    quaggaOn = true;
+  });
+
+  let lastCode = '', lastTime = 0;
+  Quagga.onDetected(data => {
+    const code = data.codeResult.code;
+    const now  = Date.now();
+    if (code === lastCode && now - lastTime < 1500) return;
+    lastCode = code; lastTime = now;
+
+    if (navigator.vibrate) navigator.vibrate(80);
+
+    // procura produto pelo código de barras ou código interno
+    const prod = products.find(p => p.barras === code || p.codigo === code) ||
+                 products.find(p => !p.barras); // se nenhum, abre modal para associar
+
+    if (prod && prod.barras === code) {
+      showToast('✅ Já registrado: ' + prod.nome.substring(0,30));
+      // destaca linha
+      highlightRow(prod.id);
+      return;
+    }
+
+    closeScanner();
+    // abre modal para confirmar/associar
+    modalProd = prod || null;
+    if (!prod) {
+      // não encontrou produto: pergunta ao usuário
+      showToast('⚠️ Código ' + code + ' não encontrado na lista');
+      return;
+    }
+
+    document.getElementById('modalTitle').textContent = prod.nome;
+    document.getElementById('modalDesc').textContent  = 'Código lido: ' + code;
+    document.getElementById('modalInp').value = code;
+    document.getElementById('modalBg').classList.add('show');
+  });
+}
+
+function highlightRow(id) {
+  const row = document.getElementById('row-' + id);
+  if (row) {
+    row.style.background = 'rgba(100,255,218,0.2)';
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => row.style.background = '', 1500);
+  }
+}
+
+// ── STORAGE LOCAL ────────────────────────────────────────────
+function saveLocal() {
+  const data = {};
+  products.filter(p => p.barras).forEach(p => { data[p.id] = p.barras; });
+  localStorage.setItem('ossocao_barras', JSON.stringify(data));
+}
+
+function loadLocal() {
   try {
-    const r = await fetch(`${SERVER}/stats`);
-    const d = await r.json();
-    render(d);
-    document.getElementById('last-update').textContent =
-      'Atualizado: ' + new Date().toLocaleTimeString('pt-BR');
-  } catch(e) {
-    document.getElementById('last-update').textContent = '❌ Sem conexão com servidor';
-  }
-  document.getElementById('spin-icon').classList.add('hidden');
-  resetCountdown();
+    const data = JSON.parse(localStorage.getItem('ossocao_barras') || '{}');
+    Object.keys(data).forEach(id => {
+      const p = products.find(q => String(q.id) === String(id));
+      if (p) p.barras = data[id];
+    });
+  } catch(e) {}
 }
 
-function render(d) {
-  // ── Pills ──
-  setDot('dot-deriv',  'lbl-deriv',  d.deriv_connected,     'Deriv');
-  setDot('dot-trader', 'lbl-trader', d.paper_trader_running, 'Paper Trader');
-
-  const btDone    = d.backtest_done    === true;
-  const btRunning = d.backtest_running === true;
-  const dotBt = document.getElementById('dot-backtest');
-  const lblBt = document.getElementById('lbl-backtest');
-  if (btDone) {
-    dotBt.className  = 'dot green';
-    lblBt.textContent = '✅ Backtest';
-  } else if (btRunning) {
-    dotBt.className  = 'dot yellow pulse';
-    lblBt.textContent = '⏳ Backtest';
-  } else {
-    dotBt.className  = 'dot red';
-    lblBt.textContent = '⏸ Backtest';
-  }
-
-  // ── Barra 1 ano ──
-  const totalTarget = 12;
-  const monthsTrained = d.months_trained || 0;
-  const yearPct = Math.min(100, Math.round((monthsTrained / totalTarget) * 100));
-  document.getElementById('year-fill').style.width = yearPct + '%';
-  document.getElementById('year-lbl').textContent = `${monthsTrained} / ${totalTarget} meses`;
-
-  // Mostrar os 12 meses como pílulas (do mais antigo ao mais recente)
-  const now = new Date();
-  const ymEl = document.getElementById('year-months');
-  ymEl.innerHTML = '';
-  for (let i = totalTarget - 1; i >= 0; i--) {
-    const d2 = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const lbl = d2.toLocaleDateString('pt-BR', {month:'short', year:'2-digit'});
-    const trained = i < monthsTrained;
-    ymEl.innerHTML += `<span class="${trained ? 'done' : ''}">${lbl}</span>`;
-  }
-
-  // ── Backtest: progresso mês a mês ──
-  const bp          = d.backtest_progress || {};
-  const curMonth    = bp.current_month  || '';
-  const monthIdx    = bp.month_idx      || 0;
-  const totalMonths = bp.total_months   || 3;
-
-  const btMonthLbl = document.getElementById('bt-month-lbl');
-  const btMonthSub = document.getElementById('bt-month-sub');
-  const btTag      = document.getElementById('bt-tag');
-  const btBar      = document.getElementById('bt-month-bar');
-
-  if (btDone) {
-    btMonthLbl.textContent  = '✅ Treinamento concluído';
-    btMonthSub.textContent  = `${totalMonths} meses processados — paper trader ativo`;
-    btTag.textContent  = 'Concluído';
-    btTag.className    = 'tag tag-done';
-    btBar.style.width  = '100%';
-    btBar.className    = 'bt-month-bar-fill done';
-  } else if (btRunning && curMonth) {
-    btMonthLbl.textContent  = `Mês ${monthIdx} de ${totalMonths} — ${curMonth}`;
-    btMonthSub.textContent  = 'Baixando e treinando candle por candle…';
-    btTag.textContent  = 'Em andamento';
-    btTag.className    = 'tag tag-running';
-    const pct = Math.round(((monthIdx - 1) / totalMonths) * 100);
-    btBar.style.width  = pct + '%';
-    btBar.className    = 'bt-month-bar-fill';
-  } else {
-    btMonthLbl.textContent  = btRunning ? 'Iniciando backtest…' : 'Aguardando token Deriv';
-    btMonthSub.textContent  = btRunning ? 'Conectando ao servidor Deriv…' : 'Configure DERIV_TOKEN no Railway';
-    btTag.textContent  = btRunning ? 'Iniciando' : 'Aguardando';
-    btTag.className    = 'tag tag-wait';
-    btBar.style.width  = '0%';
-    btBar.className    = 'bt-month-bar-fill';
-  }
-
-  // ── Backtest: por símbolo ──
-  const symList = document.getElementById('bt-sym-list');
-  symList.innerHTML = '';
-
-  for (const sym of SYMBOLS) {
-    const p       = bp[sym] || {};
-    const batches = p.batches  || 0;
-    const samples = p.samples  || 0;
-    const symDone = p.done     === true;
-    const symMonth= p.month    || '';
-
-    // estimativa de % dentro do mês atual
-    let pct = 0;
-    if (btDone || symDone) {
-      pct = 100;
-    } else if (batches > 0) {
-      pct = Math.min(99, Math.round((batches / LOTES_POR_MES) * 100));
-    }
-
-    const fillCls = (btDone || symDone) ? 'bt-bar-fill done' : 'bt-bar-fill';
-    const statusTxt = btDone || symDone
-      ? `✅ ${samples.toLocaleString()} amostras`
-      : batches > 0
-        ? `${batches} lotes · ${samples.toLocaleString()} amostras${symMonth ? ' · ' + symMonth : ''}`
-        : '⏳ aguardando…';
-
-    symList.innerHTML += `
-      <div class="bt-symbol-row">
-        <div class="bt-sym-header">
-          <span class="bt-sym-name">${sym}</span>
-          <span class="bt-sym-stats">${statusTxt}</span>
-        </div>
-        <div class="bt-bar-wrap">
-          <div class="${fillCls}" style="width:${pct}%"></div>
-        </div>
-      </div>`;
-  }
-
-  // manutenção
-  const maintBadge = document.getElementById('maint-badge');
-  if (btDone) {
-    maintBadge.style.display = 'block';
-    if (d.next_maintenance) {
-      document.getElementById('bt-next-maint').textContent = d.next_maintenance;
-    } else {
-      const now = new Date();
-      const tm  = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(),
-                                    now.getUTCDate() + 1, 0, 1, 0));
-      const diff = Math.round((tm - now) / 60000);
-      document.getElementById('bt-next-maint').textContent =
-        `em ${Math.floor(diff/60)}h ${diff%60}m`;
-    }
-  } else {
-    maintBadge.style.display = 'none';
-  }
-
-  // ── Paper Trading ──
-  const ptMsg = document.getElementById('pt-status-msg');
-  if (!d.paper_trader_running) {
-    ptMsg.style.display = 'block';
-    if (!d.backtest_done) {
-      ptMsg.innerHTML = '⏳ Aguardando conclusão do backtest para iniciar operações…';
-    } else {
-      ptMsg.innerHTML = '⏸ Paper trader pausado (manutenção diária ou reinício)';
-    }
-  } else {
-    ptMsg.style.display = 'none';
-  }
-
-  const wr = d.paper_winrate || 0;
-  document.getElementById('p-trades').textContent = d.paper_trades  || 0;
-  document.getElementById('p-wins').textContent   = d.paper_wins    || 0;
-  document.getElementById('p-losses').textContent = d.paper_losses  || 0;
-  document.getElementById('p-wr').textContent     = wr.toFixed(1)   + '%';
-  document.getElementById('p-wr2').textContent    = wr.toFixed(1)   + '%';
-
-  const fill = document.getElementById('wr-fill');
-  fill.style.width = wr + '%';
-  fill.className   = 'wr-fill' + (wr >= 55 ? '' : wr >= 50 ? ' mid' : ' low');
-
-  // ── Modelos ──
-  const models = Object.entries(d.models || {})
-    .sort((a, b) => b[1].accuracy - a[1].accuracy);
-
-  const ml = document.getElementById('model-list');
-  ml.innerHTML = '';
-  if (models.length === 0) {
-    ml.innerHTML = '<div class="model-row"><span class="model-name" style="color:#8b949e">Nenhum modelo treinado ainda</span></div>';
-  }
-  for (const [sym, m] of models) {
-    const acc   = m.accuracy || 0;
-    const color = acc >= 58 ? '#3fb950' : acc >= 52 ? '#d29922' : '#f85149';
-    const samp  = (m.samples || 0).toLocaleString();
-    ml.innerHTML += `
-      <div class="model-row">
-        <span class="model-name">${sym}</span>
-        <div class="model-bar-wrap">
-          <div class="model-bar-fill" style="width:${acc}%;background:${color}"></div>
-        </div>
-        <span class="model-acc" style="color:${color}">
-          ${m.trained ? acc.toFixed(1)+'%' : '⏳'}
-          <span style="font-size:10px;color:#8b949e;font-weight:400"> · ${samp}</span>
-        </span>
-      </div>`;
-  }
-
-  // ── Candles ──
-  const candles = Object.entries(d.candles || {})
-    .sort((a, b) => a[0].localeCompare(b[0]));
-
-  const cl = document.getElementById('candle-list');
-  cl.innerHTML = '';
-  if (candles.length === 0) {
-    cl.innerHTML = '<div class="model-row"><span class="model-name" style="color:#8b949e">Nenhum candle ainda</span></div>';
-  }
-  for (const [sym, g] of candles) {
-    const m1  = (g[60]  || g['60']  || 0);
-    const m5  = (g[300] || g['300'] || 0);
-    cl.innerHTML += `
-      <div class="model-row">
-        <span class="model-name">${sym}</span>
-        <span style="font-size:12px;color:#8b949e">
-          M1: <b style="color:#388bfd">${m1}</b>
-          &nbsp;M5: <b style="color:#d29922">${m5}</b>
-        </span>
-      </div>`;
+// ── NOME ─────────────────────────────────────────────────────
+function askName() {
+  const n = prompt('Seu nome:', myName);
+  if (n && n.trim()) {
+    myName = n.trim();
+    localStorage.setItem('userName', myName);
+    document.getElementById('nameBadge').textContent = '👤 ' + myName;
+    showToast('👤 Olá, ' + myName + '!');
   }
 }
 
-function setDot(dotId, lblId, ok, label) {
-  document.getElementById(dotId).className = 'dot ' + (ok ? 'green' : 'red');
-  document.getElementById(lblId).textContent = (ok ? '✅ ' : '❌ ') + label;
+// ── EXPORTAR ─────────────────────────────────────────────────
+function exportarTXT() {
+  const escaneados = products.filter(p => p.barras);
+  if (escaneados.length === 0) { showToast('⚠️ Nenhum produto escaneado!'); return; }
+
+  // Formato Linear Sistemas: codigo(13) + qtd(8) com zeros
+  const linhas = escaneados.map(p => {
+    const cod = p.barras.padStart(13, '0');
+    const qty = '00001000'; // qtd 1 * 1000
+    return cod + qty;
+  });
+
+  const blob = new Blob([linhas.join('\n')], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'coleta_ossocao_' + new Date().toISOString().slice(0,10) + '.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('⬇️ Exportado ' + escaneados.length + ' itens!');
 }
 
-function resetCountdown() {
-  if (timer) clearInterval(timer);
-  cd = 30;
-  document.getElementById('countdown').textContent = cd;
-  timer = setInterval(() => {
-    cd--;
-    document.getElementById('countdown').textContent = cd;
-    if (cd <= 0) load();
-  }, 1000);
+// ── TOAST ─────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-load();
+// ── TECLADO: quando digita no campo de busca e encontra 1 produto ──
+document.addEventListener('DOMContentLoaded', () => {
+  loadLocal();
+  document.getElementById('nameBadge').textContent = '👤 ' + myName;
+  renderTable();
+
+  // Enter no modal
+  document.getElementById('modalInp').addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmModal();
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // Fechar modal clicando fora
+  document.getElementById('modalBg').addEventListener('click', e => {
+    if (e.target === document.getElementById('modalBg')) closeModal();
+  });
+});
 </script>
 </body>
 </html>
