@@ -339,55 +339,79 @@ function askName() {
   }
 }
 
-// ── SYNC COM SERVIDOR ─────────────────────────────────────────
+// ── STORAGE LOCAL (persiste ao recarregar) ────────────────────
+function saveLocal() {
+  const d = {};
+  products.filter(p => p.barras).forEach(p => { d[p.id] = p.barras; });
+  localStorage.setItem('ossocao_barras', JSON.stringify(d));
+}
+
+function loadLocal() {
+  try {
+    const d = JSON.parse(localStorage.getItem('ossocao_barras') || '{}');
+    Object.keys(d).forEach(id => {
+      const p = products.find(q => String(q.id) === String(id));
+      if (p) p.barras = d[id];
+    });
+  } catch(e) {}
+}
+
+// ── SYNC COM SERVIDOR (sincroniza entre coletores) ───────────
 function sendToServer(id, barras) {
+  // Salva local + envia pro servidor
+  saveLocal();
   fetch('/api/barras', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id: id, barras: barras, user: myName })
-  }).then(r => r.json()).then(d => {
-    console.log('Sync OK, total:', d.total);
   }).catch(e => console.log('Erro sync:', e));
+}
+
+// Ao conectar, envia tudo que tem local pro servidor (caso ele tenha reiniciado)
+function pushLocalToServer() {
+  const d = {};
+  products.filter(p => p.barras).forEach(p => { d[p.id] = p.barras; });
+  if (Object.keys(d).length === 0) return;
+  fetch('/api/barras', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bulk: true, data: d, user: myName })
+  }).catch(() => {});
 }
 
 function zerarTudo() {
   if (!confirm('Tem certeza que deseja zerar TODOS os códigos escaneados?')) return;
   fetch('/api/barras', { method: 'DELETE' }).catch(() => {});
   products.forEach(p => { p.barras = ''; });
+  saveLocal();
   renderTable();
   showToast('🗑 Tudo zerado!');
 }
-
-function saveLocal() {}
-function loadLocal() {}
 
 // ── Polling a cada 2s — sincroniza entre os coletores ────────
 let lastPollData = '';
 function pollServer() {
   fetch('/api/barras').then(r => r.json()).then(data => {
     const dataStr = JSON.stringify(data);
-    if (dataStr === lastPollData) return; // nada mudou
+    if (dataStr === lastPollData) return;
     lastPollData = dataStr;
 
     let changed = false;
-    // Atualiza produtos com dados do servidor
     Object.keys(data).forEach(id => {
       const p = products.find(q => String(q.id) === String(id));
       if (p && p.barras !== (data[id].barras || '')) {
         const wasEmpty = !p.barras;
         p.barras = data[id].barras || '';
         changed = true;
-        // Notifica se outro usuário escaneou
         if (wasEmpty && data[id].user && data[id].user !== myName) {
           showToast('🔄 ' + data[id].user + ': ' + p.nome.substring(0, 25));
         }
       }
     });
-    // Verifica removidos
     products.forEach(p => {
       if (p.barras && !data[p.id]) { p.barras = ''; changed = true; }
     });
-    if (changed) renderTable();
+    if (changed) { saveLocal(); renderTable(); }
   }).catch(() => {});
 }
 
@@ -415,7 +439,9 @@ function showToast(msg) {
 // ── INIT ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('nameBadge').textContent = '👤 ' + myName;
+  loadLocal();
   renderTable();
+  pushLocalToServer();
   pollServer();
   setInterval(pollServer, 2000);
   document.getElementById('modalInp').addEventListener('keydown', e => {
