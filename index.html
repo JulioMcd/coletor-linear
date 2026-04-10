@@ -390,14 +390,29 @@ function zerarTudo() {
 
 // ── Polling a cada 2s — sincroniza entre os coletores ────────
 let lastPollData = '';
+let serverHasData = false;
+
 function pollServer() {
   fetch('/api/barras').then(r => r.json()).then(data => {
+    const serverKeys = Object.keys(data);
     const dataStr = JSON.stringify(data);
     if (dataStr === lastPollData) return;
     lastPollData = dataStr;
 
+    // Se servidor retornou vazio mas eu tenho dados locais,
+    // o servidor provavelmente reiniciou — reenviar meus dados
+    const localCount = products.filter(p => p.barras).length;
+    if (serverKeys.length === 0 && localCount > 0) {
+      console.log('Servidor vazio mas tenho ' + localCount + ' locais, reenviando...');
+      pushLocalToServer();
+      return; // não apaga nada local!
+    }
+
+    serverHasData = serverKeys.length > 0;
     let changed = false;
-    Object.keys(data).forEach(id => {
+
+    // Atualiza com dados do servidor
+    serverKeys.forEach(id => {
       const p = products.find(q => String(q.id) === String(id));
       if (p && p.barras !== (data[id].barras || '')) {
         const wasEmpty = !p.barras;
@@ -408,9 +423,14 @@ function pollServer() {
         }
       }
     });
-    products.forEach(p => {
-      if (p.barras && !data[p.id]) { p.barras = ''; changed = true; }
-    });
+
+    // Só remove locais se o servidor TEM dados (alguém deletou de propósito)
+    if (serverHasData) {
+      products.forEach(p => {
+        if (p.barras && !data[p.id]) { p.barras = ''; changed = true; }
+      });
+    }
+
     if (changed) { saveLocal(); renderTable(); }
   }).catch(() => {});
 }
