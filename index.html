@@ -424,12 +424,9 @@ function pollServer() {
       }
     });
 
-    // Só remove locais se o servidor TEM dados (alguém deletou de propósito)
-    if (serverHasData) {
-      products.forEach(p => {
-        if (p.barras && !data[p.id]) { p.barras = ''; changed = true; }
-      });
-    }
+    // Nunca remove dados locais com base no servidor.
+    // Dados locais só são removidos pelo usuário via deletarBarras().
+    // O servidor apenas ADICIONA dados, nunca apaga.
 
     if (changed) { saveLocal(); renderTable(); }
   }).catch(() => {});
