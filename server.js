@@ -4,7 +4,7 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 
-// ── Estado em memória (barras escaneados) ────────────────────
+// ── Estado em memória ────────────────────────────────────────
 let barrasDB = {};
 
 // ── Clientes SSE conectados ──────────────────────────────────
@@ -13,10 +13,22 @@ let sseClients = [];
 function broadcast(event, data) {
   const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   sseClients = sseClients.filter(res => {
-    try { res.write(msg); return true; }
+    try {
+      res.write(msg);
+      if (res.flush) res.flush(); // força envio imediato
+      return true;
+    } catch(e) { return false; }
+  });
+  console.log(`[SSE] broadcast ${event} para ${sseClients.length} clientes`);
+}
+
+// ── Keepalive: manda ping a cada 15s pra não cair ────────────
+setInterval(() => {
+  sseClients = sseClients.filter(res => {
+    try { res.write(`:ping\n\n`); return true; }
     catch(e) { return false; }
   });
-}
+}, 15000);
 
 // ── MIME types ───────────────────────────────────────────────
 const mimeTypes = {
@@ -26,7 +38,6 @@ const mimeTypes = {
   '.json': 'application/json',
 };
 
-// ── Helpers ──────────────────────────────────────────────────
 function readBody(req) {
   return new Promise(resolve => {
     let body = '';
@@ -47,7 +58,7 @@ function jsonRes(res, code, data) {
 http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
-  // CORS preflight
+  // CORS
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
@@ -57,47 +68,61 @@ http.createServer(async (req, res) => {
     return res.end();
   }
 
-  // ── SSE: stream de atualizações em tempo real ──────────────
+  // ── SSE stream ─────────────────────────────────────────────
   if (url.pathname === '/api/stream') {
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
       'Access-Control-Allow-Origin': '*'
     });
+
+    // Desabilita buffering do Node
+    res.socket.setNoDelay(true);
+    res.socket.setKeepAlive(true);
+
     res.write(`event: init\ndata: ${JSON.stringify(barrasDB)}\n\n`);
     sseClients.push(res);
+    console.log(`[SSE] +1 cliente (total: ${sseClients.length})`);
+
     req.on('close', () => {
       sseClients = sseClients.filter(c => c !== res);
+      console.log(`[SSE] -1 cliente (total: ${sseClients.length})`);
     });
     return;
   }
 
-  // ── GET /api/barras — retorna todos os escaneados ──────────
+  // ── GET /api/barras ────────────────────────────────────────
   if (url.pathname === '/api/barras' && req.method === 'GET') {
     return jsonRes(res, 200, barrasDB);
   }
 
-  // ── POST /api/barras — salva um código de barras ───────────
+  // ── POST /api/barras ───────────────────────────────────────
   if (url.pathname === '/api/barras' && req.method === 'POST') {
     try {
       const { id, barras, user } = JSON.parse(await readBody(req));
       if (!id) return jsonRes(res, 400, { error: 'id obrigatório' });
+
+      const userName = user || 'Anônimo';
       if (barras) {
-        barrasDB[id] = { barras, user: user || 'Anônimo' };
+        barrasDB[id] = { barras, user: userName };
       } else {
         delete barrasDB[id];
       }
-      broadcast('update', { id, barras: barras || '', user: user || 'Anônimo' });
+
+      console.log(`[API] ${userName} -> produto ${id} = "${barras || '(removido)'}"`);
+      broadcast('update', { id, barras: barras || '', user: userName });
       return jsonRes(res, 200, { ok: true });
     } catch(e) {
       return jsonRes(res, 400, { error: 'JSON inválido' });
     }
   }
 
-  // ── DELETE /api/barras — zera tudo ─────────────────────────
+  // ── DELETE /api/barras ─────────────────────────────────────
   if (url.pathname === '/api/barras' && req.method === 'DELETE') {
     barrasDB = {};
+    console.log('[API] RESET - tudo zerado');
     broadcast('reset', {});
     return jsonRes(res, 200, { ok: true });
   }
