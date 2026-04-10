@@ -339,12 +339,14 @@ function askName() {
   }
 }
 
-// ── SYNC COM SERVIDOR (tempo real) ────────────────────────────
+// ── SYNC COM SERVIDOR ─────────────────────────────────────────
 function sendToServer(id, barras) {
   fetch('/api/barras', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id: id, barras: barras, user: myName })
+  }).then(r => r.json()).then(d => {
+    console.log('Sync OK, total:', d.total);
   }).catch(e => console.log('Erro sync:', e));
 }
 
@@ -359,60 +361,29 @@ function zerarTudo() {
 function saveLocal() {}
 function loadLocal() {}
 
-function connectSSE() {
-  const es = new EventSource('/api/stream');
-
-  es.addEventListener('init', e => {
-    try {
-      const data = JSON.parse(e.data);
-      Object.keys(data).forEach(id => {
-        const p = products.find(q => String(q.id) === String(id));
-        if (p) p.barras = data[id].barras || '';
-      });
-      renderTable();
-      console.log('SSE conectado, ' + Object.keys(data).length + ' itens carregados');
-    } catch(err) { console.log('Erro init SSE:', err); }
-  });
-
-  es.addEventListener('update', e => {
-    try {
-      const { id, barras, user } = JSON.parse(e.data);
-      const p = products.find(q => String(q.id) === String(id));
-      if (p) {
-        p.barras = barras;
-        renderTable();
-        if (user && user !== myName) {
-          showToast('🔄 ' + user + ': ' + p.nome.substring(0, 25));
-        }
-      }
-    } catch(err) { console.log('Erro update SSE:', err); }
-  });
-
-  es.addEventListener('reset', () => {
-    products.forEach(p => { p.barras = ''; });
-    renderTable();
-    showToast('🗑 Coleta zerada!');
-  });
-
-  es.onerror = () => {
-    console.log('SSE desconectou, reconectando em 3s...');
-    es.close();
-    setTimeout(connectSSE, 3000);
-  };
-}
-
-// ── Polling backup (caso SSE falhe) ──────────────────────────
+// ── Polling a cada 2s — sincroniza entre os coletores ────────
+let lastPollData = '';
 function pollServer() {
   fetch('/api/barras').then(r => r.json()).then(data => {
+    const dataStr = JSON.stringify(data);
+    if (dataStr === lastPollData) return; // nada mudou
+    lastPollData = dataStr;
+
     let changed = false;
+    // Atualiza produtos com dados do servidor
     Object.keys(data).forEach(id => {
       const p = products.find(q => String(q.id) === String(id));
       if (p && p.barras !== (data[id].barras || '')) {
+        const wasEmpty = !p.barras;
         p.barras = data[id].barras || '';
         changed = true;
+        // Notifica se outro usuário escaneou
+        if (wasEmpty && data[id].user && data[id].user !== myName) {
+          showToast('🔄 ' + data[id].user + ': ' + p.nome.substring(0, 25));
+        }
       }
     });
-    // Check removed
+    // Verifica removidos
     products.forEach(p => {
       if (p.barras && !data[p.id]) { p.barras = ''; changed = true; }
     });
@@ -445,8 +416,8 @@ function showToast(msg) {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('nameBadge').textContent = '👤 ' + myName;
   renderTable();
-  connectSSE();
-  setInterval(pollServer, 5000);
+  pollServer();
+  setInterval(pollServer, 2000);
   document.getElementById('modalInp').addEventListener('keydown', e => {
     if (e.key==='Enter') confirmModal();
     if (e.key==='Escape') closeModal();
