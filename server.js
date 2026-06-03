@@ -3,20 +3,13 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
+const FILE = path.join(__dirname, 'index.html');
 
 const server = http.createServer((req, res) => {
-  const filePath = path.join(__dirname, 'index.html');
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.writeHead(500);
-      res.end('Error loading page');
-      return;
-    }
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(data);
-  });
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  fs.createReadStream(FILE).pipe(res);
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on 0.0.0.0:${PORT}`);
+  console.log(`Listening on port ${PORT}`);
 });
