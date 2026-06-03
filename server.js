@@ -1,22 +1,22 @@
 const express = require('express');
 const { Pool } = require('pg');
+const fs = require('fs');
 const path = require('path');
 
 const app = express();
 const PORT = parseInt(process.env.PORT) || 3000;
 
-console.log(`PORT env: ${process.env.PORT}`);
-console.log(`Iniciando na porta: ${PORT}`);
-
 app.use(express.json());
 
-// Log todas requisições
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  next();
+// Serve index.html na rota raiz diretamente (evita problema do static com arquivo grande)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.use(express.static(path.join(__dirname)));
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', port: PORT });
+});
 
 // Banco de dados
 let pool;
@@ -34,8 +34,7 @@ if (process.env.DATABASE_URL) {
       usuario TEXT,
       atualizado TIMESTAMP DEFAULT NOW()
     )
-  `).then(() => console.log('Tabela criada/verificada'))
-    .catch(e => console.error('DB error:', e.message));
+  `).catch(e => console.error('DB:', e.message));
   console.log('Usando PostgreSQL');
 } else {
   console.log('Usando memoria');
@@ -51,7 +50,6 @@ app.get('/api/inventario', async (req, res) => {
     }
     res.json(memStore);
   } catch (e) {
-    console.error(e);
     res.json(memStore);
   }
 });
@@ -63,23 +61,20 @@ app.post('/api/inventario', async (req, res) => {
       if (pool) {
         for (const [cod, q] of Object.entries(data)) {
           await pool.query(
-            `INSERT INTO inventario (codigo, qtd, usuario) VALUES ($1,$2,$3)
-             ON CONFLICT (codigo) DO UPDATE SET qtd=$2, usuario=$3, atualizado=NOW()`,
+            `INSERT INTO inventario (codigo,qtd,usuario) VALUES ($1,$2,$3)
+             ON CONFLICT (codigo) DO UPDATE SET qtd=$2,usuario=$3,atualizado=NOW()`,
             [cod, q, user || 'anon']
           );
         }
       } else { Object.assign(memStore, data); }
     } else if (codigo !== undefined) {
       if (pool) {
-        if (qtd === 0) {
-          await pool.query('DELETE FROM inventario WHERE codigo=$1', [codigo]);
-        } else {
-          await pool.query(
-            `INSERT INTO inventario (codigo, qtd, usuario) VALUES ($1,$2,$3)
-             ON CONFLICT (codigo) DO UPDATE SET qtd=$2, usuario=$3, atualizado=NOW()`,
-            [codigo, qtd, user || 'anon']
-          );
-        }
+        if (qtd === 0) await pool.query('DELETE FROM inventario WHERE codigo=$1', [codigo]);
+        else await pool.query(
+          `INSERT INTO inventario (codigo,qtd,usuario) VALUES ($1,$2,$3)
+           ON CONFLICT (codigo) DO UPDATE SET qtd=$2,usuario=$3,atualizado=NOW()`,
+          [codigo, qtd, user || 'anon']
+        );
       } else {
         if (qtd === 0) delete memStore[codigo];
         else memStore[codigo] = qtd;
@@ -87,7 +82,6 @@ app.post('/api/inventario', async (req, res) => {
     }
     res.json({ ok: true });
   } catch (e) {
-    console.error(e);
     res.json({ ok: false, error: e.message });
   }
 });
@@ -103,5 +97,5 @@ app.delete('/api/inventario', async (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Casa 505 ouvindo em 0.0.0.0:${PORT}`);
+  console.log(`Casa 505 na porta ${PORT}`);
 });
