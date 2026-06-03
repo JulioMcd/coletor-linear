@@ -27,6 +27,13 @@ if (process.env.DATABASE_URL) {
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
   });
+
+  // CRITICAL: sem este handler o processo crasha quando o banco falha
+  pool.on('error', (err) => {
+    console.error('Pool error (ignorado):', err.message);
+    pool = null; // cai para memória se banco falhar
+  });
+
   pool.query(`
     CREATE TABLE IF NOT EXISTS inventario (
       codigo TEXT PRIMARY KEY,
@@ -34,7 +41,11 @@ if (process.env.DATABASE_URL) {
       usuario TEXT,
       atualizado TIMESTAMP DEFAULT NOW()
     )
-  `).catch(e => console.error('DB:', e.message));
+  `).then(() => console.log('Tabela OK'))
+    .catch(e => {
+      console.error('DB init error:', e.message);
+      pool = null; // usa memória como fallback
+    });
   console.log('Usando PostgreSQL');
 } else {
   console.log('Usando memoria');
