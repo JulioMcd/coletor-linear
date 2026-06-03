@@ -1,3 +1,6 @@
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first'); // força IPv4 para conectar ao Supabase
+
 const express = require('express');
 const { Pool } = require('pg');
 const fs = require('fs');
