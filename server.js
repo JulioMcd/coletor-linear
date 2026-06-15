@@ -49,6 +49,12 @@ if (process.env.DATABASE_URL) {
       criado_por TEXT,
       criado_at TIMESTAMP DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS estado (
+      chave TEXT PRIMARY KEY,
+      valor TEXT
+    );
+    INSERT INTO estado (chave, valor) VALUES ('zeroed_at', '1970-01-01T00:00:00.000Z')
+      ON CONFLICT (chave) DO NOTHING;
   `).then(() => console.log('Tabelas OK')).catch(e => { console.error('DB init:', e.message); pool = null; });
   console.log('Usando PostgreSQL');
 } else {
@@ -160,6 +166,8 @@ app.get('/api/inventario', async (req, res) => {
           coletas
         };
       });
+      const est = await pool.query(`SELECT valor FROM estado WHERE chave='zeroed_at'`);
+      data._zeroed_at = est.rows[0]?.valor || null;
       return res.json(data);
     }
     res.json(memStore);
@@ -218,11 +226,14 @@ app.post('/api/inventario', async (req, res) => {
 
 app.delete('/api/inventario', async (req, res) => {
   try {
+    const zeroed_at = new Date().toISOString();
     if (pool) {
       await pool.query('DELETE FROM inventario');
       await pool.query('DELETE FROM coletas');
+      await pool.query(`INSERT INTO estado (chave,valor) VALUES ('zeroed_at',$1)
+        ON CONFLICT (chave) DO UPDATE SET valor=$1`, [zeroed_at]);
     } else { memStore = {}; }
-    res.json({ ok: true });
+    res.json({ ok: true, zeroed_at });
   } catch (e) {
     res.json({ ok: false });
   }
