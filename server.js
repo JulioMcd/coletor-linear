@@ -145,7 +145,7 @@ app.get('/api/inventario', async (req, res) => {
   try {
     if (pool) {
       const [inv, col] = await Promise.all([
-        pool.query('SELECT codigo, qtd, usuario FROM inventario WHERE qtd > 0'),
+        pool.query('SELECT codigo, qtd, usuario, atualizado FROM inventario WHERE qtd > 0'),
         pool.query('SELECT codigo, usuario, qtd FROM coletas WHERE qtd > 0 ORDER BY codigo, usuario')
       ]);
 
@@ -162,6 +162,7 @@ app.get('/api/inventario', async (req, res) => {
         data[r.codigo] = {
           qtd: parseFloat(r.qtd),
           usuario: r.usuario,
+          atualizado: r.atualizado,
           conflito: coletas.length > 1,
           coletas
         };
