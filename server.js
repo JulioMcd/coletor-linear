@@ -10,7 +10,10 @@ const PORT = parseInt(process.env.PORT) || 3000;
 
 app.use(express.json());
 
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 app.get('/health', (req, res) => res.json({ status: 'ok', port: PORT }));
 
 // ── BANCO ────────────────────────────────────────────────────
