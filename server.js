@@ -17,7 +17,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', port: PORT }));
 let pool;
 let memStore = {};
 let memColetas = {};   // { codigo: { usuario: qtd } }
-let memUsuarios = {};  // { nome: timestamp }
+let memUsuarios = {};  // { device_id: { nome, ts } }
 
 if (process.env.DATABASE_URL) {
   pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
@@ -37,8 +37,9 @@ if (process.env.DATABASE_URL) {
       atualizado TIMESTAMP DEFAULT NOW(),
       PRIMARY KEY (codigo, usuario)
     );
-    CREATE TABLE IF NOT EXISTS usuarios_ativos (
-      nome TEXT PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS presenca (
+      device_id TEXT PRIMARY KEY,
+      nome TEXT,
       ultimo_ping TIMESTAMP DEFAULT NOW()
     );
     CREATE TABLE IF NOT EXISTS produtos_custom (
@@ -61,65 +62,43 @@ if (process.env.DATABASE_URL) {
   console.log('Usando memoria');
 }
 
-// ── USUÁRIOS ─────────────────────────────────────────────────
+// ── USUÁRIOS (identidade por dispositivo) ────────────────────
 
-// Registrar nome (verifica duplicata)
+// Registrar/atualizar presença do dispositivo
 app.post('/api/usuarios/registrar', async (req, res) => {
-  const { nome } = req.body;
-  if (!nome || !nome.trim()) return res.json({ ok: false, error: 'Nome inválido' });
-  const n = nome.trim();
+  const { deviceId, nome } = req.body;
+  if (!deviceId) return res.json({ ok: false, error: 'deviceId obrigatório' });
+  const n = (nome || '').trim() || ('Coletor-' + deviceId.slice(0, 4));
   try {
     if (pool) {
-      // limpa inativos (sem ping há >5 min)
-      await pool.query(`DELETE FROM usuarios_ativos WHERE ultimo_ping < NOW() - INTERVAL '5 minutes'`);
-      const { rows } = await pool.query('SELECT nome FROM usuarios_ativos WHERE nome = $1', [n]);
-      if (rows.length) {
-        // já existe — pode ser reconexão do mesmo usuário; só atualiza ping
-        await pool.query('UPDATE usuarios_ativos SET ultimo_ping = NOW() WHERE nome = $1', [n]);
-        return res.json({ ok: true });
-      }
-      await pool.query('INSERT INTO usuarios_ativos (nome) VALUES ($1)', [n]);
+      await pool.query(
+        `INSERT INTO presenca (device_id, nome) VALUES ($1, $2)
+         ON CONFLICT (device_id) DO UPDATE SET nome = $2, ultimo_ping = NOW()`,
+        [deviceId, n]
+      );
       return res.json({ ok: true });
     }
-    // memória
-    const now = Date.now();
-    Object.keys(memUsuarios).forEach(u => { if (now - memUsuarios[u] > 300000) delete memUsuarios[u]; });
-    memUsuarios[n] = now;
+    memUsuarios[deviceId] = { nome: n, ts: Date.now() };
     res.json({ ok: true });
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }
 });
 
-// Verifica se nome está disponível sem registrar
-app.get('/api/usuarios/disponivel/:nome', async (req, res) => {
-  const n = req.params.nome.trim();
-  try {
-    if (pool) {
-      await pool.query(`DELETE FROM usuarios_ativos WHERE ultimo_ping < NOW() - INTERVAL '5 minutes'`);
-      const { rows } = await pool.query('SELECT nome FROM usuarios_ativos WHERE nome = $1', [n]);
-      return res.json({ disponivel: rows.length === 0 });
-    }
-    const now = Date.now();
-    const ativo = memUsuarios[n] && (now - memUsuarios[n] < 300000);
-    res.json({ disponivel: !ativo });
-  } catch (e) {
-    res.json({ disponivel: true });
-  }
-});
-
 // Ping de presença (mantém sessão ativa)
 app.post('/api/usuarios/ping', async (req, res) => {
-  const { nome } = req.body;
-  if (!nome) return res.json({ ok: false });
+  const { deviceId, nome } = req.body;
+  if (!deviceId) return res.json({ ok: false });
+  const n = (nome || '').trim() || ('Coletor-' + deviceId.slice(0, 4));
   try {
     if (pool) {
       await pool.query(
-        'INSERT INTO usuarios_ativos (nome) VALUES ($1) ON CONFLICT (nome) DO UPDATE SET ultimo_ping = NOW()',
-        [nome]
+        `INSERT INTO presenca (device_id, nome) VALUES ($1, $2)
+         ON CONFLICT (device_id) DO UPDATE SET nome = $2, ultimo_ping = NOW()`,
+        [deviceId, n]
       );
     } else {
-      memUsuarios[nome] = Date.now();
+      memUsuarios[deviceId] = { nome: n, ts: Date.now() };
     }
     res.json({ ok: true });
   } catch (e) {
@@ -127,30 +106,32 @@ app.post('/api/usuarios/ping', async (req, res) => {
   }
 });
 
-// Lista usuários online (com ping nos últimos 2 minutos)
+// Lista usuários online (ping nos últimos 2 minutos, sem duplicar dispositivo)
 app.get('/api/usuarios/online', async (req, res) => {
   try {
     if (pool) {
-      await pool.query(`DELETE FROM usuarios_ativos WHERE ultimo_ping < NOW() - INTERVAL '5 minutes'`);
+      await pool.query(`DELETE FROM presenca WHERE ultimo_ping < NOW() - INTERVAL '5 minutes'`);
       const { rows } = await pool.query(
-        `SELECT nome FROM usuarios_ativos WHERE ultimo_ping > NOW() - INTERVAL '2 minutes' ORDER BY nome`
+        `SELECT nome FROM presenca WHERE ultimo_ping > NOW() - INTERVAL '2 minutes' ORDER BY nome`
       );
       return res.json({ total: rows.length, usuarios: rows.map(r => r.nome) });
     }
     const now = Date.now();
-    const ativos = Object.keys(memUsuarios).filter(u => now - memUsuarios[u] < 120000).sort();
+    const ativos = Object.values(memUsuarios)
+      .filter(u => now - u.ts < 120000)
+      .map(u => u.nome).sort();
     res.json({ total: ativos.length, usuarios: ativos });
   } catch (e) {
     res.json({ total: 0, usuarios: [] });
   }
 });
 
-// Liberar nome ao sair
-app.delete('/api/usuarios/:nome', async (req, res) => {
-  const n = req.params.nome;
+// Liberar dispositivo ao sair
+app.delete('/api/usuarios/:deviceId', async (req, res) => {
+  const d = req.params.deviceId;
   try {
-    if (pool) await pool.query('DELETE FROM usuarios_ativos WHERE nome = $1', [n]);
-    else delete memUsuarios[n];
+    if (pool) await pool.query('DELETE FROM presenca WHERE device_id = $1', [d]);
+    else delete memUsuarios[d];
     res.json({ ok: true });
   } catch (e) {
     res.json({ ok: false });
