@@ -127,6 +127,24 @@ app.post('/api/usuarios/ping', async (req, res) => {
   }
 });
 
+// Lista usuários online (com ping nos últimos 2 minutos)
+app.get('/api/usuarios/online', async (req, res) => {
+  try {
+    if (pool) {
+      await pool.query(`DELETE FROM usuarios_ativos WHERE ultimo_ping < NOW() - INTERVAL '5 minutes'`);
+      const { rows } = await pool.query(
+        `SELECT nome FROM usuarios_ativos WHERE ultimo_ping > NOW() - INTERVAL '2 minutes' ORDER BY nome`
+      );
+      return res.json({ total: rows.length, usuarios: rows.map(r => r.nome) });
+    }
+    const now = Date.now();
+    const ativos = Object.keys(memUsuarios).filter(u => now - memUsuarios[u] < 120000).sort();
+    res.json({ total: ativos.length, usuarios: ativos });
+  } catch (e) {
+    res.json({ total: 0, usuarios: [] });
+  }
+});
+
 // Liberar nome ao sair
 app.delete('/api/usuarios/:nome', async (req, res) => {
   const n = req.params.nome;
