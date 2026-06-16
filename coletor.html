@@ -270,6 +270,7 @@ td.qtd  { text-align: center; }
     <button class="name-badge" id="nameBadge" onclick="toggleUserMenu()">👤 Usuário</button>
     <div id="userMenu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:#111;border:1px solid #2a2a2a;border-radius:12px;min-width:160px;z-index:300;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.9)">
       <button onclick="askName();toggleUserMenu()" style="display:block;width:100%;padding:13px 16px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:#fff;text-align:left">✏️ Alterar nome</button>
+      <a id="btnPainel" href="/admin" style="display:none;width:100%;padding:13px 16px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:#359483;text-align:left;border-top:1px solid #222;text-decoration:none;box-sizing:border-box">🏠 Painel ADM</a>
       <button onclick="sairColetor()" style="display:block;width:100%;padding:13px 16px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:#E63946;text-align:left;border-top:1px solid #222">🚪 Sair</button>
     </div>
   </div>
@@ -940,6 +941,10 @@ document.addEventListener('DOMContentLoaded', () => {
 // Auth guard
 const sessionUser = JSON.parse(sessionStorage.getItem('jc_user') || '{}');
 if (!sessionUser.id) { window.location.href = '/'; }
+if (sessionUser.perfil === 'ADM') {
+  const btnP = document.getElementById('btnPainel');
+  if (btnP) btnP.style.display = 'block';
+}
 
 let currentInventarioId = null;
 async function loadInventario() {
