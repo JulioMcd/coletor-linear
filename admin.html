@@ -73,6 +73,7 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
   <div class="tab" onclick="setTab(1)">Empresas</div>
   <div class="tab" onclick="setTab(2)">Inventarios</div>
   <div class="tab" onclick="setTab(3)">Online</div>
+  <div class="tab" onclick="setTab(4)">Contagem</div>
 </div>
 
 <!-- USUARIOS -->
@@ -113,6 +114,15 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
       <tbody id="tbInventarios"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
     </table>
   </div>
+</div>
+
+<!-- CONTAGEM -->
+<div class="panel" id="panel-4">
+  <div class="section-header"><h2>Acesso a Contagem</h2></div>
+  <div id="contagemInfo" style="margin-bottom:24px"></div>
+  <a href="/coletor" style="display:block;background:var(--jc-green);border-radius:12px;padding:22px;text-align:center;color:#fff;font-size:16px;font-weight:700;text-decoration:none;max-width:420px;margin:0 auto;letter-spacing:0.3px">
+    &#x1F4E6; Entrar na Tela de Contagem
+  </a>
 </div>
 
 <!-- ONLINE -->
@@ -174,12 +184,35 @@ function setTab(i) {
   if (i === 1) carregarEmpresas();
   if (i === 2) carregarInventarios();
   if (i === 3) carregarOnline();
+  if (i === 4) carregarContagemInfo();
 }
 
 function fmtDate(iso) {
   if (!iso) return '-';
-  var d = new Date(iso);
+  var s = /[Z+]/.test(iso.slice(-6)) ? iso : iso + 'Z';
+  var d = new Date(s);
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function carregarContagemInfo() {
+  var el = document.getElementById('contagemInfo');
+  el.innerHTML = '<div class="empty" style="padding:20px">Carregando...</div>';
+  fetch('/api/inventarios' + (user.empresa_id ? '?empresa_id=' + user.empresa_id : ''))
+    .then(function(r) { return r.json(); })
+    .then(function(rows) {
+      var inv = rows.find(function(r) { return r.status === 'EM_ANDAMENTO'; }) || rows[0];
+      if (!inv) { el.innerHTML = '<div class="empty">Nenhum inventario ativo no momento</div>'; return; }
+      var pct = inv.total_produtos > 0 ? Math.round((inv.total_coletados / inv.total_produtos) * 100) : 0;
+      el.innerHTML =
+        '<div class="stat-row">' +
+        '<div class="stat-card"><div class="val" style="color:var(--jc-green)">' + (inv.total_coletados || 0) + '</div><div class="lbl">Produtos Contados</div></div>' +
+        '<div class="stat-card"><div class="val">' + (inv.total_produtos || 0) + '</div><div class="lbl">Total no Inventario</div></div>' +
+        '<div class="stat-card"><div class="val">' + pct + '%</div><div class="lbl">Progresso</div></div>' +
+        '<div class="stat-card"><div class="val">' + badgeStatus(inv.status) + '</div><div class="lbl">Status</div></div>' +
+        '</div>' +
+        '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Inventario #' + inv.id + ' &mdash; importado em ' + fmtDate(inv.data_importacao) + '</div>';
+    })
+    .catch(function() { el.innerHTML = '<div class="empty">Erro ao carregar inventario</div>'; });
 }
 
 function badgePerfil(p) {

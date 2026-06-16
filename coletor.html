@@ -516,7 +516,8 @@ function excluirQtd() {
 let itemDates = {}; // { codigo: ISOString } data da contagem
 function fmtData(iso) {
   try {
-    const d = new Date(iso);
+    const s = /[Z+]/.test(iso.slice(-6)) ? iso : iso + 'Z';
+    const d = new Date(s);
     if (isNaN(d)) return '';
     const dd = String(d.getDate()).padStart(2,'0');
     const mm = String(d.getMonth()+1).padStart(2,'0');
