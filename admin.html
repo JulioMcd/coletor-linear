@@ -457,7 +457,6 @@ function invParseCSV(text) {
   var di = invFindCol(header, ['descricao','nome','description','produto','desc']);
   var ui = invFindCol(header, ['unidade','un','unit','und']);
   var ei = invFindCol(header, ['ean','barcode','codigo_barras','gtin']);
-  if (ci < 0 && di < 0) { ci = 0; di = 1; ui = 2; ei = 3; }
   var result = [];
   for (var i = 1; i < lines.length; i++) {
     var cols = lines[i].split(sep).map(function(c) { return c.trim().replace(/^["']|["']$/g,''); });
@@ -480,7 +479,6 @@ function invParseXLSX(buf) {
     var di = invFindCol(header, ['descricao','nome','description','produto','desc']);
     var ui = invFindCol(header, ['unidade','un','unit','und']);
     var ei = invFindCol(header, ['ean','barcode','codigo_barras','gtin']);
-    if (ci < 0 && di < 0) { ci = 0; di = 1; ui = 2; ei = 3; }
     var result = [];
     for (var i = 1; i < data.length; i++) {
       var row = data[i];
@@ -552,7 +550,7 @@ function excluirInventario(id) {
 }
 
 function admEnviarLotes(invId, lista, btn) {
-  var LOTE = 1000;
+  var LOTE = 300;
   var chunks = [];
   for (var i = 0; i < lista.length; i += LOTE) chunks.push(lista.slice(i, i + LOTE));
   var total = 0; var idx = 0;
