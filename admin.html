@@ -24,13 +24,26 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans
 .section-header h2 { font-size:15px; font-weight:600; }
 .btn-add { background:var(--jc-green); border:none; border-radius:8px; padding:9px 16px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
 .btn-add:hover { opacity:0.85; }
-.table-wrap { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
-table { width:100%; border-collapse:collapse; font-size:13px; }
-thead th { background:var(--card2); color:var(--muted); padding:11px 14px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border); }
+.table-wrap { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; min-width:500px; }
+thead th { background:var(--card2); color:var(--muted); padding:11px 14px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border); white-space:nowrap; }
 tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
 tbody tr:last-child { border-bottom:none; }
 tbody tr:hover { background:var(--card2); }
-td { padding:11px 14px; color:var(--text); vertical-align:middle; }
+td { padding:11px 14px; color:var(--text); vertical-align:middle; white-space:nowrap; }
+@media (max-width:640px) {
+  .header { padding:10px 14px; }
+  .user-info { display:none; }
+  .tab { padding:10px 4px; font-size:11px; }
+  .panel { padding:12px; }
+  .section-header h2 { font-size:13px; }
+  .btn-add { padding:7px 11px; font-size:12px; }
+  td, thead th { padding:9px 10px; font-size:12px; }
+  .stat-row { grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:16px; }
+  .stat-card { padding:12px; }
+  .stat-card .val { font-size:22px; }
+  .hide-sm { display:none; }
+}
 .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
 .badge-adm { background:rgba(199,53,58,0.2); color:var(--jc-red); }
 .badge-gerador { background:rgba(53,148,131,0.2); color:var(--jc-green); }
@@ -93,7 +106,7 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Login</th><th>Perfil</th><th>Empresa</th><th>Criado em</th><th></th></tr></thead>
+      <thead><tr><th>Login</th><th>Perfil</th><th>Empresa</th><th class="hide-sm">Criado em</th><th></th></tr></thead>
       <tbody id="tbUsuarios"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
     </table>
   </div>
@@ -107,7 +120,7 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Nome</th><th>Logo URL</th><th>Criada em</th><th></th></tr></thead>
+      <thead><tr><th>Nome</th><th class="hide-sm">Logo URL</th><th class="hide-sm">Criada em</th><th></th></tr></thead>
       <tbody id="tbEmpresas"><tr><td colspan="4" class="empty">Carregando...</td></tr></tbody>
     </table>
   </div>
@@ -121,7 +134,7 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Nome</th><th>Empresa</th><th>Gerador</th><th>Status</th><th>Importacao</th><th>Tempo</th><th>Ultima Alt.</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>Nome</th><th>Empresa</th><th class="hide-sm">Gerador</th><th>Status</th><th class="hide-sm">Importacao</th><th class="hide-sm">Tempo</th><th class="hide-sm">Ultima Alt.</th><th></th></tr></thead>
       <tbody id="tbInventarios"><tr><td colspan="9" class="empty">Carregando...</td></tr></tbody>
     </table>
   </div>
@@ -135,7 +148,7 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Usuario</th><th>Empresa</th><th>Perfil</th><th>Ultimo acesso</th></tr></thead>
+      <thead><tr><th>Usuario</th><th>Empresa</th><th>Perfil</th><th class="hide-sm">Ultimo acesso</th></tr></thead>
       <tbody id="tbOnline"><tr><td colspan="4" class="empty">Carregando...</td></tr></tbody>
     </table>
   </div>
@@ -267,7 +280,7 @@ function carregarUsuarios() {
       '<div class="stat-card"><div class="val">' + conf + '</div><div class="lbl">Conferentes</div></div>';
     tb.innerHTML = rows.map(function(r) {
       return '<tr><td><strong>' + r.login + '</strong></td><td>' + badgePerfil(r.perfil) + '</td><td>' +
-        (r.empresa_nome || '-') + '</td><td>' + fmtDate(r.created_at) + '</td><td>' +
+        (r.empresa_nome || '-') + '</td><td class="hide-sm">' + fmtDate(r.created_at) + '</td><td>' +
         (r.login !== 'admin' ? '<button class="btn-del" onclick="deletarUsuario(' + r.id + ')">Excluir</button>' : '') + '</td></tr>';
     }).join('');
   }).catch(function() { tb.innerHTML = '<tr><td colspan="5" class="empty">Erro ao carregar</td></tr>'; });
@@ -279,8 +292,8 @@ function carregarEmpresas() {
     empresas = rows;
     if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">Nenhuma empresa cadastrada</td></tr>'; return; }
     tb.innerHTML = rows.map(function(e) {
-      return '<tr><td><strong>' + e.nome + '</strong></td><td><span style="color:var(--muted);font-size:12px">' +
-        (e.logo_url || '-') + '</span></td><td>' + fmtDate(e.created_at) + '</td><td>' +
+      return '<tr><td><strong>' + e.nome + '</strong></td><td class="hide-sm"><span style="color:var(--muted);font-size:12px">' +
+        (e.logo_url || '-') + '</span></td><td class="hide-sm">' + fmtDate(e.created_at) + '</td><td>' +
         '<button class="btn-del" onclick="deletarEmpresa(' + e.id + ')">Excluir</button></td></tr>';
     }).join('');
   }).catch(function() { tb.innerHTML = '<tr><td colspan="4" class="empty">Erro ao carregar</td></tr>'; });
@@ -298,11 +311,11 @@ function carregarInventarios() {
         '<td>#' + r.id + '</td>' +
         '<td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.nome || '<span style="color:var(--muted)">—</span>') + '</td>' +
         '<td>' + (r.empresa_nome || r.empresa_id || '-') + '</td>' +
-        '<td>' + (r.gerador_login || '-') + '</td>' +
+        '<td class="hide-sm">' + (r.gerador_login || '-') + '</td>' +
         '<td>' + badgeStatus(r.status) + '</td>' +
-        '<td>' + fmtDate(r.data_importacao) + '</td>' +
-        '<td style="color:var(--jc-green);font-weight:600">' + tempoDecorrido(r.inicio_contagem, r.fim_contagem) + '</td>' +
-        '<td style="font-size:12px;color:var(--muted)">' + fmtDate(r.ultima_coleta) + '</td>' +
+        '<td class="hide-sm">' + fmtDate(r.data_importacao) + '</td>' +
+        '<td class="hide-sm" style="color:var(--jc-green);font-weight:600">' + tempoDecorrido(r.inicio_contagem, r.fim_contagem) + '</td>' +
+        '<td class="hide-sm" style="font-size:12px;color:var(--muted)">' + fmtDate(r.ultima_coleta) + '</td>' +
         '<td>' + btnAuditar + '</td>' +
         '</tr>';
     }).join('');
@@ -323,7 +336,7 @@ function carregarOnline() {
         '<td><strong>' + u.login + '</strong></td>' +
         '<td>' + (u.empresa_nome || '-') + '</td>' +
         '<td>' + badgePerfil(u.perfil || '') + '</td>' +
-        '<td style="color:var(--muted);font-size:12px">' + fmtDate(u.last_seen) + '</td>' +
+        '<td class="hide-sm" style="color:var(--muted);font-size:12px">' + fmtDate(u.last_seen) + '</td>' +
         '</tr>';
     }).join('');
   }).catch(function() {
