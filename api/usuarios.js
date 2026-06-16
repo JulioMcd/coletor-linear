@@ -15,6 +15,8 @@ module.exports = async function handler(req, res) {
     if (req.method === 'POST') {
       const { login, senha, perfil, empresa_id } = req.body || {};
       if (!login || !senha || !perfil) return res.status(400).json({ error: 'login, senha e perfil obrigatorios.' });
+      const { data: existe } = await sb.from('usuarios').select('id').eq('login', login).maybeSingle();
+      if (existe) return res.status(409).json({ error: 'Login "' + login + '" ja existe. Escolha outro.' });
       const { error } = await sb.from('usuarios').insert({ login, senha, perfil, empresa_id: empresa_id || null });
       if (error) throw error;
       return res.status(201).json({ ok: true });

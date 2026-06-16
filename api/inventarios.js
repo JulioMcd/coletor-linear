@@ -5,7 +5,7 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const { empresa_id } = req.query;
-      let q = sb.from('inventarios').select('*, usuarios(login), produtos(id, quantidade_coletada)').order('data_importacao', { ascending: false });
+      let q = sb.from('inventarios').select('*, usuarios(login), produtos(id, quantidade_coletada, data_coleta)').order('data_importacao', { ascending: false });
       if (empresa_id) q = q.eq('empresa_id', empresa_id);
       const { data, error } = await q;
       if (error) throw error;
@@ -14,6 +14,11 @@ module.exports = async function handler(req, res) {
         gerador_login: i.usuarios?.login || null,
         total_produtos: i.produtos?.length || 0,
         total_coletados: i.produtos?.filter(p => p.quantidade_coletada > 0).length || 0,
+        ultima_coleta: i.produtos
+          ?.filter(p => p.data_coleta)
+          .map(p => p.data_coleta)
+          .sort()
+          .pop() || null,
         usuarios: undefined,
         produtos: undefined
       }));

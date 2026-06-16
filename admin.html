@@ -109,7 +109,7 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
   <div class="section-header"><h2>Historico de Inventarios</h2></div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Empresa</th><th>Gerador</th><th>Status</th><th>Importacao</th><th>Inicio</th><th>Fim</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>Empresa</th><th>Gerador</th><th>Status</th><th>Importacao</th><th>Tempo</th><th>Ultima Alt.</th><th></th></tr></thead>
       <tbody id="tbInventarios"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
     </table>
   </div>
@@ -179,6 +179,20 @@ function setTab(i) {
   if (i === 3) carregarOnline();
 }
 
+function tempoDecorrido(isoInicio, isoFim) {
+  if (!isoInicio) return '-';
+  var s = /[Z+]/.test(isoInicio.slice(-6)) ? isoInicio : isoInicio + 'Z';
+  var fim = isoFim ? ((/[Z+]/.test(isoFim.slice(-6)) ? isoFim : isoFim + 'Z')) : null;
+  var diff = (fim ? new Date(fim) : new Date()) - new Date(s);
+  if (diff < 0) return '-';
+  var min = Math.floor(diff / 60000);
+  var h = Math.floor(min / 60);
+  var d = Math.floor(h / 24);
+  if (d > 0) return d + 'd ' + (h % 24) + 'h';
+  if (h > 0) return h + 'h ' + (min % 60) + 'min';
+  return min + 'min';
+}
+
 function fmtDate(iso) {
   if (!iso) return '-';
   var s = /[Z+]/.test(iso.slice(-6)) ? iso : iso + 'Z';
@@ -240,7 +254,8 @@ function carregarInventarios() {
         : '';
       return '<tr><td>#' + r.id + '</td><td>' + (r.empresa_id || '-') + '</td><td>' + (r.gerador_login || '-') +
         '</td><td>' + badgeStatus(r.status) + '</td><td>' + fmtDate(r.data_importacao) +
-        '</td><td>' + fmtDate(r.inicio_contagem) + '</td><td>' + fmtDate(r.fim_contagem) +
+        '</td><td style="color:var(--jc-green);font-weight:600">' + tempoDecorrido(r.inicio_contagem, r.fim_contagem) +
+        '</td><td style="font-size:12px;color:var(--muted)">' + fmtDate(r.ultima_coleta) +
         '</td><td>' + btnAuditar + '</td></tr>';
     }).join('');
   }).catch(function() { tb.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar</td></tr>'; });
