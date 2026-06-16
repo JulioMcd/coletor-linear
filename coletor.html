@@ -316,7 +316,7 @@ td.qtd  { text-align: center; }
 
 <div class="table-wrap">
   <table>
-    <thead><tr><th>Cód</th><th>Produto</th><th>UN</th><th class="qcol">Qtd</th><th>Coletor</th><th>Cód. Barras</th><th>Data</th></tr></thead>
+    <thead><tr><th>Cód</th><th>Produto</th><th>UN</th><th class="qcol">Qtd</th><th>Cód. Barras</th><th>Data</th></tr></thead>
     <tbody id="tbody"></tbody>
   </table>
   <div class="empty" id="empty" style="display:none"></div>
@@ -440,7 +440,6 @@ function renderTable() {
       <td class="qtd">${p.qtd>0
         ? `<span class="badge-qtd" onclick="openModal(${p.id})">${fmt(p.qtd)}</span>`
         : `<span class="badge-add" onclick="openModal(${p.id})">+ somar</span>`}</td>
-      <td class="td-user">${coletor || ''}</td>
       <td class="td-ean">${p.ean || ''}</td>
       <td class="td-data">${dataFmt}</td>
     </tr>`;
