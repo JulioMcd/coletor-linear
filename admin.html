@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel ADM - JC Sistema</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root { --jc-green:#359483; --jc-red:#C7353A; --bg:#000; --card:#0d0d0d; --card2:#1a1a1a; --border:#262626; --text:#fff; --muted:#a3a3a3; }
@@ -59,6 +60,14 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
 .stat-card .val { font-size:28px; font-weight:800; margin-bottom:4px; }
 .stat-card .lbl { font-size:12px; color:var(--muted); }
 .empty { text-align:center; padding:40px; color:var(--muted); font-size:14px; }
+.upload-zone { border:2px dashed var(--border); border-radius:12px; padding:28px 20px; text-align:center; cursor:pointer; transition:border-color .2s; margin:14px 0; }
+.upload-zone:hover, .upload-zone.dragover { border-color:var(--jc-green); }
+.upload-zone p { font-size:13px; color:var(--muted); }
+.upload-zone p strong { color:var(--jc-green); }
+.preview-mini { max-height:180px; overflow-y:auto; background:var(--card2); border-radius:8px; margin-bottom:12px; font-size:12px; }
+.preview-mini table { width:100%; border-collapse:collapse; }
+.preview-mini th { padding:6px 10px; color:var(--muted); font-size:10px; text-transform:uppercase; background:var(--card); }
+.preview-mini td { padding:6px 10px; border-bottom:1px solid var(--border); color:var(--text); }
 </style>
 </head>
 <body>
@@ -106,11 +115,14 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
 
 <!-- INVENTARIOS -->
 <div class="panel" id="panel-2">
-  <div class="section-header"><h2>Historico de Inventarios</h2></div>
+  <div class="section-header">
+    <h2>Historico de Inventarios</h2>
+    <button class="btn-add" onclick="abrirModalCriarInv()">+ Criar Inventario</button>
+  </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Empresa</th><th>Gerador</th><th>Status</th><th>Importacao</th><th>Tempo</th><th>Ultima Alt.</th><th></th></tr></thead>
-      <tbody id="tbInventarios"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+      <thead><tr><th>ID</th><th>Nome</th><th>Empresa</th><th>Gerador</th><th>Status</th><th>Importacao</th><th>Tempo</th><th>Ultima Alt.</th><th></th></tr></thead>
+      <tbody id="tbInventarios"><tr><td colspan="9" class="empty">Carregando...</td></tr></tbody>
     </table>
   </div>
 </div>
@@ -146,6 +158,36 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
     <div class="modal-btns">
       <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
       <button class="btn-confirm" onclick="salvarUsuario()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CRIAR INVENTARIO (ADM) -->
+<div class="modal-bg" id="modalCriarInv">
+  <div class="modal" style="max-width:520px;max-height:92vh;overflow-y:auto">
+    <h3>Novo Inventario</h3>
+    <div class="field">
+      <label>Empresa *</label>
+      <select id="invEmpresa"></select>
+    </div>
+    <div class="field">
+      <label>Nome do Inventario *</label>
+      <input id="invNome" placeholder="Ex: Inventario Junho 2026">
+    </div>
+    <div class="upload-zone" id="invDropZone" onclick="document.getElementById('invFile').click()">
+      <p>📂 Clique ou arraste um <strong>CSV ou XLSX</strong></p>
+      <p id="invFileInfo" style="margin-top:6px;font-size:12px"></p>
+      <input type="file" id="invFile" accept=".csv,.xlsx,.xls" style="display:none">
+    </div>
+    <div class="preview-mini" id="invPreviewWrap" style="display:none">
+      <table>
+        <thead><tr><th>#</th><th>Codigo</th><th>Descricao</th><th>UN</th></tr></thead>
+        <tbody id="invPreviewBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-confirm" id="btnCriarInv" onclick="criarInventarioAdm()">Criar e Importar</button>
     </div>
   </div>
 </div>
@@ -247,18 +289,24 @@ function carregarEmpresas() {
 function carregarInventarios() {
   var tb = document.getElementById('tbInventarios');
   fetch('/api/inventarios').then(function(r) { return r.json(); }).then(function(rows) {
-    if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum inventario encontrado</td></tr>'; return; }
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhum inventario encontrado</td></tr>'; return; }
     tb.innerHTML = rows.map(function(r) {
       var btnAuditar = r.status === 'EM_ANDAMENTO'
         ? '<a href="/coletor" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none;">&#x1F50D; Auditar</a>'
         : '';
-      return '<tr><td>#' + r.id + '</td><td>' + (r.empresa_id || '-') + '</td><td>' + (r.gerador_login || '-') +
-        '</td><td>' + badgeStatus(r.status) + '</td><td>' + fmtDate(r.data_importacao) +
-        '</td><td style="color:var(--jc-green);font-weight:600">' + tempoDecorrido(r.inicio_contagem, r.fim_contagem) +
-        '</td><td style="font-size:12px;color:var(--muted)">' + fmtDate(r.ultima_coleta) +
-        '</td><td>' + btnAuditar + '</td></tr>';
+      return '<tr>' +
+        '<td>#' + r.id + '</td>' +
+        '<td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.nome || '<span style="color:var(--muted)">—</span>') + '</td>' +
+        '<td>' + (r.empresa_nome || r.empresa_id || '-') + '</td>' +
+        '<td>' + (r.gerador_login || '-') + '</td>' +
+        '<td>' + badgeStatus(r.status) + '</td>' +
+        '<td>' + fmtDate(r.data_importacao) + '</td>' +
+        '<td style="color:var(--jc-green);font-weight:600">' + tempoDecorrido(r.inicio_contagem, r.fim_contagem) + '</td>' +
+        '<td style="font-size:12px;color:var(--muted)">' + fmtDate(r.ultima_coleta) + '</td>' +
+        '<td>' + btnAuditar + '</td>' +
+        '</tr>';
     }).join('');
-  }).catch(function() { tb.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar</td></tr>'; });
+  }).catch(function() { tb.innerHTML = '<tr><td colspan="9" class="empty">Erro ao carregar</td></tr>'; });
 }
 
 function carregarOnline() {
@@ -330,6 +378,159 @@ function deletarEmpresa(id) {
 }
 
 function logout() { sessionStorage.removeItem('jc_user'); location.href = '/'; }
+
+// ── CRIAR INVENTARIO (ADM) ──────────────────────────────────────
+var invProdutos = [];
+
+function abrirModalCriarInv() {
+  invProdutos = [];
+  document.getElementById('invNome').value = '';
+  document.getElementById('invFile').value = '';
+  document.getElementById('invFileInfo').textContent = '';
+  document.getElementById('invPreviewWrap').style.display = 'none';
+  var sel = document.getElementById('invEmpresa');
+  sel.innerHTML = '<option value="">Selecione a empresa</option>' +
+    empresas.map(function(e) { return '<option value="' + e.id + '">' + e.nome + '</option>'; }).join('');
+  document.getElementById('modalCriarInv').classList.add('show');
+}
+
+var invDz = null;
+document.addEventListener('DOMContentLoaded', function() {
+  invDz = document.getElementById('invDropZone');
+  if (invDz) {
+    invDz.addEventListener('dragover', function(e) { e.preventDefault(); invDz.classList.add('dragover'); });
+    invDz.addEventListener('dragleave', function() { invDz.classList.remove('dragover'); });
+    invDz.addEventListener('drop', function(e) {
+      e.preventDefault(); invDz.classList.remove('dragover');
+      var f = e.dataTransfer.files[0];
+      if (f) invProcessFile(f);
+    });
+  }
+  document.getElementById('invFile').addEventListener('change', function(e) {
+    if (e.target.files[0]) invProcessFile(e.target.files[0]);
+  });
+});
+
+function invProcessFile(file) {
+  var ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    var reader = new FileReader();
+    reader.onload = function(e) { invParseCSV(e.target.result); };
+    reader.readAsText(file, 'UTF-8');
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    var reader = new FileReader();
+    reader.onload = function(e) { invParseXLSX(e.target.result); };
+    reader.readAsArrayBuffer(file);
+  } else {
+    alert('Formato invalido. Use CSV ou XLSX.');
+  }
+}
+
+function invFindCol(header, names) {
+  for (var i = 0; i < names.length; i++) {
+    var idx = header.indexOf(names[i]);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function invParseCSV(text) {
+  var lines = text.split('\n').filter(function(l) { return l.trim(); });
+  if (lines.length < 2) { alert('CSV vazio ou sem dados.'); return; }
+  var sep = lines[0].includes(';') ? ';' : ',';
+  var header = lines[0].split(sep).map(function(h) { return h.trim().toLowerCase().replace(/['"]/g, ''); });
+  var ci = invFindCol(header, ['codigo','code','cod','item']);
+  var di = invFindCol(header, ['descricao','nome','description','produto','desc']);
+  var ui = invFindCol(header, ['unidade','un','unit','und']);
+  var ei = invFindCol(header, ['ean','barcode','codigo_barras','gtin']);
+  var result = [];
+  for (var i = 1; i < lines.length; i++) {
+    var cols = lines[i].split(sep).map(function(c) { return c.trim().replace(/^["']|["']$/g,''); });
+    var cod = ci >= 0 ? cols[ci] : String(i);
+    var desc = di >= 0 ? cols[di] : '';
+    if (!cod && !desc) continue;
+    result.push({ codigo: cod, descricao: desc, unidade: ui >= 0 ? (cols[ui]||'PC') : 'PC', ean: ei >= 0 ? cols[ei] : '' });
+  }
+  invShowPreview(result);
+}
+
+function invParseXLSX(buf) {
+  try {
+    var wb = XLSX.read(buf, { type: 'array' });
+    var ws = wb.Sheets[wb.SheetNames[0]];
+    var data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    if (data.length < 2) { alert('Planilha vazia.'); return; }
+    var header = data[0].map(function(h) { return String(h).trim().toLowerCase(); });
+    var ci = invFindCol(header, ['codigo','code','cod','item']);
+    var di = invFindCol(header, ['descricao','nome','description','produto','desc']);
+    var ui = invFindCol(header, ['unidade','un','unit','und']);
+    var ei = invFindCol(header, ['ean','barcode','codigo_barras','gtin']);
+    var result = [];
+    for (var i = 1; i < data.length; i++) {
+      var row = data[i];
+      var cod = ci >= 0 ? String(row[ci]||'').trim() : String(i);
+      var desc = di >= 0 ? String(row[di]||'').trim() : '';
+      if (!cod && !desc) continue;
+      result.push({ codigo: cod, descricao: desc, unidade: ui >= 0 ? String(row[ui]||'PC').trim() : 'PC', ean: ei >= 0 ? String(row[ei]||'').trim() : '' });
+    }
+    invShowPreview(result);
+  } catch(e) { alert('Erro ao ler XLSX: ' + e.message); }
+}
+
+function invShowPreview(rows) {
+  if (!rows.length) { alert('Nenhum produto encontrado no arquivo.'); return; }
+  invProdutos = rows;
+  document.getElementById('invFileInfo').textContent = rows.length + ' produtos carregados';
+  var wrap = document.getElementById('invPreviewWrap');
+  var body = document.getElementById('invPreviewBody');
+  body.innerHTML = rows.slice(0, 50).map(function(p, i) {
+    return '<tr><td>' + (i+1) + '</td><td>' + p.codigo + '</td><td>' + p.descricao + '</td><td>' + p.unidade + '</td></tr>';
+  }).join('');
+  if (rows.length > 50) body.innerHTML += '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:8px">... e mais ' + (rows.length-50) + ' produtos</td></tr>';
+  wrap.style.display = 'block';
+}
+
+function criarInventarioAdm() {
+  var empresa_id = document.getElementById('invEmpresa').value;
+  var nome = document.getElementById('invNome').value.trim();
+  if (!empresa_id) { alert('Selecione a empresa.'); return; }
+  if (!nome) { alert('Informe o nome do inventario.'); return; }
+  if (!invProdutos.length) { alert('Importe um arquivo CSV ou XLSX com os produtos.'); return; }
+
+  var btn = document.getElementById('btnCriarInv');
+  btn.disabled = true;
+  btn.textContent = 'Criando...';
+
+  fetch('/api/inventarios', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ empresa_id: parseInt(empresa_id), gerador_id: user.id, nome: nome })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (!d.ok) throw new Error(d.error);
+    btn.textContent = 'Importando ' + invProdutos.length + ' produtos...';
+    return fetch('/api/produtos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventario_id: d.id, produtos: invProdutos })
+    });
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (!d.ok) throw new Error(d.error);
+    fecharModal();
+    carregarInventarios();
+    btn.disabled = false;
+    btn.textContent = 'Criar e Importar';
+    invProdutos = [];
+  })
+  .catch(function(e) {
+    alert('Erro: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Criar e Importar';
+  });
+}
 
 carregarEmpresas();
 carregarUsuarios();

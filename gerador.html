@@ -78,6 +78,11 @@ td { padding:9px 12px; }
 <div class="panel active" id="panel-0">
   <div class="info-bar" id="infoBar"></div>
 
+  <div style="margin-bottom:16px">
+    <label style="display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">Nome do Inventario *</label>
+    <input id="nomeInv" placeholder="Ex: Inventario Junho 2026" style="width:100%;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--jc-green)'" onblur="this.style.borderColor='var(--border)'">
+  </div>
+
   <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -114,7 +119,7 @@ td { padding:9px 12px; }
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Status</th><th>Importacao</th><th>Inicio</th><th>Produtos</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>Nome</th><th>Status</th><th>Importacao</th><th>Inicio</th><th>Produtos</th><th></th></tr></thead>
       <tbody id="tbInventarios"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
     </table>
   </div>
@@ -291,10 +296,13 @@ function limparPreview() {
   document.getElementById('btnImportar').disabled = true;
   document.getElementById('infoBar').classList.remove('show');
   document.getElementById('fileInput').value = '';
+  document.getElementById('nomeInv').value = '';
 }
 
 function importar() {
   if (!produtos.length) return;
+  var nome = document.getElementById('nomeInv').value.trim();
+  if (!nome) { toast('Informe o nome do inventario.', true); document.getElementById('nomeInv').focus(); return; }
   var btn = document.getElementById('btnImportar');
   btn.disabled = true;
   btn.textContent = 'Criando inventario...';
@@ -302,7 +310,7 @@ function importar() {
   fetch('/api/inventarios', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ empresa_id: user.empresa_id, gerador_id: user.id })
+    body: JSON.stringify({ empresa_id: user.empresa_id, gerador_id: user.id, nome: nome })
   })
   .then(function(r) { return r.json(); })
   .then(function(d) {
@@ -353,10 +361,10 @@ function carregarInventarios() {
       '<div class="stat-card"><div class="val">' + total + '</div><div class="lbl">Total</div></div>' +
       '<div class="stat-card"><div class="val" style="color:var(--jc-green)">' + andamento + '</div><div class="lbl">Em Andamento</div></div>' +
       '<div class="stat-card"><div class="val" style="color:var(--muted)">' + finalizado + '</div><div class="lbl">Finalizados</div></div>';
-    if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum inventario criado ainda</td></tr>'; return; }
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum inventario criado ainda</td></tr>'; return; }
     tb.innerHTML = rows.map(function(r) {
       var canFinish = r.status === 'EM_ANDAMENTO';
-      return '<tr><td>#' + r.id + '</td><td>' + badgeStatus(r.status) + '</td><td>' +
+      return '<tr><td>#' + r.id + '</td><td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.nome || '<span style="color:var(--muted)">—</span>') + '</td><td>' + badgeStatus(r.status) + '</td><td>' +
         fmtDate(r.data_importacao) + '</td><td>' + fmtDate(r.inicio_contagem) +
         '</td><td><span style="color:var(--jc-green)">' + (r.total_coletados || 0) + '</span><span style="color:var(--muted)">/' + (r.total_produtos || 0) + '</span></td><td>' +
         (canFinish ? '<button class="btn-finalizar" onclick="finalizar(' + r.id + ')">Finalizar</button>' : '') + '</td></tr>';

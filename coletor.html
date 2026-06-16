@@ -88,6 +88,8 @@ body {
 .stats b    { color: var(--accent-red); font-weight: 700; }
 .name-badge { background: var(--bg-card2); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; color: var(--accent-white); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all .2s; }
 .name-badge:hover { background: var(--accent-white); color: #000; }
+.btn-finalizar-cnt { background: rgba(230,57,70,0.15); border: 1px solid rgba(230,57,70,0.35); border-radius: 10px; padding: 6px 10px; color: var(--accent-red); font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all .2s; }
+.btn-finalizar-cnt:hover { background: rgba(230,57,70,0.3); }
 
 /* ── TOOLBAR ───────────────────────────────── */
 .toolbar {
@@ -266,6 +268,7 @@ td.qtd  { text-align: center; }
     Produtos: <span id="statDone">0</span>
   </div>
   <button class="online-badge" id="onlineBadge" onclick="mostrarOnline()">🟢 0</button>
+  <button class="btn-finalizar-cnt" id="btnFinalizarCnt" style="display:none" onclick="finalizarContagem()">⛔ Finalizar</button>
   <div style="position:relative">
     <button class="name-badge" id="nameBadge" onclick="toggleUserMenu()">👤 Usuário</button>
     <div id="userMenu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:#111;border:1px solid #2a2a2a;border-radius:12px;min-width:160px;z-index:300;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.9)">
@@ -944,6 +947,28 @@ if (!sessionUser.id) { window.location.href = '/'; }
 if (sessionUser.perfil === 'ADM') {
   const btnP = document.getElementById('btnPainel');
   if (btnP) btnP.style.display = 'block';
+}
+if (sessionUser.perfil === 'ADM' || sessionUser.perfil === 'GERADOR') {
+  const btnF = document.getElementById('btnFinalizarCnt');
+  if (btnF) btnF.style.display = '';
+}
+
+async function finalizarContagem() {
+  if (!currentInventarioId) { showToast('⚠️ Nenhum inventário ativo'); return; }
+  if (!confirm('Finalizar a contagem? Os conferentes não poderão mais registrar quantidades neste inventário.')) return;
+  try {
+    const r = await fetch('/api/inventarios', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: currentInventarioId, status: 'FINALIZADO', fim_contagem: new Date().toISOString() })
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    showToast('✅ Inventário finalizado! Redirecionando...');
+    setTimeout(() => { location.href = sessionUser.perfil === 'ADM' ? '/admin' : '/gerador'; }, 2000);
+  } catch(e) {
+    showToast('❌ Erro: ' + e.message);
+  }
 }
 
 let currentInventarioId = null;

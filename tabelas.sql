@@ -42,6 +42,9 @@ CREATE TABLE IF NOT EXISTS inventarios (
 -- Migração: adiciona last_seen se tabela já existir
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;
 
+-- Migração: adiciona nome ao inventario
+ALTER TABLE inventarios ADD COLUMN IF NOT EXISTS nome TEXT;
+
 -- 4. Tabela de Produtos
 CREATE TABLE IF NOT EXISTS produtos (
     id SERIAL PRIMARY KEY,
