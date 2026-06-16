@@ -12,9 +12,18 @@ module.exports = async function handler(req, res) {
     }
     if (req.method === 'GET') {
       const limit = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-      const { data, error } = await sb.from('usuarios').select('login').gte('last_seen', limit).order('login');
+      const { data, error } = await sb.from('usuarios')
+        .select('login, perfil, last_seen, empresas(nome)')
+        .gte('last_seen', limit)
+        .order('last_seen', { ascending: false });
       if (error) throw error;
-      return res.status(200).json({ usuarios: data.map(u => u.login) });
+      const usuarios = data.map(u => ({
+        login: u.login,
+        perfil: u.perfil,
+        last_seen: u.last_seen,
+        empresa_nome: u.empresas?.nome || ''
+      }));
+      return res.status(200).json({ usuarios, total: usuarios.length });
     }
     return res.status(405).json({ error: 'Method Not Allowed' });
   } catch (e) {

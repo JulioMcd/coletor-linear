@@ -857,12 +857,13 @@ function pollOnline() {
   fetch('/api/online').then(r => r.json()).then(res => {
     onlineUsers = res.usuarios || [];
     const badge = document.getElementById('onlineBadge');
-    if (badge) badge.textContent = '🟢 ' + (res.total || 0);
+    if (badge) badge.textContent = '🟢 ' + (res.total || onlineUsers.length || 0);
   }).catch(() => {});
 }
 function mostrarOnline() {
   if (!onlineUsers.length) { showToast('👥 Ninguém online no momento'); return; }
-  showToast('👥 Online (' + onlineUsers.length + '): ' + onlineUsers.join(', '));
+  const nomes = onlineUsers.map(u => typeof u === 'object' ? u.login : u);
+  showToast('👥 Online (' + nomes.length + '): ' + nomes.join(', '));
 }
 
 // ── NOME ─────────────────────────────────────────────────────

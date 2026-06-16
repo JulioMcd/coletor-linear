@@ -72,7 +72,7 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
   <div class="tab active" onclick="setTab(0)">Usuarios</div>
   <div class="tab" onclick="setTab(1)">Empresas</div>
   <div class="tab" onclick="setTab(2)">Inventarios</div>
-  <div class="tab" onclick="setTab(3)">Contagem</div>
+  <div class="tab" onclick="setTab(3)">Online</div>
 </div>
 
 <!-- USUARIOS -->
@@ -115,13 +115,18 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
   </div>
 </div>
 
-<!-- CONTAGEM -->
+<!-- ONLINE -->
 <div class="panel" id="panel-3">
-  <div class="section-header"><h2>Acesso a Contagem</h2></div>
-  <div id="contagemInfo" style="margin-bottom:24px"></div>
-  <a href="/coletor" style="display:block;background:var(--jc-green);border-radius:12px;padding:22px;text-align:center;color:#fff;font-size:16px;font-weight:700;text-decoration:none;max-width:420px;margin:0 auto;letter-spacing:0.3px">
-    &#x1F4E6; Entrar na Tela de Contagem
-  </a>
+  <div class="section-header">
+    <h2>Usuarios Online</h2>
+    <button class="btn-add" onclick="carregarOnline()">Atualizar</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Usuario</th><th>Empresa</th><th>Perfil</th><th>Ultimo acesso</th></tr></thead>
+      <tbody id="tbOnline"><tr><td colspan="4" class="empty">Carregando...</td></tr></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- MODAL USUARIO -->
@@ -171,7 +176,7 @@ function setTab(i) {
   if (i === 0) carregarUsuarios();
   if (i === 1) carregarEmpresas();
   if (i === 2) carregarInventarios();
-  if (i === 3) carregarContagemInfo();
+  if (i === 3) carregarOnline();
 }
 
 function fmtDate(iso) {
@@ -241,25 +246,26 @@ function carregarInventarios() {
   }).catch(function() { tb.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar</td></tr>'; });
 }
 
-function carregarContagemInfo() {
-  var el = document.getElementById('contagemInfo');
-  el.innerHTML = '';
-  fetch('/api/inventarios' + (user.empresa_id ? '?empresa_id=' + user.empresa_id : ''))
-    .then(function(r) { return r.json(); })
-    .then(function(rows) {
-      var inv = rows.find(function(r) { return r.status === 'EM_ANDAMENTO'; }) || rows[0];
-      if (!inv) { el.innerHTML = '<div class="empty">Nenhum inventario ativo no momento</div>'; return; }
-      var pct = inv.total_produtos > 0 ? Math.round((inv.total_coletados / inv.total_produtos) * 100) : 0;
-      el.innerHTML =
-        '<div class="stat-row">' +
-        '<div class="stat-card"><div class="val" style="color:var(--jc-green)">' + (inv.total_coletados || 0) + '</div><div class="lbl">Produtos Contados</div></div>' +
-        '<div class="stat-card"><div class="val">' + (inv.total_produtos || 0) + '</div><div class="lbl">Total no Inventario</div></div>' +
-        '<div class="stat-card"><div class="val">' + pct + '%</div><div class="lbl">Progresso</div></div>' +
-        '<div class="stat-card"><div class="val">' + badgeStatus(inv.status) + '</div><div class="lbl">Status</div></div>' +
-        '</div>' +
-        '<div style="font-size:12px;color:var(--muted);margin-bottom:20px">Inventario #' + inv.id + ' &mdash; importado em ' + fmtDate(inv.data_importacao) + '</div>';
-    })
-    .catch(function() { el.innerHTML = '<div class="empty">Erro ao carregar inventario</div>'; });
+function carregarOnline() {
+  var tb = document.getElementById('tbOnline');
+  tb.innerHTML = '<tr><td colspan="4" class="empty">Carregando...</td></tr>';
+  fetch('/api/online').then(function(r) { return r.json(); }).then(function(data) {
+    var lista = data.usuarios || [];
+    if (!lista.length) {
+      tb.innerHTML = '<tr><td colspan="4" class="empty">Nenhum usuario online no momento</td></tr>';
+      return;
+    }
+    tb.innerHTML = lista.map(function(u) {
+      return '<tr>' +
+        '<td><strong>' + u.login + '</strong></td>' +
+        '<td>' + (u.empresa_nome || '-') + '</td>' +
+        '<td>' + badgePerfil(u.perfil || '') + '</td>' +
+        '<td style="color:var(--muted);font-size:12px">' + fmtDate(u.last_seen) + '</td>' +
+        '</tr>';
+    }).join('');
+  }).catch(function() {
+    tb.innerHTML = '<tr><td colspan="4" class="empty">Erro ao carregar</td></tr>';
+  });
 }
 
 function abrirModalUsuario() {
