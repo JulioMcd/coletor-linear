@@ -558,30 +558,20 @@ function loadLocal() {
 
 function zerarTudo() {
   if (!confirm('Tem certeza que deseja ZERAR TODAS as contagens (de todos os usuários)?')) return;
-  // bloqueia merges por alguns segundos (evita corrida com o DELETE)
-  zeroGuardUntil = Date.now() + 8000;
-  // marca o zero localmente JÁ (limpa em todos os polls de todos os aparelhos)
-  const agora = new Date().toISOString();
-  localStorage.setItem('zeroedAt', agora);
-  localStorage.setItem('processedZero', agora);
-  localStorage.setItem('lastActivity', '1970-01-01T00:00:00.000Z');
+  if (!currentInventarioId) { showToast('⚠️ Nenhum inventário ativo'); return; }
   products.forEach(p => { p.qtd = 0; });
   itemDates = {};
   serverUserData = {};
   lastPoll = '';
   saveLocal(); renderTable();
   showToast('🗑 Zerando inventário...');
-  fetch('/api/inventario', { method: 'DELETE' })
+  fetch('/api/coleta?inventario_id=' + currentInventarioId, { method: 'DELETE' })
     .then(r => r.json())
     .then(res => {
-      // usa o timestamp do servidor como verdade (mais recente vence)
-      const ts = res.zeroed_at || agora;
-      if (ts > (localStorage.getItem('zeroedAt') || '')) {
-        localStorage.setItem('zeroedAt', ts);
-        localStorage.setItem('processedZero', ts);
-      }
+      if (!res.ok) throw new Error(res.error);
       showToast('🗑 Inventário zerado em todos os dispositivos!');
-    }).catch(() => showToast('⚠️ Falha ao zerar no servidor'));
+    })
+    .catch(() => showToast('⚠️ Falha ao zerar no servidor'));
 }
 
 // ── SYNC OPCIONAL COM SERVIDOR (mesmo padrão do coletor antigo) ─
