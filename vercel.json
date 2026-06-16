@@ -1,28 +1,8 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "api/login.js", "use": "@vercel/node" },
-    { "src": "api/usuarios.js", "use": "@vercel/node" },
-    { "src": "api/empresas.js", "use": "@vercel/node" },
-    { "src": "api/inventarios.js", "use": "@vercel/node" },
-    { "src": "api/produtos.js", "use": "@vercel/node" },
-    { "src": "api/coleta.js", "use": "@vercel/node" },
-    { "src": "api/online.js", "use": "@vercel/node" },
-    { "src": "server.js", "use": "@vercel/node" }
-  ],
-  "routes": [
-    { "src": "/api/login", "dest": "/api/login.js" },
-    { "src": "/api/usuarios", "dest": "/api/usuarios.js" },
-    { "src": "/api/empresas", "dest": "/api/empresas.js" },
-    { "src": "/api/inventarios", "dest": "/api/inventarios.js" },
-    { "src": "/api/produtos", "dest": "/api/produtos.js" },
-    { "src": "/api/coleta", "dest": "/api/coleta.js" },
-    { "src": "/api/online", "dest": "/api/online.js" },
-    { "src": "/admin", "dest": "/admin.html" },
-    { "src": "/gerador", "dest": "/gerador.html" },
-    { "src": "/coletor", "dest": "/coletor.html" },
-    { "src": "/login", "dest": "/index.html" },
-    { "src": "/(.*\\.html)", "dest": "/$1" },
-    { "src": "/(.*)", "dest": "/server.js" }
+  "rewrites": [
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/gerador", "destination": "/gerador.html" },
+    { "source": "/coletor", "destination": "/coletor.html" },
+    { "source": "/login", "destination": "/index.html" }
   ]
 }
