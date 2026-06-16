@@ -224,6 +224,7 @@ function parseCSV(text) {
   var di = findCol(header, ['descricao', 'descricao', 'nome', 'description', 'produto', 'desc']);
   var ui = findCol(header, ['unidade', 'un', 'unit', 'und']);
   var ei = findCol(header, ['ean', 'barcode', 'codigo_barras', 'gtin']);
+  if (ci < 0 && di < 0) { ci = 0; di = 1; ui = 2; ei = 3; }
   var result = [];
   for (var i = 1; i < lines.length; i++) {
     var cols = splitCSVLine(lines[i], sep);
@@ -260,6 +261,7 @@ function parseXLSX(buf) {
     var di = findCol(header, ['descricao', 'descricao', 'nome', 'description', 'produto', 'desc']);
     var ui = findCol(header, ['unidade', 'un', 'unit', 'und']);
     var ei = findCol(header, ['ean', 'barcode', 'codigo_barras', 'gtin']);
+    if (ci < 0 && di < 0) { ci = 0; di = 1; ui = 2; ei = 3; }
     var result = [];
     for (var i = 1; i < data.length; i++) {
       var row = data[i];
@@ -341,7 +343,7 @@ function importar() {
 }
 
 function enviarProdutosEmLotes(invId, lista, btn, labelOriginal) {
-  var LOTE = 300;
+  var LOTE = 1000;
   var chunks = [];
   for (var i = 0; i < lista.length; i += LOTE) chunks.push(lista.slice(i, i + LOTE));
   var total = 0;
