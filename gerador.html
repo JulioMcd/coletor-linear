@@ -325,18 +325,10 @@ function importar() {
   .then(function(r) { return r.json(); })
   .then(function(d) {
     if (!d.ok) throw new Error(d.error);
-    var invId = d.id;
-    btn.textContent = 'Enviando ' + produtos.length + ' produtos...';
-    return fetch('/api/produtos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ inventario_id: invId, produtos: produtos })
-    });
+    return enviarProdutosEmLotes(d.id, produtos, btn, 'Criar Inventario e Importar Produtos');
   })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (!d.ok) throw new Error(d.error);
-    toast('Inventario criado com ' + d.inseridos + ' produtos!');
+  .then(function(total) {
+    toast('Inventario criado com ' + total + ' produtos!');
     limparPreview();
     btn.textContent = 'Criar Inventario e Importar Produtos';
     setTab(1);
@@ -346,6 +338,31 @@ function importar() {
     btn.disabled = false;
     btn.textContent = 'Criar Inventario e Importar Produtos';
   });
+}
+
+function enviarProdutosEmLotes(invId, lista, btn, labelOriginal) {
+  var LOTE = 300;
+  var chunks = [];
+  for (var i = 0; i < lista.length; i += LOTE) chunks.push(lista.slice(i, i + LOTE));
+  var total = 0;
+  var idx = 0;
+  function next() {
+    if (idx >= chunks.length) return Promise.resolve(total);
+    btn.textContent = 'Enviando ' + Math.min((idx + 1) * LOTE, lista.length) + '/' + lista.length + ' produtos...';
+    return fetch('/api/produtos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventario_id: invId, produtos: chunks[idx] })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.ok) throw new Error(d.error);
+      total += d.inseridos;
+      idx++;
+      return next();
+    });
+  }
+  return next();
 }
 
 function fmtDate(iso) {

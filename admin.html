@@ -522,16 +522,9 @@ function criarInventarioAdm() {
   .then(function(r) { return r.json(); })
   .then(function(d) {
     if (!d.ok) throw new Error(d.error);
-    btn.textContent = 'Importando ' + invProdutos.length + ' produtos...';
-    return fetch('/api/produtos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ inventario_id: d.id, produtos: invProdutos })
-    });
+    return admEnviarLotes(d.id, invProdutos, btn);
   })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (!d.ok) throw new Error(d.error);
+  .then(function(total) {
     fecharModal();
     carregarInventarios();
     btn.disabled = false;
@@ -543,6 +536,27 @@ function criarInventarioAdm() {
     btn.disabled = false;
     btn.textContent = 'Criar e Importar';
   });
+}
+
+function admEnviarLotes(invId, lista, btn) {
+  var LOTE = 300;
+  var chunks = [];
+  for (var i = 0; i < lista.length; i += LOTE) chunks.push(lista.slice(i, i + LOTE));
+  var total = 0; var idx = 0;
+  function next() {
+    if (idx >= chunks.length) return Promise.resolve(total);
+    btn.textContent = 'Enviando ' + Math.min((idx + 1) * LOTE, lista.length) + '/' + lista.length + '...';
+    return fetch('/api/produtos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventario_id: invId, produtos: chunks[idx] })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (!d.ok) throw new Error(d.error);
+      total += d.inseridos; idx++;
+      return next();
+    });
+  }
+  return next();
 }
 
 carregarEmpresas();
