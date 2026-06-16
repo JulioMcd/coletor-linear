@@ -72,8 +72,7 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
   <div class="tab active" onclick="setTab(0)">Usuarios</div>
   <div class="tab" onclick="setTab(1)">Empresas</div>
   <div class="tab" onclick="setTab(2)">Inventarios</div>
-  <div class="tab" onclick="setTab(3)">Online</div>
-  <div class="tab" onclick="setTab(4)">Contagem</div>
+  <div class="tab" onclick="setTab(3)">Contagem</div>
 </div>
 
 <!-- USUARIOS -->
@@ -110,30 +109,19 @@ td { padding:11px 14px; color:var(--text); vertical-align:middle; }
   <div class="section-header"><h2>Historico de Inventarios</h2></div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Empresa</th><th>Gerador</th><th>Status</th><th>Importacao</th><th>Inicio</th><th>Fim</th></tr></thead>
+      <thead><tr><th>ID</th><th>Empresa</th><th>Gerador</th><th>Status</th><th>Importacao</th><th>Inicio</th><th>Fim</th><th></th></tr></thead>
       <tbody id="tbInventarios"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
     </table>
   </div>
 </div>
 
 <!-- CONTAGEM -->
-<div class="panel" id="panel-4">
+<div class="panel" id="panel-3">
   <div class="section-header"><h2>Acesso a Contagem</h2></div>
   <div id="contagemInfo" style="margin-bottom:24px"></div>
   <a href="/coletor" style="display:block;background:var(--jc-green);border-radius:12px;padding:22px;text-align:center;color:#fff;font-size:16px;font-weight:700;text-decoration:none;max-width:420px;margin:0 auto;letter-spacing:0.3px">
     &#x1F4E6; Entrar na Tela de Contagem
   </a>
-</div>
-
-<!-- ONLINE -->
-<div class="panel" id="panel-3">
-  <div class="section-header">
-    <h2>Usuarios Online</h2>
-    <button class="btn-add" onclick="carregarOnline()">Atualizar</button>
-  </div>
-  <div class="table-wrap">
-    <div class="online-list" id="onlineList"><span class="empty" style="padding:20px">Carregando...</span></div>
-  </div>
 </div>
 
 <!-- MODAL USUARIO -->
@@ -183,8 +171,7 @@ function setTab(i) {
   if (i === 0) carregarUsuarios();
   if (i === 1) carregarEmpresas();
   if (i === 2) carregarInventarios();
-  if (i === 3) carregarOnline();
-  if (i === 4) carregarContagemInfo();
+  if (i === 3) carregarContagemInfo();
 }
 
 function fmtDate(iso) {
@@ -194,26 +181,6 @@ function fmtDate(iso) {
   return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-function carregarContagemInfo() {
-  var el = document.getElementById('contagemInfo');
-  el.innerHTML = '<div class="empty" style="padding:20px">Carregando...</div>';
-  fetch('/api/inventarios' + (user.empresa_id ? '?empresa_id=' + user.empresa_id : ''))
-    .then(function(r) { return r.json(); })
-    .then(function(rows) {
-      var inv = rows.find(function(r) { return r.status === 'EM_ANDAMENTO'; }) || rows[0];
-      if (!inv) { el.innerHTML = '<div class="empty">Nenhum inventario ativo no momento</div>'; return; }
-      var pct = inv.total_produtos > 0 ? Math.round((inv.total_coletados / inv.total_produtos) * 100) : 0;
-      el.innerHTML =
-        '<div class="stat-row">' +
-        '<div class="stat-card"><div class="val" style="color:var(--jc-green)">' + (inv.total_coletados || 0) + '</div><div class="lbl">Produtos Contados</div></div>' +
-        '<div class="stat-card"><div class="val">' + (inv.total_produtos || 0) + '</div><div class="lbl">Total no Inventario</div></div>' +
-        '<div class="stat-card"><div class="val">' + pct + '%</div><div class="lbl">Progresso</div></div>' +
-        '<div class="stat-card"><div class="val">' + badgeStatus(inv.status) + '</div><div class="lbl">Status</div></div>' +
-        '</div>' +
-        '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Inventario #' + inv.id + ' &mdash; importado em ' + fmtDate(inv.data_importacao) + '</div>';
-    })
-    .catch(function() { el.innerHTML = '<div class="empty">Erro ao carregar inventario</div>'; });
-}
 
 function badgePerfil(p) {
   var m = { ADM: 'adm', GERADOR: 'gerador', CONFERENTE: 'conferente' };
@@ -263,24 +230,36 @@ function carregarInventarios() {
   fetch('/api/inventarios').then(function(r) { return r.json(); }).then(function(rows) {
     if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum inventario encontrado</td></tr>'; return; }
     tb.innerHTML = rows.map(function(r) {
+      var btnAuditar = r.status === 'EM_ANDAMENTO'
+        ? '<a href="/coletor" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none;">&#x1F50D; Auditar</a>'
+        : '';
       return '<tr><td>#' + r.id + '</td><td>' + (r.empresa_id || '-') + '</td><td>' + (r.gerador_login || '-') +
         '</td><td>' + badgeStatus(r.status) + '</td><td>' + fmtDate(r.data_importacao) +
-        '</td><td>' + fmtDate(r.inicio_contagem) + '</td><td>' + fmtDate(r.fim_contagem) + '</td></tr>';
+        '</td><td>' + fmtDate(r.inicio_contagem) + '</td><td>' + fmtDate(r.fim_contagem) +
+        '</td><td>' + btnAuditar + '</td></tr>';
     }).join('');
   }).catch(function() { tb.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar</td></tr>'; });
 }
 
-function carregarOnline() {
-  var el = document.getElementById('onlineList');
-  fetch('/api/online').then(function(r) { return r.json(); }).then(function(data) {
-    if (!data.usuarios || !data.usuarios.length) {
-      el.innerHTML = '<span style="padding:20px;color:var(--muted)">Nenhum usuario online</span>';
-      return;
-    }
-    el.innerHTML = data.usuarios.map(function(n) {
-      return '<div class="online-chip">&#x1F7E2; ' + n + '</div>';
-    }).join('');
-  }).catch(function() { el.innerHTML = '<span style="padding:20px;color:var(--muted)">Erro ao carregar</span>'; });
+function carregarContagemInfo() {
+  var el = document.getElementById('contagemInfo');
+  el.innerHTML = '';
+  fetch('/api/inventarios' + (user.empresa_id ? '?empresa_id=' + user.empresa_id : ''))
+    .then(function(r) { return r.json(); })
+    .then(function(rows) {
+      var inv = rows.find(function(r) { return r.status === 'EM_ANDAMENTO'; }) || rows[0];
+      if (!inv) { el.innerHTML = '<div class="empty">Nenhum inventario ativo no momento</div>'; return; }
+      var pct = inv.total_produtos > 0 ? Math.round((inv.total_coletados / inv.total_produtos) * 100) : 0;
+      el.innerHTML =
+        '<div class="stat-row">' +
+        '<div class="stat-card"><div class="val" style="color:var(--jc-green)">' + (inv.total_coletados || 0) + '</div><div class="lbl">Produtos Contados</div></div>' +
+        '<div class="stat-card"><div class="val">' + (inv.total_produtos || 0) + '</div><div class="lbl">Total no Inventario</div></div>' +
+        '<div class="stat-card"><div class="val">' + pct + '%</div><div class="lbl">Progresso</div></div>' +
+        '<div class="stat-card"><div class="val">' + badgeStatus(inv.status) + '</div><div class="lbl">Status</div></div>' +
+        '</div>' +
+        '<div style="font-size:12px;color:var(--muted);margin-bottom:20px">Inventario #' + inv.id + ' &mdash; importado em ' + fmtDate(inv.data_importacao) + '</div>';
+    })
+    .catch(function() { el.innerHTML = '<div class="empty">Erro ao carregar inventario</div>'; });
 }
 
 function abrirModalUsuario() {

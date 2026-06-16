@@ -266,7 +266,13 @@ td.qtd  { text-align: center; }
     Produtos: <span id="statDone">0</span>
   </div>
   <button class="online-badge" id="onlineBadge" onclick="mostrarOnline()">🟢 0</button>
-  <button class="name-badge" id="nameBadge" onclick="askName()">👤 Usuário</button>
+  <div style="position:relative">
+    <button class="name-badge" id="nameBadge" onclick="toggleUserMenu()">👤 Usuário</button>
+    <div id="userMenu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);background:#111;border:1px solid #2a2a2a;border-radius:12px;min-width:160px;z-index:300;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.9)">
+      <button onclick="askName();toggleUserMenu()" style="display:block;width:100%;padding:13px 16px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:#fff;text-align:left">✏️ Alterar nome</button>
+      <button onclick="sairColetor()" style="display:block;width:100%;padding:13px 16px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:#E63946;text-align:left;border-top:1px solid #222">🚪 Sair</button>
+    </div>
+  </div>
 </div>
 
 <div class="toolbar">
@@ -860,6 +866,22 @@ function mostrarOnline() {
 }
 
 // ── NOME ─────────────────────────────────────────────────────
+function toggleUserMenu() {
+  var m = document.getElementById('userMenu');
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+function sairColetor() {
+  sessionStorage.removeItem('jc_user');
+  location.href = '/';
+}
+document.addEventListener('click', function(e) {
+  var badge = document.getElementById('nameBadge');
+  var menu = document.getElementById('userMenu');
+  if (menu && badge && !badge.contains(e.target) && !menu.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+
 function askName() {
   const atual = myName.startsWith('Coletor-') ? '' : myName;
   const n = prompt('Seu nome:', atual);
