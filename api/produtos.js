@@ -6,9 +6,21 @@ module.exports = async function handler(req, res) {
     if (req.method === 'GET') {
       const { inventario_id } = req.query;
       if (!inventario_id) return res.status(400).json({ error: 'inventario_id obrigatorio.' });
-      const { data, error } = await sb.from('produtos').select('*, usuarios(login)').eq('inventario_id', inventario_id).order('descricao');
-      if (error) throw error;
-      return res.status(200).json(data.map(p => ({ ...p, conferente_login: p.usuarios?.login || null, usuarios: undefined })));
+      let all = [];
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data, error } = await sb.from('produtos')
+          .select('*, usuarios(login)')
+          .eq('inventario_id', inventario_id)
+          .order('descricao')
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        all = all.concat(data || []);
+        if (!data || data.length < PAGE) break;
+        from += PAGE;
+      }
+      return res.status(200).json(all.map(p => ({ ...p, conferente_login: p.usuarios?.login || null, usuarios: undefined })));
     }
     if (req.method === 'POST') {
       const { inventario_id, produtos } = req.body || {};
