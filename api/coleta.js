@@ -1,31 +1,24 @@
-const { getPool } = require('./_db');
+const { getClient } = require('./_db');
 
 module.exports = async function handler(req, res) {
-  const pool = getPool();
+  const sb = getClient();
   try {
     if (req.method === 'POST') {
       const { produto_id, quantidade, conferente_id } = req.body || {};
-      if (produto_id === undefined || quantidade === undefined) return res.status(400).json({ error: 'produto_id e quantidade obrigatórios.' });
-      await pool.query(
-        `UPDATE produtos SET quantidade_coletada=$1, conferente_id=$2, data_coleta=NOW() WHERE id=$3`,
-        [quantidade, conferente_id || null, produto_id]
-      );
+      if (produto_id === undefined || quantidade === undefined) return res.status(400).json({ error: 'produto_id e quantidade obrigatorios.' });
+      const { error } = await sb.from('produtos').update({ quantidade_coletada: quantidade, conferente_id: conferente_id || null, data_coleta: new Date().toISOString() }).eq('id', produto_id);
+      if (error) throw error;
       return res.status(200).json({ ok: true });
     }
-    // Busca coletas de um inventário (para sync em tempo real)
     if (req.method === 'GET') {
       const { inventario_id } = req.query;
-      if (!inventario_id) return res.status(400).json({ error: 'inventario_id obrigatório.' });
-      const { rows } = await pool.query(
-        `SELECT id, codigo, quantidade_coletada, conferente_id FROM produtos
-         WHERE inventario_id=$1 AND quantidade_coletada > 0`,
-        [inventario_id]
-      );
-      return res.status(200).json(rows);
+      if (!inventario_id) return res.status(400).json({ error: 'inventario_id obrigatorio.' });
+      const { data, error } = await sb.from('produtos').select('id, codigo, quantidade_coletada, conferente_id').eq('inventario_id', inventario_id).gt('quantidade_coletada', 0);
+      if (error) throw error;
+      return res.status(200).json(data);
     }
     return res.status(405).json({ error: 'Method Not Allowed' });
   } catch (e) {
-    console.error('coleta:', e.message);
     return res.status(500).json({ error: e.message });
   }
 };

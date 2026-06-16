@@ -1,50 +1,44 @@
-const { getPool } = require('./_db');
+const { getClient } = require('./_db');
 
 module.exports = async function handler(req, res) {
-  const pool = getPool();
+  const sb = getClient();
   try {
     if (req.method === 'GET') {
       const { empresa_id } = req.query;
-      const { rows } = empresa_id
-        ? await pool.query(
-            `SELECT i.*, u.login AS gerador_login,
-               (SELECT COUNT(*) FROM produtos p WHERE p.inventario_id = i.id) AS total_produtos,
-               (SELECT COUNT(*) FROM produtos p WHERE p.inventario_id = i.id AND p.quantidade_coletada > 0) AS total_coletados
-             FROM inventarios i LEFT JOIN usuarios u ON i.gerador_id = u.id
-             WHERE i.empresa_id=$1 ORDER BY i.data_importacao DESC`, [empresa_id])
-        : await pool.query(
-            `SELECT i.*, u.login AS gerador_login,
-               (SELECT COUNT(*) FROM produtos p WHERE p.inventario_id = i.id) AS total_produtos,
-               (SELECT COUNT(*) FROM produtos p WHERE p.inventario_id = i.id AND p.quantidade_coletada > 0) AS total_coletados
-             FROM inventarios i LEFT JOIN usuarios u ON i.gerador_id = u.id
-             ORDER BY i.data_importacao DESC`);
+      let q = sb.from('inventarios').select('*, usuarios(login), produtos(id, quantidade_coletada)').order('data_importacao', { ascending: false });
+      if (empresa_id) q = q.eq('empresa_id', empresa_id);
+      const { data, error } = await q;
+      if (error) throw error;
+      const rows = data.map(i => ({
+        ...i,
+        gerador_login: i.usuarios?.login || null,
+        total_produtos: i.produtos?.length || 0,
+        total_coletados: i.produtos?.filter(p => p.quantidade_coletada > 0).length || 0,
+        usuarios: undefined,
+        produtos: undefined
+      }));
       return res.status(200).json(rows);
     }
     if (req.method === 'POST') {
       const { empresa_id, gerador_id } = req.body || {};
-      if (!empresa_id || !gerador_id) return res.status(400).json({ error: 'empresa_id e gerador_id obrigatórios.' });
-      const { rows } = await pool.query(
-        `INSERT INTO inventarios (empresa_id, gerador_id, status) VALUES ($1,$2,'PENDENTE') RETURNING id`,
-        [empresa_id, gerador_id]
-      );
-      return res.status(201).json({ ok: true, id: rows[0].id });
+      if (!empresa_id || !gerador_id) return res.status(400).json({ error: 'empresa_id e gerador_id obrigatorios.' });
+      const { data, error } = await sb.from('inventarios').insert({ empresa_id, gerador_id, status: 'PENDENTE' }).select('id').single();
+      if (error) throw error;
+      return res.status(201).json({ ok: true, id: data.id });
     }
     if (req.method === 'PUT') {
       const { id, status, inicio_contagem, fim_contagem } = req.body || {};
-      if (!id) return res.status(400).json({ error: 'id obrigatório.' });
-      await pool.query(
-        `UPDATE inventarios SET
-           status = COALESCE($1, status),
-           inicio_contagem = COALESCE($2::timestamp, inicio_contagem),
-           fim_contagem = COALESCE($3::timestamp, fim_contagem)
-         WHERE id=$4`,
-        [status || null, inicio_contagem || null, fim_contagem || null, id]
-      );
+      if (!id) return res.status(400).json({ error: 'id obrigatorio.' });
+      const upd = {};
+      if (status) upd.status = status;
+      if (inicio_contagem) upd.inicio_contagem = inicio_contagem;
+      if (fim_contagem) upd.fim_contagem = fim_contagem;
+      const { error } = await sb.from('inventarios').update(upd).eq('id', id);
+      if (error) throw error;
       return res.status(200).json({ ok: true });
     }
     return res.status(405).json({ error: 'Method Not Allowed' });
   } catch (e) {
-    console.error('inventarios:', e.message);
     return res.status(500).json({ error: e.message });
   }
 };

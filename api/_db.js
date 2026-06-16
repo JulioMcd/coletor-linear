@@ -1,16 +1,15 @@
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first');
-const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 
-let pool;
-function getPool() {
-  if (!pool) {
-    const connStr = (process.env.DATABASE_URL || '').replace('?sslmode=require', '');
-    pool = new Pool({ connectionString: connStr, ssl: { rejectUnauthorized: false } });
-    pool.on('error', (err) => { console.error('Pool error:', err.message); pool = null; });
+let client;
+function getClient() {
+  if (!client) {
+    client = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY,
+      { auth: { persistSession: false } }
+    );
   }
-  return pool;
+  return client;
 }
 
-module.exports = { getPool };
+module.exports = { getClient };

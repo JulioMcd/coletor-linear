@@ -1,33 +1,33 @@
-const { getPool } = require('./_db');
+const { getClient } = require('./_db');
 
 module.exports = async function handler(req, res) {
-  const pool = getPool();
+  const sb = getClient();
   try {
     if (req.method === 'GET') {
-      const { rows } = await pool.query(
-        `SELECT u.id, u.login, u.perfil, u.empresa_id, e.nome AS empresa_nome, u.created_at
-         FROM usuarios u LEFT JOIN empresas e ON u.empresa_id = e.id ORDER BY u.login`
-      );
+      const { data, error } = await sb
+        .from('usuarios')
+        .select('id, login, perfil, empresa_id, created_at, empresas(nome)')
+        .order('login');
+      if (error) throw error;
+      const rows = data.map(u => ({ ...u, empresa_nome: u.empresas?.nome || null }));
       return res.status(200).json(rows);
     }
     if (req.method === 'POST') {
       const { login, senha, perfil, empresa_id } = req.body || {};
-      if (!login || !senha || !perfil) return res.status(400).json({ error: 'login, senha e perfil são obrigatórios.' });
-      await pool.query(
-        `INSERT INTO usuarios (login, senha, perfil, empresa_id) VALUES ($1,$2,$3,$4)`,
-        [login, senha, perfil, empresa_id || null]
-      );
+      if (!login || !senha || !perfil) return res.status(400).json({ error: 'login, senha e perfil obrigatorios.' });
+      const { error } = await sb.from('usuarios').insert({ login, senha, perfil, empresa_id: empresa_id || null });
+      if (error) throw error;
       return res.status(201).json({ ok: true });
     }
     if (req.method === 'DELETE') {
       const id = req.query.id;
-      if (!id) return res.status(400).json({ error: 'id obrigatório.' });
-      await pool.query('DELETE FROM usuarios WHERE id = $1', [id]);
+      if (!id) return res.status(400).json({ error: 'id obrigatorio.' });
+      const { error } = await sb.from('usuarios').delete().eq('id', id);
+      if (error) throw error;
       return res.status(200).json({ ok: true });
     }
     return res.status(405).json({ error: 'Method Not Allowed' });
   } catch (e) {
-    console.error('usuarios:', e.message);
     return res.status(500).json({ error: e.message });
   }
 };

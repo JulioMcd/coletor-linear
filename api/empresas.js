@@ -1,39 +1,36 @@
-const { getPool } = require('./_db');
+const { getClient } = require('./_db');
 
 module.exports = async function handler(req, res) {
-  const pool = getPool();
+  const sb = getClient();
   try {
     if (req.method === 'GET') {
-      const { rows } = await pool.query('SELECT * FROM empresas ORDER BY nome');
-      return res.status(200).json(rows);
+      const { data, error } = await sb.from('empresas').select('*').order('nome');
+      if (error) throw error;
+      return res.status(200).json(data);
     }
     if (req.method === 'POST') {
       const { nome, logo_url } = req.body || {};
-      if (!nome) return res.status(400).json({ error: 'nome é obrigatório.' });
-      const { rows } = await pool.query(
-        `INSERT INTO empresas (nome, logo_url) VALUES ($1,$2) RETURNING id`,
-        [nome, logo_url || '']
-      );
-      return res.status(201).json({ ok: true, id: rows[0].id });
+      if (!nome) return res.status(400).json({ error: 'nome obrigatorio.' });
+      const { error } = await sb.from('empresas').insert({ nome, logo_url: logo_url || '' });
+      if (error) throw error;
+      return res.status(201).json({ ok: true });
     }
     if (req.method === 'PUT') {
       const { id, nome, logo_url } = req.body || {};
-      if (!id) return res.status(400).json({ error: 'id obrigatório.' });
-      await pool.query(
-        `UPDATE empresas SET nome=COALESCE($1,nome), logo_url=COALESCE($2,logo_url) WHERE id=$3`,
-        [nome, logo_url, id]
-      );
+      if (!id) return res.status(400).json({ error: 'id obrigatorio.' });
+      const { error } = await sb.from('empresas').update({ nome, logo_url }).eq('id', id);
+      if (error) throw error;
       return res.status(200).json({ ok: true });
     }
     if (req.method === 'DELETE') {
       const id = req.query.id;
-      if (!id) return res.status(400).json({ error: 'id obrigatório.' });
-      await pool.query('DELETE FROM empresas WHERE id=$1', [id]);
+      if (!id) return res.status(400).json({ error: 'id obrigatorio.' });
+      const { error } = await sb.from('empresas').delete().eq('id', id);
+      if (error) throw error;
       return res.status(200).json({ ok: true });
     }
     return res.status(405).json({ error: 'Method Not Allowed' });
   } catch (e) {
-    console.error('empresas:', e.message);
     return res.status(500).json({ error: e.message });
   }
 };
