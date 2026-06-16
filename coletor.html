@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Casa 505</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+:root {
+  --jc-green:      #359483;
+  --jc-red:        #C7353A;
+  
+  --bg-main:       #000000;
+  --bg-card:       #0d0d0d;
+  --bg-card2:      #1a1a1a;
+  --border:        #262626;
+  --text:          #ffffff;
+  --text-muted:    #a3a3a3;
+  
+  --accent-red:    #E63946; 
+  --accent-white:  #ffffff; 
+}
+
+:root {
+  --green-dark:  var(--bg-main);
+  --green-mid:   var(--bg-card);
+  --green-light: var(--bg-card2);
+  --green-glow:  var(--accent-red);
+  --red:         var(--accent-red);
+  --red-dark:    #7f1d1d;
+  --red-glow:    #ff4d4d;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  background: var(--bg-main);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+/* ── LOADING SCREEN ───────────────────────────────────────── */
+#loadingScreen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg-main);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 24px;
+}
+.load-logo { width: 80px; height: 80px; position: relative; }
+.load-ring {
+  width: 80px; height: 80px; border-radius: 50%;
+  border: 4px solid var(--bg-card2);
+  border-top-color: var(--jc-green);
+  border-right-color: var(--jc-red);
+  animation: spin 1s linear infinite;
+  position: absolute; inset: 0;
+}
+.load-ring2 {
+  width: 56px; height: 56px; border-radius: 50%;
+  border: 3px solid var(--bg-card);
+  border-bottom-color: var(--jc-green);
+  animation: spin 1.6s linear infinite reverse;
+  position: absolute; top: 12px; left: 12px;
+}
+.load-initials { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #fff; letter-spacing: 1px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.load-title { text-align: center; color: #fff; font-size: 18px; font-weight: 700; letter-spacing: 1px; }
+.load-sub { color: var(--text-muted); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin-top: -14px; }
+.load-bar-wrap { width: 160px; height: 3px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.load-bar { height: 100%; width: 0%; border-radius: 4px; background: linear-gradient(90deg, var(--jc-green) 0%, var(--jc-green) 50%, var(--jc-red) 100%); animation: loadBar 2.2s ease-out forwards; }
+@keyframes loadBar { 0%{width:0%} 60%{width:75%} 85%{width:90%} 100%{width:100%} }
+.load-hint { color: var(--text-muted); font-size: 11px; font-weight:500; }
+
+/* ── HEADER ────────────────────────────────────────────────── */
+.header {
+  background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(16px);
+  padding: 12px 14px; display: flex; align-items: center; gap: 8px;
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.header h1 { color: var(--text); font-size: 16px; font-weight: 700; flex: 1; letter-spacing: -0.5px; }
+.header h1 span { color: var(--accent-red); }
+.stats { color: var(--text-muted); font-size: 11px; text-align: right; line-height: 1.4; }
+.stats span { color: var(--accent-white); font-weight: 700; }
+.stats b    { color: var(--accent-red); font-weight: 700; }
+.name-badge { background: var(--bg-card2); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; color: var(--accent-white); font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all .2s; }
+.name-badge:hover { background: var(--accent-white); color: #000; }
+
+/* ── TOOLBAR ───────────────────────────────── */
+.toolbar {
+  background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(16px);
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;
+  position: sticky; top: 52px; z-index: 99;
+  border-bottom: 1px solid rgba(255,255,255,0.05); box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+}
+.search-row { display: flex; gap: 8px; }
+.search-input { flex: 1; background: var(--bg-card2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; color: var(--text); font-size: 14px; outline: none; transition: all .2s; }
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus { border-color: var(--accent-white); background: #000; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15); }
+.btn-scan { background: var(--accent-red); border: none; border-radius: 12px; min-width: 44px; height: 42px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 18px; cursor: pointer; transition: all .2s; box-shadow: 0 2px 8px rgba(230, 57, 70, 0.3); }
+.btn-scan:active { transform: scale(0.92); }
+.filter-row { display: flex; gap: 6px; align-items: stretch; }
+.filter-btn { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-card); color: var(--text-muted); font-size: 12px; font-weight: 500; cursor: pointer; transition: all .2s; }
+.filter-btn.active { background: var(--accent-white); border-color: var(--accent-white); color: #000; font-weight: 600; box-shadow: 0 2px 6px rgba(255,255,255,0.15); }
+.btn-zerar { flex: 0 0 auto; padding: 0 12px; background: transparent; border: 1px solid var(--border); border-radius: 10px; color: var(--accent-red); font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all .2s; }
+.btn-zerar:hover { background: rgba(230,57,70,0.1); border-color: var(--accent-red); }
+.btn-zerar:active { transform: scale(0.95); }
+
+/* ── TABELA ───────────────────────────── */
+.table-wrap { padding: 12px 14px; overflow-x: auto; width: 100%; }
+table { width: 100%; border-collapse: separate; border-spacing: 0 8px; font-size: 13px; }
+thead th { background: transparent; color: var(--text-muted); padding: 4px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; border: none; }
+thead th:first-child { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+thead th:last-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+thead th.qcol { text-align: center; }
+tbody tr { background: var(--bg-card); transition: transform .2s, box-shadow .2s, border .2s; box-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+tbody tr:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.8); }
+tbody tr td { padding: 12px 10px; vertical-align: middle; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+tbody tr td:first-child { border-left: 1px solid var(--border); border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+tbody tr td:last-child { border-right: 1px solid var(--border); border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+tbody tr.counted { background: rgba(230, 57, 70, 0.05); }
+tbody tr.counted td { border-top-color: rgba(230, 57, 70, 0.2); border-bottom-color: rgba(230, 57, 70, 0.2); }
+tbody tr.counted td:first-child { border-left-color: rgba(230, 57, 70, 0.2); }
+tbody tr.counted td:last-child { border-right-color: rgba(230, 57, 70, 0.2); }
+td.cod  { color: var(--text-muted); font-family: 'SF Mono', Consolas, monospace; font-size: 11px; white-space: nowrap; }
+td.nome { color: var(--text); font-weight: 600; line-height: 1.3; font-size: 13px; }
+td.un   { color: var(--text-muted); font-size: 11px; font-weight: 600; white-space: nowrap; }
+td.qtd  { text-align: center; }
+.td-user { color: var(--accent-white); font-size: 11px; font-weight: 500; white-space: nowrap; max-width: 60px; overflow: hidden; text-overflow: ellipsis; }
+.td-ean  { color: var(--text-muted); font-size: 11px; font-family: 'SF Mono', Consolas, monospace; white-space: nowrap; }
+.td-data { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+
+/* ── BADGES NO BLOCO ───────────────────────────────────────── */
+.badge-qtd { background: var(--accent-white); color: #000; padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 800; cursor: pointer; display: inline-block; min-width: 44px; box-shadow: 0 2px 6px rgba(255,255,255,0.1); }
+.badge-add { background: transparent; color: var(--accent-white); padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-block; border: 1px solid var(--border); transition: all 0.2s; }
+.badge-add:active { background: rgba(255,255,255,0.1); }
+.badge-conflito { background: var(--accent-red); color: #fff; font-size: 9px; font-weight: 700; border-radius: 4px; padding: 2px 4px; margin-left: 4px; }
+
+/* ── FAB ─────────────────────────────────────────────────────── */
+.fab { position: fixed; bottom: 20px; border: none; border-radius: 24px; padding: 12px 20px; font-size: 13px; font-weight: 700; cursor: pointer; z-index: 200; transition: transform .2s, box-shadow .2s; letter-spacing: 0.02em; box-shadow: 0 8px 20px rgba(0,0,0,0.8); }
+.fab:active { transform: translateY(2px); }
+.fab-export { right: 120px; background: var(--accent-white); color: #000; }
+.fab-add { right: 16px; background: var(--accent-red); color: #fff; }
+
+/* ── NOVO MODAL (BOTTOM SHEET SLEEK COMPACTO) ───────────────────────────────────────────────────── */
+.modal-bg, .modal-cad-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px);
+  z-index: 500; align-items: flex-end; justify-content: center; padding: 0; /* Colado nas bordas embaixo */
+}
+.modal-bg.show, .modal-cad-bg.show { display: flex; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes slideUp { from{opacity:0; transform:translateY(40px)} to{opacity:1; transform:translateY(0)} }
+
+.modal, .modal-cad {
+  background: #0d0d0d; border-top: 1px solid #222;
+  border-radius: 24px 24px 0 0; padding: 24px 16px; width: 100%; max-width: 100%;
+  box-shadow: 0 -10px 30px rgba(0,0,0,1);
+  position: relative; margin-bottom: 0; padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
+}
+.modal::before, .modal-cad::before {
+  content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  width: 36px; height: 4px; border-radius: 4px; background: #333;
+}
+
+.modal h3 { color: var(--text); font-size: 18px; font-weight: 700; margin-bottom: 4px; text-align: center; margin-top: 8px;}
+.modal p  { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; text-align: center; }
+.modal-cad h3 { color: var(--text); font-size: 18px; font-weight: 700; margin-bottom: 20px; text-align: center; margin-top: 8px;}
+
+/* Quantidade Atual Minimalista */
+.qty-display { background: transparent; border: none; padding: 0; text-align: center; margin-bottom: 24px; }
+.qty-display .lbl { color: var(--text-muted); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.qty-display .val { color: var(--text); font-size: 26px; font-weight: 300; line-height: 1; }
+.qty-display .val small { font-size: 13px; color: var(--text-muted); margin-left: 4px; }
+
+/* Stepper Elegante */
+.stepper { 
+  display: flex; align-items: center; justify-content: space-between; 
+  background: #000; border: 1px solid #222; border-radius: 16px; 
+  padding: 6px; margin-bottom: 24px; 
+}
+.stepper button { 
+  width: 48px; height: 48px; background: #1a1a1a; border-radius: 12px; border: none; 
+  font-size: 28px; font-weight: 300; cursor: pointer; transition: all 0.2s; 
+  display: flex; align-items: center; justify-content: center; color: var(--text);
+}
+.stepper button:active { transform: scale(0.9); background: #333; }
+.step-minus { color: var(--text-muted); }
+.modal-inp {
+  flex: 1; text-align: center; background: transparent; border: none; 
+  color: var(--text); font-size: 32px; font-weight: 700; font-family: 'SF Mono', Consolas, monospace; 
+  outline: none; height: 48px; width: 100%;
+}
+
+/* Botões de Ação Modal */
+.row-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.row-btns button { padding: 14px 10px; border-radius: 14px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.1s; }
+.row-btns button:active { transform: scale(0.96); }
+.btn-somar  { background: var(--accent-red); color: #fff; box-shadow: 0 2px 10px rgba(230,57,70,0.3); }
+.btn-set    { background: var(--accent-white); color: #000; }
+
+.modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.modal-btns button { padding: 12px 10px; border-radius: 14px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: transform 0.1s; }
+.modal-btns button:active { transform: scale(0.96); }
+.btn-cancel { background: transparent; color: var(--text-muted); border: 1px solid #333 !important; }
+.btn-del    { background: rgba(230,57,70,0.1); color: var(--accent-red); border: 1px solid rgba(230,57,70,0.3) !important; }
+
+/* Botões de Cadastro */
+.cad-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+.cad-btns button { padding: 14px 10px; border-radius: 14px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform 0.1s; }
+.cad-btns button:active { transform: scale(0.96); }
+.btn-cad-ok     { background: var(--accent-white); color: #000; }
+.btn-cad-cancel { background: transparent; color: var(--text-muted); border: 1px solid #333; }
+.modal-cad label { display: block; color: var(--text-muted); font-size: 12px; font-weight: 500; margin-bottom: 6px; margin-top: 14px; }
+.modal-cad input, .modal-cad select {
+  width: 100%; background: #000; border: 1px solid #333;
+  border-radius: 12px; padding: 12px 14px; color: var(--text); font-size: 14px;
+  outline: none; box-sizing: border-box; transition: border-color 0.2s;
+}
+.modal-cad input:focus, .modal-cad select:focus { border-color: var(--accent-white); }
+
+/* ── SCANNER ─────────────────────────────────────────────────── */
+.scanner-fs { display: none; position: fixed; inset: 0; background: #000; z-index: 1000; }
+.scanner-fs.show { display: block; }
+.scanner-fs video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.scanner-fs canvas { display: none; }
+.scan-ui { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.scan-frame { width: 78%; max-width: 320px; height: 100px; border: 3px solid var(--accent-red); border-radius: 16px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.8); position: relative; overflow: hidden; }
+.scan-line { position: absolute; left: 0; right: 0; height: 3px; background: var(--accent-white); box-shadow: 0 0 10px var(--accent-white); animation: sl 2s ease-in-out infinite; }
+@keyframes sl { 0%{top:8%} 50%{top:88%} 100%{top:8%} }
+.scan-hint { margin-top: 24px; color: #fff; font-size: 13px; font-weight: 600; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px); padding: 10px 24px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); }
+.scan-close-btn { position: absolute; top: 20px; right: 20px; pointer-events: all; background: rgba(0, 0, 0, 0.8); border: 1px solid var(--border); color: #fff; font-size: 13px; font-weight: 600; padding: 10px 20px; border-radius: 24px; cursor: pointer; z-index: 10; backdrop-filter: blur(4px); }
+
+/* ── CONFLITOS, TOAST, OUTROS ───────────────────────────────── */
+#conflictsPanel { display: none; background: rgba(230, 57, 70, 0.1); border-bottom: 2px solid var(--accent-red); border-left: 4px solid var(--accent-red); padding: 12px 16px; font-size: 13px; color: #fca5a5; line-height: 1.6; border-radius: 10px; margin-bottom: 16px; }
+#conflictsPanel strong { color: #fff; }
+#conflictsPanel .conf-title { font-size: 14px; font-weight: 700; color: var(--accent-red); margin-bottom: 6px; }
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--bg-card); color: var(--text); padding: 12px 24px; border-radius: 24px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .3s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1500; white-space: nowrap; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; box-shadow: 0 10px 25px rgba(0,0,0,0.8); max-width: 90vw; overflow: hidden; text-overflow: ellipsis; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.empty { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+.empty div { font-size: 48px; margin-bottom: 16px; opacity: 0.8; }
+.more-note { text-align: center; padding: 20px; color: var(--text-muted); font-size: 12px; border-top: 1px dashed var(--border); margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loadingScreen">
+  <div class="load-logo">
+    <div class="load-ring"></div>
+    <div class="load-ring2"></div>
+    <div class="load-initials">JC</div>
+  </div>
+  <div class="load-title">JC CONSULTORIA</div>
+  <div class="load-sub">&amp; Assessoria</div>
+  <div class="load-bar-wrap"><div class="load-bar"></div></div>
+  <div class="load-hint">Carregando inventário...</div>
+</div>
+
+<div class="header">
+  <h1>📦 Casa <span>505</span></h1>
+  <div class="stats">
+    Itens: <b id="statUnits">0</b><br>
+    Produtos: <span id="statDone">0</span>
+  </div>
+  <button class="online-badge" id="onlineBadge" onclick="mostrarOnline()">🟢 0</button>
+  <button class="name-badge" id="nameBadge" onclick="askName()">👤 Usuário</button>
+</div>
+
+<div class="toolbar">
+  <div class="search-row">
+    <input class="search-input" id="searchInput" type="text"
+      placeholder="🔍 Buscar produto, EAN ou código..." autocomplete="off"
+      oninput="onSearch(this.value)">
+    <button class="btn-scan" onclick="openScanner(null)" title="Escanear código de barras">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+        <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+        <line x1="7" y1="12" x2="17" y2="12" stroke-width="2.5"/>
+        <line x1="7" y1="8" x2="7" y2="16" stroke-width="1.5"/><line x1="17" y1="8" x2="17" y2="16" stroke-width="1.5"/>
+        <line x1="11" y1="8" x2="11" y2="16" stroke-width="1"/><line x1="13" y1="8" x2="13" y2="16" stroke-width="1"/>
+      </svg>
+    </button>
+  </div>
+  <div class="filter-row">
+    <button class="filter-btn active" id="f-counted" onclick="setFilter('counted')">✅ Contados</button>
+    <button class="filter-btn"        id="f-all"     onclick="setFilter('all')">📋 Todos</button>
+    <button class="btn-zerar" onclick="zerarTudo()">🗑&nbsp;ZERAR</button>
+  </div>
+</div>
+
+<div class="scanner-fs" id="scannerFs">
+  <video id="scanVideo" autoplay playsinline muted></video>
+  <canvas id="scanCanvas"></canvas>
+  <div class="scan-ui">
+    <div class="scan-frame"><div class="scan-line"></div></div>
+    <div class="scan-hint">📷 Aponte o código para a área verde</div>
+  </div>
+  <button class="scan-close-btn" onclick="closeScanner()">✕ Fechar</button>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="conflictsPanel"></div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Cód</th><th>Produto</th><th>UN</th><th class="qcol">Qtd</th><th>Coletor</th><th>Cód. Barras</th><th>Data</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="empty" id="empty" style="display:none"></div>
+  <div class="more-note" id="moreNote" style="display:none"></div>
+</div>
+
+<button class="fab fab-export" onclick="exportarCSV()">⬇️ Exportar</button>
+<button class="fab fab-add" onclick="abrirCadastro()">➕ Produto</button>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle"></h3>
+    <p id="modalDesc"></p>
+    <div class="qty-display">
+      <div class="lbl">Quantidade atual</div>
+      <div class="val"><span id="qtyCurrent">0</span> <small id="qtyUn"></small></div>
+    </div>
+    <div class="stepper">
+      <button class="step-minus" onclick="stepInput(-1)">−</button>
+      <input class="modal-inp" id="modalInp" inputmode="decimal" value="1">
+      <button class="step-plus" onclick="stepInput(1)">+</button>
+    </div>
+    <div class="row-btns">
+      <button class="btn-somar" onclick="somarQtd()">➕ Somar</button>
+      <button class="btn-set"   onclick="definirQtd()">✏️ Definir total</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Fechar</button>
+      <button class="btn-del" id="btnDel" onclick="excluirQtd()">🗑 Excluir</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Esconde loading após app inicializar
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    var s = document.getElementById('loadingScreen');
+    if (s) { s.style.transition = 'opacity 0.5s'; s.style.opacity = '0'; setTimeout(function(){ s.style.display='none'; }, 500); }
+  }, 2400);
+});
+
+const PRODUCTS = []; // API Data
+
+let products   = PRODUCTS.map(p => ({...p, qtd: 0}));
+let byCode = {}; let byEan = {};
+products.forEach(p => { byCode[p.codigo] = p; if (p.ean) byEan[p.ean] = p; });
+let searchTerm = '';
+let filterMode = 'counted';
+let modalProd  = null;
+let scanTarget = null;
+let scanStream = null;
+let scanTimer  = null;
+// identidade estável por dispositivo (sobrevive a refresh e troca de nome)
+let deviceId = localStorage.getItem('deviceId');
+if (!deviceId) {
+  deviceId = (crypto.randomUUID ? crypto.randomUUID() : 'dev-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+  localStorage.setItem('deviceId', deviceId);
+}
+let myName     = localStorage.getItem('userName') || ('Coletor-' + deviceId.slice(0, 4));
+let serverUserData = {}; // { codigo: { usuario, conflito, coletas } }
+
+const DISPLAY_CAP = 300;   // máximo de linhas renderizadas por vez
+const fmt = n => (Number.isInteger(n) ? String(n) : String(n).replace('.', ','));
+const parseNum = s => { const n = parseFloat(String(s).replace(',', '.')); return isNaN(n) ? 0 : n; };
+
+// ── FILTRO / BUSCA ───────────────────────────────────────────
+function getFiltered() {
+  let list;
+  if (searchTerm) {
+    const t = searchTerm.toLowerCase();
+    list = [];
+    for (let i = 0; i < products.length && list.length <= DISPLAY_CAP; i++) {
+      const p = products[i];
+      if (p.nome.toLowerCase().includes(t) || p.codigo.includes(t) || (p.ean && p.ean.includes(t))) list.push(p);
+    }
+    if (filterMode === 'counted') list = list.filter(p => p.qtd > 0);
+    return list;
+  }
+  // sem busca
+  if (filterMode === 'counted') return products.filter(p => p.qtd > 0);
+  return products.slice(0, DISPLAY_CAP); // "Todos" sem busca: amostra
+}
+
+function renderTable() {
+  const counted = products.filter(p => p.qtd > 0);
+  const units   = counted.reduce((s,p) => s + p.qtd, 0);
+  document.getElementById('statUnits').textContent = fmt(units);
+  document.getElementById('statDone').textContent  = counted.length;
+
+  const list = getFiltered();
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('empty');
+  const note  = document.getElementById('moreNote');
+
+  if (!list.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    note.style.display  = 'none';
+    if (filterMode === 'counted' && !searchTerm)
+      empty.innerHTML = '<div>📦</div>Nenhum item contado ainda.<br>Use a busca ou a câmera para localizar um produto e somar a quantidade.';
+    else
+      empty.innerHTML = '<div>🔍</div>Nenhum produto encontrado';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = list.map(p => {
+    const sv = serverUserData[p.codigo];
+    const coletor = sv ? sv.usuario : '';
+    const conflito = sv && sv.conflito;
+    const confBadge = conflito ? `<span class="badge-conflito">!</span>` : '';
+    const dataIso = itemDates[p.codigo] || (sv && sv.atualizado) || '';
+    const dataFmt = (p.qtd > 0 && dataIso) ? fmtData(dataIso) : '';
+    return `
+    <tr class="${p.qtd>0?'counted':''}" id="row-${p.id}">
+      <td class="cod">${p.codigo}</td>
+      <td class="nome">${p.nome}${confBadge}</td>
+      <td class="un">${p.un}</td>
+      <td class="qtd">${p.qtd>0
+        ? `<span class="badge-qtd" onclick="openModal(${p.id})">${fmt(p.qtd)}</span>`
+        : `<span class="badge-add" onclick="openModal(${p.id})">+ somar</span>`}</td>
+      <td class="td-user">${coletor || ''}</td>
+      <td class="td-ean">${p.ean || ''}</td>
+      <td class="td-data">${dataFmt}</td>
+    </tr>`;
+  }).join('');
+
+  // aviso de resultados limitados
+  if (searchTerm && list.length > DISPLAY_CAP) {
+    note.style.display = 'block';
+    note.textContent = `Mostrando os primeiros ${DISPLAY_CAP} resultados — refine a busca.`;
+  } else if (!searchTerm && filterMode === 'all') {
+    note.style.display = 'block';
+    note.textContent = `Mostrando ${list.length} de ${products.length.toLocaleString('pt-BR')} produtos — use a busca para localizar.`;
+  } else {
+    note.style.display = 'none';
+  }
+}
+
+function onSearch(v) { searchTerm = v.trim(); renderTable(); }
+function setFilter(m) {
+  filterMode = m;
+  ['counted','all'].forEach(k =>
+    document.getElementById('f-'+k).classList.toggle('active', k===m));
+  renderTable();
+}
+
+// ── MODAL DE CONTAGEM ────────────────────────────────────────
+function openModal(id) {
+  modalProd = products.find(p => p.id === id);
+  if (!modalProd) return;
+  document.getElementById('modalTitle').textContent = modalProd.nome;
+  document.getElementById('modalDesc').textContent  = 'Código: ' + modalProd.codigo + '  |  UN: ' + modalProd.un;
+  document.getElementById('qtyCurrent').textContent = fmt(modalProd.qtd);
+  document.getElementById('qtyUn').textContent      = modalProd.un;
+  document.getElementById('modalInp').value         = '1';
+  document.getElementById('btnDel').style.display   = modalProd.qtd > 0 ? '' : 'none';
+  document.getElementById('modalBg').classList.add('show');
+  setTimeout(() => { const i=document.getElementById('modalInp'); i.focus(); i.select(); }, 200);
+}
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('show');
+  modalProd = null;
+}
+function stepInput(d) {
+  const i = document.getElementById('modalInp');
+  let v = parseNum(i.value) + d;
+  if (v < 0) v = 0;
+  i.value = fmt(v);
+}
+function refreshModalQty() {
+  if (!modalProd) return;
+  document.getElementById('qtyCurrent').textContent = fmt(modalProd.qtd);
+  document.getElementById('btnDel').style.display   = modalProd.qtd > 0 ? '' : 'none';
+}
+
+// SOMAR: acrescenta a quantidade digitada ao total
+function somarQtd() {
+  if (!modalProd) return;
+  const add = parseNum(document.getElementById('modalInp').value);
+  if (!add) { showToast('⚠️ Digite uma quantidade'); return; }
+  modalProd.qtd = +(modalProd.qtd + add).toFixed(3);
+  persist(modalProd);
+  refreshModalQty(); renderTable();
+  showToast('➕ ' + fmt(add) + ' somado → total ' + fmt(modalProd.qtd));
+}
+// DEFINIR: troca o total pela quantidade digitada (alteração)
+function definirQtd() {
+  if (!modalProd) return;
+  const val = parseNum(document.getElementById('modalInp').value);
+  modalProd.qtd = +val.toFixed(3);
+  persist(modalProd);
+  refreshModalQty(); renderTable();
+  showToast('✏️ Total definido em ' + fmt(modalProd.qtd));
+}
+// EXCLUIR: zera/remove a contagem do produto
+function excluirQtd() {
+  if (!modalProd) return;
+  modalProd.qtd = 0;
+  persist(modalProd);
+  renderTable(); closeModal();
+  showToast('🗑 Contagem removida');
+}
+
+// ── STORAGE LOCAL ────────────────────────────────────────────
+let itemDates = {}; // { codigo: ISOString } data da contagem
+function fmtData(iso) {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  } catch(e) { return ''; }
+}
+function persist(p) {
+  const now = new Date().toISOString();
+  if (p.qtd > 0) { itemDates[p.codigo] = now; localStorage.setItem("lastActivity", now); }
+  else delete itemDates[p.codigo];
+  saveLocal();
+  sendToServer(p.codigo, p.qtd);
+}
+function saveLocal() {
+  const d = {};
+  products.forEach(p => { if (p.qtd > 0) d[p.codigo] = p.qtd; });
+  localStorage.setItem('casa505_inv', JSON.stringify(d));
+  localStorage.setItem('casa505_dates', JSON.stringify(itemDates));
+}
+function loadLocal() {
+  try {
+    const d = JSON.parse(localStorage.getItem('casa505_inv') || '{}');
+    Object.keys(d).forEach(c => { if (byCode[c]) byCode[c].qtd = d[c]; });
+    itemDates = JSON.parse(localStorage.getItem('casa505_dates') || '{}');
+  } catch(e) { itemDates = {}; }
+}
+
+function zerarTudo() {
+  if (!confirm('Tem certeza que deseja ZERAR TODAS as contagens (de todos os usuários)?')) return;
+  // bloqueia merges por alguns segundos (evita corrida com o DELETE)
+  zeroGuardUntil = Date.now() + 8000;
+  // marca o zero localmente JÁ (limpa em todos os polls de todos os aparelhos)
+  const agora = new Date().toISOString();
+  localStorage.setItem('zeroedAt', agora);
+  localStorage.setItem('processedZero', agora);
+  localStorage.setItem('lastActivity', '1970-01-01T00:00:00.000Z');
+  products.forEach(p => { p.qtd = 0; });
+  itemDates = {};
+  serverUserData = {};
+  lastPoll = '';
+  saveLocal(); renderTable();
+  showToast('🗑 Zerando inventário...');
+  fetch('/api/inventario', { method: 'DELETE' })
+    .then(r => r.json())
+    .then(res => {
+      // usa o timestamp do servidor como verdade (mais recente vence)
+      const ts = res.zeroed_at || agora;
+      if (ts > (localStorage.getItem('zeroedAt') || '')) {
+        localStorage.setItem('zeroedAt', ts);
+        localStorage.setItem('processedZero', ts);
+      }
+      showToast('🗑 Inventário zerado em todos os dispositivos!');
+    }).catch(() => showToast('⚠️ Falha ao zerar no servidor'));
+}
+
+// ── SYNC OPCIONAL COM SERVIDOR (mesmo padrão do coletor antigo) ─
+function sendToServer(codigo, qtd) {
+  fetch('/api/inventario', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ codigo, qtd, user: myName })
+  }).catch(() => {});
+  // persiste no novo banco de dados
+  const p = byCode[codigo];
+  if (p && p.db_id && sessionUser && sessionUser.id) {
+    fetch('/api/coleta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ produto_id: p.db_id, quantidade: qtd, conferente_id: sessionUser.id })
+    }).catch(() => {});
+  }
+}
+function pushLocalToServer() {
+  const d = {};
+  products.forEach(p => { if (p.qtd > 0) d[p.codigo] = p.qtd; });
+  if (!Object.keys(d).length) return;
+  fetch('/api/inventario', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bulk: true, data: d, user: myName })
+  }).catch(() => {});
+}
+let lastPoll = '';
+let lastConflitos = '';
+let zeroGuardUntil = 0;
+function pollServer() {
+  fetch('/api/inventario').then(r => r.json()).then(data => {
+    const zeroed_at = data._zeroed_at || null;
+    delete data._zeroed_at;
+
+    // sincroniza o zero conhecido localmente com o do servidor
+    let zeroedAt = localStorage.getItem('zeroedAt') || '1970-01-01T00:00:00.000Z';
+    if (zeroed_at && zeroed_at > zeroedAt) {
+      zeroedAt = zeroed_at;
+      localStorage.setItem('zeroedAt', zeroedAt);
+    }
+
+    const prevData = lastPoll ? JSON.parse(lastPoll) : {};
+
+    // reconstrói mapa de coletores (zera para não deixar nome fantasma)
+    serverUserData = {};
+    Object.keys(data).forEach(c => {
+      if (typeof data[c] === 'object') serverUserData[c] = data[c];
+    });
+
+    // ── ZERO PROPAGADO: se há um zero mais novo do que já apliquei, limpo TUDO ──
+    // determinístico, não depende de relógio sincronizado entre aparelhos
+    let pruned = false;
+    const processedZero = localStorage.getItem('processedZero') || '1970-01-01T00:00:00.000Z';
+    if (zeroedAt > processedZero) {
+      products.forEach(p => { if (p.qtd > 0) p.qtd = 0; });
+      itemDates = {};
+      localStorage.setItem('processedZero', zeroedAt);
+      pruned = true;
+      saveLocal();
+    }
+
+    // guarda pós-zero: ignora merge/reenvio por alguns segundos (corrida com o DELETE)
+    if (Date.now() < zeroGuardUntil) { renderTable(); lastPoll = JSON.stringify(data); return; }
+
+    const str = JSON.stringify(data);
+    if (str === lastPoll && !pruned) { renderTable(); return; }
+    lastPoll = str;
+
+    const keys = Object.keys(data);
+    const localCount = products.filter(p => p.qtd > 0).length;
+    if (!keys.length && localCount > 0) {
+      // só reenvia se a última contagem foi DEPOIS do último zero
+      const lastAct = localStorage.getItem("lastActivity") || "1970-01-01T00:00:00.000Z";
+      if (lastAct > zeroedAt) { pushLocalToServer(); }
+      renderTable();
+      return;
+    }
+
+    let changed = pruned;
+    keys.forEach(c => {
+      const p = byCode[c];
+      if (!p) return;
+      const entry = data[c];
+      const sv = (typeof entry === 'object') ? (entry.qtd || 0) : entry;
+      const svUser = (typeof entry === 'object') ? (entry.usuario || '') : '';
+      const svData = (typeof entry === 'object') ? entry.atualizado : null;
+
+      // notifica quando outro usuário coleta algo
+      if (svUser && svUser !== myName) {
+        const prev = prevData[c];
+        const prevQtd = prev ? ((typeof prev === 'object') ? (prev.qtd || 0) : prev) : 0;
+        if (sv > 0 && sv !== prevQtd) {
+          showToast(`📦 ${svUser} coletou ${p.codigo} (${fmt(sv)})`);
+        }
+      }
+
+      // só adota o servidor se localmente ainda não houver contagem
+      if (p.qtd === 0 && sv > 0) {
+        p.qtd = sv;
+        if (svData) itemDates[c] = svData;
+        changed = true;
+      }
+    });
+
+    if (changed) saveLocal();
+    renderTable();
+  }).catch(() => {});
+
+  // verifica conflitos a cada poll
+  fetch('/api/conflitos').then(r => r.json()).then(conf => {
+    const str = JSON.stringify(conf);
+    if (str === lastConflitos) return;
+    lastConflitos = str;
+    const panel = document.getElementById('conflictsPanel');
+    const keys = Object.keys(conf);
+    if (!keys.length) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    panel.innerHTML = `<div class="conf-title">⚠️ Conflito: ${keys.length} produto(s) coletado(s) por mais de um usuário</div>` +
+      keys.map(cod => {
+        const p = byCode[cod];
+        const nome = p ? p.nome : cod;
+        const lista = conf[cod].map(c => `<strong>${c.usuario}</strong>: ${fmt(c.qtd)}`).join(' · ');
+        return `<div>📦 ${cod} ${nome} — ${lista}</div>`;
+      }).join('');
+  }).catch(() => {});
+}
+
+// ── EXPORTAR ─────────────────────────────────────────────────
+function exportarCSV() {
+  const list = products.filter(p => p.qtd > 0);
+  if (!list.length) { showToast('⚠️ Nenhum item contado!'); return; }
+  let csv = 'Codigo;CodBarras;Descricao;Un;Quantidade;Data\r\n';
+  list.forEach(p => {
+    const nome = '"' + p.nome.replace(/"/g,'""') + '"';
+    const dataIso = itemDates[p.codigo] || '';
+    const dataFmt = dataIso ? fmtData(dataIso) : '';
+    csv += `${p.codigo};${p.ean || ''};${nome};${p.un};${fmt(p.qtd)};${dataFmt}\r\n`;
+  });
+  const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'inventario_casa505_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  showToast('⬇️ Exportado ' + list.length + ' itens!');
+}
+
+// ── TOAST ─────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── SCANNER (auxiliar de busca por código) ───────────────────
+async function openScanner(target) {
+  scanTarget = target;
+  document.getElementById('modalBg').classList.remove('show');
+  const fs = document.getElementById('scannerFs');
+  fs.classList.add('show');
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: {ideal:'environment'}, width:{ideal:1280}, height:{ideal:720} }
+    });
+    const video = document.getElementById('scanVideo');
+    video.srcObject = scanStream;
+    await video.play();
+    requestAnimationFrame(tickScan);
+  } catch(e) { showToast('❌ Câmera: ' + e.message); closeScanner(); }
+}
+function closeScanner() {
+  clearTimeout(scanTimer);
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  document.getElementById('scannerFs').classList.remove('show');
+}
+function tickScan() {
+  if (!scanStream) return;
+  const video = document.getElementById('scanVideo');
+  if (video.readyState < 2 || !video.videoWidth) { scanTimer = setTimeout(tickScan, 150); return; }
+  const W = video.videoWidth, H = video.videoHeight;
+  const cropH = Math.floor(H * 0.38), cropY = Math.floor(H * 0.31);
+  const canvas = document.getElementById('scanCanvas');
+  canvas.width = W; canvas.height = cropH;
+  canvas.getContext('2d').drawImage(video, 0, cropY, W, cropH, 0, 0, W, cropH);
+  if (typeof BarcodeDetector !== 'undefined') {
+    const bd = new BarcodeDetector({ formats:['ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf'] });
+    bd.detect(canvas).then(codes => {
+      if (codes.length) onCodeDetected(codes[0].rawValue);
+      else scanTimer = setTimeout(tickScan, 100);
+    }).catch(() => { scanTimer = setTimeout(tickScan, 100); });
+  } else {
+    if (!window._zxing) {
+      if (!window._zxingLoading) {
+        window._zxingLoading = true;
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js';
+        s.onload = () => { window._zxing = new ZXing.BrowserMultiFormatReader(); };
+        document.head.appendChild(s);
+      }
+      scanTimer = setTimeout(tickScan, 500); return;
+    }
+    window._zxing.decodeFromCanvas(canvas).then(r => {
+      if (r) onCodeDetected(r.getText());
+      else scanTimer = setTimeout(tickScan, 120);
+    }).catch(() => { scanTimer = setTimeout(tickScan, 120); });
+  }
+}
+function onCodeDetected(code) {
+  if (!scanStream) return;
+  if (navigator.vibrate) navigator.vibrate([60,30,60]);
+  closeScanner();
+  const p = byCode[code] || byEan[code];
+  if (p) { openModal(p.id); showToast('🎯 ' + code); return; }
+  // não é código interno: joga na busca
+  document.getElementById('searchInput').value = code;
+  onSearch(code);
+  showToast('🔎 ' + code + ' — selecione o produto na lista');
+}
+
+
+// ── CADASTRO DE PRODUTO ───────────────────────────────────────
+function abrirCadastro() {
+  document.getElementById('cadCodigo').value = '';
+  document.getElementById('cadNome').value   = '';
+  document.getElementById('cadUn').value     = 'PC';
+  document.getElementById('cadEan').value    = '';
+  document.getElementById('modalCadBg').classList.add('show');
+  setTimeout(() => document.getElementById('cadCodigo').focus(), 100);
+}
+function fecharCadastro() {
+  document.getElementById('modalCadBg').classList.remove('show');
+}
+function salvarCadastro() {
+  const codigo = document.getElementById('cadCodigo').value.trim();
+  const nome   = document.getElementById('cadNome').value.trim();
+  const un     = document.getElementById('cadUn').value.trim() || 'PC';
+  const ean    = document.getElementById('cadEan').value.trim();
+  if (!codigo) { showToast('❌ Informe o código'); return; }
+  if (!nome)   { showToast('❌ Informe o nome');   return; }
+  if (byCode[codigo]) { showToast('❌ Código já existe'); return; }
+  fetch('/api/produtos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ codigo, ean, nome, un, usuario: myName })
+  }).then(r => r.json()).then(res => {
+    if (!res.ok) { showToast('❌ ' + (res.error || 'Erro ao salvar')); return; }
+    const id = products.length + 1;
+    const novo = { id, codigo, ean, nome, un, qtd: 0 };
+    products.push(novo);
+    byCode[codigo] = novo;
+    if (ean) byEan[ean] = novo;
+    fecharCadastro();
+    showToast('✅ Produto cadastrado!');
+    renderTable();
+  }).catch(() => showToast('❌ Erro de conexão'));
+}
+function carregarProdutosCustom() {
+  fetch('/api/produtos/custom').then(r => r.json()).then(lista => {
+    lista.forEach(p => {
+      if (byCode[p.codigo]) return; // já existe no catálogo
+      const id = products.length + 1;
+      const novo = { id, codigo: p.codigo, ean: p.ean || '', nome: p.nome, un: p.un, qtd: 0 };
+      products.push(novo);
+      byCode[p.codigo] = novo;
+      if (novo.ean) byEan[novo.ean] = novo;
+    });
+    if (lista.length) renderTable();
+  }).catch(() => {});
+}
+
+// ── USUÁRIOS ONLINE ──────────────────────────────────────────
+let onlineUsers = [];
+function pollOnline() {
+  fetch('/api/online').then(r => r.json()).then(res => {
+    onlineUsers = res.usuarios || [];
+    const badge = document.getElementById('onlineBadge');
+    if (badge) badge.textContent = '🟢 ' + (res.total || 0);
+  }).catch(() => {});
+}
+function mostrarOnline() {
+  if (!onlineUsers.length) { showToast('👥 Ninguém online no momento'); return; }
+  showToast('👥 Online (' + onlineUsers.length + '): ' + onlineUsers.join(', '));
+}
+
+// ── NOME ─────────────────────────────────────────────────────
+function askName() {
+  const atual = myName.startsWith('Coletor-') ? '' : myName;
+  const n = prompt('Seu nome:', atual);
+  if (!n || !n.trim()) return;
+  const novo = n.trim();
+  if (novo === myName) return;
+  setName(novo);
+  // mesma identidade de dispositivo: só atualiza o nome (não cria usuário novo)
+  fetch('/api/usuarios/registrar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceId, nome: novo })
+  }).catch(() => {});
+}
+function setName(n) {
+  myName = n;
+  localStorage.setItem('userName', myName);
+  document.getElementById('nameBadge').textContent = '👤 ' + myName;
+  showToast('👤 Olá, ' + myName + '!');
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('nameBadge').textContent = '👤 ' + myName;
+  loadLocal();
+  renderTable();
+  pollServer(); // primeiro poll verifica zeroed_at antes de sincronizar
+  setInterval(pollServer, 3000);
+  carregarProdutosCustom();
+  pollOnline();
+  setInterval(pollOnline, 15000);
+
+  // mantém presença online
+  if (sessionUser && sessionUser.id) {
+    const pingOnline = () => fetch('/api/online', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: sessionUser.id })
+    }).catch(() => {});
+    pingOnline();
+    setInterval(pingOnline, 30000);
+  }
+  const inp = document.getElementById('modalInp');
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') somarQtd();
+    if (e.key === 'Escape') closeModal();
+  });
+  document.getElementById('modalBg').addEventListener('click', e => {
+    if (e.target === document.getElementById('modalBg')) closeModal();
+  });
+  document.getElementById('modalCadBg').addEventListener('click', e => {
+    if (e.target === document.getElementById('modalCadBg')) fecharCadastro();
+  });
+});
+
+// Auth guard
+const sessionUser = JSON.parse(sessionStorage.getItem('jc_user') || '{}');
+if (!sessionUser.id) { window.location.href = '/'; }
+
+let currentInventarioId = null;
+async function loadInventario() {
+  if (!sessionUser || !sessionUser.empresa_id) return;
+  try {
+    const invRes = await fetch('/api/inventarios?empresa_id=' + sessionUser.empresa_id);
+    const inventarios = await invRes.json();
+    const inv = inventarios.find(i => i.status === 'EM_ANDAMENTO') || inventarios[0];
+    if (!inv) { showToast('⚠️ Nenhum inventario ativo. Aguarde o Gerador.'); return; }
+    currentInventarioId = inv.id;
+    const prodRes = await fetch('/api/produtos?inventario_id=' + inv.id);
+    const lista = await prodRes.json();
+    products.length = 0;
+    byCode = {}; byEan = {};
+    lista.forEach((p, i) => {
+      const item = { id: i + 1, db_id: p.id, codigo: p.codigo, nome: p.descricao,
+        un: p.unidade || 'PC', ean: p.ean || '', qtd: p.quantidade_coletada || 0 };
+      products.push(item);
+      byCode[item.codigo] = item;
+      if (item.ean) byEan[item.ean] = item;
+    });
+    renderTable();
+    showToast('📦 ' + products.length.toLocaleString('pt-BR') + ' produtos carregados');
+  } catch(e) {
+    console.error('loadInventario:', e);
+    showToast('⚠️ Erro ao carregar produtos da API');
+  }
+}
+window.addEventListener('DOMContentLoaded', loadInventario);
+
+</script>
+
+<div class="modal-cad-bg" id="modalCadBg">
+  <div class="modal-cad">
+    <h3>➕ Cadastrar Produto</h3>
+    <label>Código interno *</label>
+    <input id="cadCodigo" placeholder="Ex: 99999" />
+    <label>Nome do produto *</label>
+    <input id="cadNome" placeholder="Ex: PRODUTO TESTE" />
+    <label>Unidade</label>
+    <input id="cadUn" placeholder="PC" value="PC" />
+    <label>Código de barras (EAN)</label>
+    <input id="cadEan" placeholder="Opcional" type="number" />
+    <div class="cad-btns">
+      <button class="btn-cad-cancel" onclick="fecharCadastro()">Cancelar</button>
+      <button class="btn-cad-ok" onclick="salvarCadastro()">Salvar</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador - JC Sistema</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root { --jc-green:#359483; --jc-red:#C7353A; --bg:#000; --card:#0d0d0d; --card2:#1a1a1a; --border:#262626; --text:#fff; --muted:#a3a3a3; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+.header { background:rgba(0,0,0,0.9); border-bottom:1px solid var(--border); padding:14px 20px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; backdrop-filter:blur(16px); }
+.header h1 { font-size:16px; font-weight:700; flex:1; }
+.header h1 span { color:var(--jc-red); }
+.btn-logout { background:rgba(199,53,58,0.15); border:1px solid rgba(199,53,58,0.3); border-radius:8px; padding:7px 14px; color:var(--jc-red); font-size:12px; font-weight:600; cursor:pointer; }
+.user-info { font-size:12px; color:var(--muted); }
+.tabs { display:flex; border-bottom:1px solid var(--border); background:var(--card); }
+.tab { flex:1; padding:14px; text-align:center; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); border-bottom:2px solid transparent; transition:all .2s; }
+.tab.active { color:var(--jc-green); border-bottom-color:var(--jc-green); }
+.tab:hover:not(.active) { color:var(--text); background:var(--card2); }
+.panel { display:none; padding:20px; max-width:900px; margin:0 auto; }
+.panel.active { display:block; }
+.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.section-header h2 { font-size:15px; font-weight:600; }
+.upload-zone { border:2px dashed var(--border); border-radius:12px; padding:40px 20px; text-align:center; cursor:pointer; transition:border-color .2s; margin-bottom:20px; }
+.upload-zone:hover, .upload-zone.dragover { border-color:var(--jc-green); }
+.upload-zone svg { display:block; margin:0 auto 12px; opacity:.5; }
+.upload-zone p { font-size:14px; color:var(--muted); }
+.upload-zone p strong { color:var(--jc-green); }
+.upload-zone input[type=file] { display:none; }
+.preview-box { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:20px; }
+.preview-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); }
+.preview-header span { font-size:13px; font-weight:600; color:var(--jc-green); }
+.preview-scroll { max-height:260px; overflow-y:auto; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+thead th { background:var(--card2); color:var(--muted); padding:9px 12px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border); position:sticky; top:0; }
+tbody tr { border-bottom:1px solid var(--border); }
+tbody tr:last-child { border-bottom:none; }
+td { padding:9px 12px; }
+.btn-primary { background:var(--jc-green); border:none; border-radius:10px; padding:13px 24px; color:#fff; font-size:14px; font-weight:700; cursor:pointer; width:100%; }
+.btn-primary:hover { opacity:0.85; }
+.btn-primary:disabled { opacity:0.4; cursor:not-allowed; }
+.btn-danger { background:rgba(199,53,58,0.15); border:1px solid rgba(199,53,58,0.3); border-radius:8px; padding:7px 14px; color:var(--jc-red); font-size:12px; font-weight:600; cursor:pointer; }
+.table-wrap { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-pendente { background:rgba(255,193,7,0.15); color:#ffc107; }
+.badge-andamento { background:rgba(53,148,131,0.2); color:var(--jc-green); }
+.badge-finalizado { background:rgba(255,255,255,0.08); color:var(--muted); }
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--jc-green); color:#fff; padding:12px 24px; border-radius:10px; font-size:14px; font-weight:600; opacity:0; transition:opacity .3s; pointer-events:none; z-index:999; }
+.toast.show { opacity:1; }
+.toast.err { background:var(--jc-red); }
+.info-bar { background:rgba(53,148,131,0.1); border:1px solid rgba(53,148,131,0.25); border-radius:10px; padding:12px 16px; font-size:13px; color:var(--jc-green); margin-bottom:20px; display:none; }
+.info-bar.show { display:block; }
+.empty { text-align:center; padding:40px; color:var(--muted); font-size:14px; }
+.btn-finalizar { background:rgba(199,53,58,0.12); border:1px solid rgba(199,53,58,0.2); border-radius:6px; padding:5px 10px; color:var(--jc-red); font-size:11px; cursor:pointer; }
+.btn-finalizar:hover { background:rgba(199,53,58,0.25); }
+.stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+.stat-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; }
+.stat-card .val { font-size:24px; font-weight:800; margin-bottom:4px; }
+.stat-card .lbl { font-size:11px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>JC <span>|</span> Gerador</h1>
+  <span class="user-info" id="headerUser"></span>
+  <button class="btn-logout" onclick="logout()">Sair</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Importar Lista</div>
+  <div class="tab" onclick="setTab(1)">Meus Inventarios</div>
+</div>
+
+<!-- IMPORTAR -->
+<div class="panel active" id="panel-0">
+  <div class="info-bar" id="infoBar"></div>
+
+  <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <p>Arraste um arquivo <strong>CSV ou XLSX</strong> aqui</p>
+    <p style="font-size:12px;margin-top:6px">ou clique para selecionar</p>
+    <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+  </div>
+
+  <div class="preview-box" id="previewBox" style="display:none">
+    <div class="preview-header">
+      <span id="previewCount"></span>
+      <button class="btn-danger" onclick="limparPreview()">Limpar</button>
+    </div>
+    <div class="preview-scroll">
+      <table>
+        <thead><tr><th>#</th><th>Codigo</th><th>Descricao</th><th>Unidade</th><th>EAN</th></tr></thead>
+        <tbody id="previewBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="btnImportar" onclick="importar()" disabled>Criar Inventario e Importar Produtos</button>
+</div>
+
+<!-- INVENTARIOS -->
+<div class="panel" id="panel-1">
+  <div class="stat-row" id="statsInv"></div>
+  <div class="section-header">
+    <h2>Meus Inventarios</h2>
+    <button class="btn-primary" style="width:auto;padding:9px 16px;font-size:13px" onclick="carregarInventarios()">Atualizar</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Status</th><th>Importacao</th><th>Inicio</th><th>Produtos</th><th></th></tr></thead>
+      <tbody id="tbInventarios"><tr><td colspan="6" class="empty">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var user = JSON.parse(sessionStorage.getItem('jc_user') || 'null');
+if (!user || (user.perfil !== 'GERADOR' && user.perfil !== 'ADM')) { location.href = '/'; }
+document.getElementById('headerUser').textContent = user ? user.login : '';
+
+var produtos = [];
+
+function setTab(i) {
+  document.querySelectorAll('.tab').forEach(function(t, j) { t.classList.toggle('active', i === j); });
+  document.querySelectorAll('.panel').forEach(function(p, j) { p.classList.toggle('active', i === j); });
+  if (i === 1) carregarInventarios();
+}
+
+function toast(msg, err) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (err ? ' err' : '');
+  setTimeout(function() { el.className = 'toast'; }, 3000);
+}
+
+// Drag & drop
+var dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', function() { dz.classList.remove('dragover'); });
+dz.addEventListener('drop', function(e) {
+  e.preventDefault(); dz.classList.remove('dragover');
+  var f = e.dataTransfer.files[0];
+  if (f) processFile(f);
+});
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  if (e.target.files[0]) processFile(e.target.files[0]);
+});
+
+function processFile(file) {
+  var ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    var reader = new FileReader();
+    reader.onload = function(e) { parseCSV(e.target.result); };
+    reader.readAsText(file, 'UTF-8');
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    var reader = new FileReader();
+    reader.onload = function(e) { parseXLSX(e.target.result); };
+    reader.readAsArrayBuffer(file);
+  } else {
+    toast('Formato invalido. Use CSV ou XLSX.', true);
+  }
+}
+
+function parseCSV(text) {
+  var lines = text.split('\n').filter(function(l) { return l.trim(); });
+  if (lines.length < 2) { toast('CSV vazio ou sem dados.', true); return; }
+  var sep = lines[0].includes(';') ? ';' : ',';
+  var header = lines[0].split(sep).map(function(h) { return h.trim().toLowerCase().replace(/['"]/g, ''); });
+  var ci = findCol(header, ['codigo', 'code', 'cod', 'item']);
+  var di = findCol(header, ['descricao', 'descricao', 'nome', 'description', 'produto', 'desc']);
+  var ui = findCol(header, ['unidade', 'un', 'unit', 'und']);
+  var ei = findCol(header, ['ean', 'barcode', 'codigo_barras', 'gtin']);
+  var result = [];
+  for (var i = 1; i < lines.length; i++) {
+    var cols = splitCSVLine(lines[i], sep);
+    var cod = ci >= 0 ? clean(cols[ci]) : String(i);
+    var desc = di >= 0 ? clean(cols[di]) : '';
+    if (!cod && !desc) continue;
+    result.push({ codigo: cod, descricao: desc, unidade: ui >= 0 ? clean(cols[ui]) : 'PC', ean: ei >= 0 ? clean(cols[ei]) : '' });
+  }
+  showPreview(result);
+}
+
+function splitCSVLine(line, sep) {
+  var result = [];
+  var cur = '';
+  var inQ = false;
+  for (var i = 0; i < line.length; i++) {
+    var c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === sep && !inQ) { result.push(cur); cur = ''; }
+    else { cur += c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function parseXLSX(buf) {
+  try {
+    var wb = XLSX.read(buf, { type: 'array' });
+    var ws = wb.Sheets[wb.SheetNames[0]];
+    var data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    if (data.length < 2) { toast('Planilha vazia ou sem dados.', true); return; }
+    var header = data[0].map(function(h) { return String(h).trim().toLowerCase(); });
+    var ci = findCol(header, ['codigo', 'code', 'cod', 'item']);
+    var di = findCol(header, ['descricao', 'descricao', 'nome', 'description', 'produto', 'desc']);
+    var ui = findCol(header, ['unidade', 'un', 'unit', 'und']);
+    var ei = findCol(header, ['ean', 'barcode', 'codigo_barras', 'gtin']);
+    var result = [];
+    for (var i = 1; i < data.length; i++) {
+      var row = data[i];
+      var cod = ci >= 0 ? String(row[ci] || '').trim() : String(i);
+      var desc = di >= 0 ? String(row[di] || '').trim() : '';
+      if (!cod && !desc) continue;
+      result.push({ codigo: cod, descricao: desc, unidade: ui >= 0 ? String(row[ui] || 'PC').trim() : 'PC', ean: ei >= 0 ? String(row[ei] || '').trim() : '' });
+    }
+    showPreview(result);
+  } catch(e) { toast('Erro ao ler XLSX: ' + e.message, true); }
+}
+
+function findCol(header, names) {
+  for (var i = 0; i < names.length; i++) {
+    var idx = header.indexOf(names[i]);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function clean(s) { return s ? s.trim().replace(/^["']|["']$/g, '') : ''; }
+
+function showPreview(rows) {
+  if (!rows.length) { toast('Nenhum produto encontrado no arquivo.', true); return; }
+  produtos = rows;
+  document.getElementById('previewCount').textContent = rows.length + ' produtos encontrados';
+  var tbody = document.getElementById('previewBody');
+  tbody.innerHTML = rows.slice(0, 100).map(function(p, i) {
+    return '<tr><td>' + (i + 1) + '</td><td>' + p.codigo + '</td><td>' + p.descricao + '</td><td>' + p.unidade + '</td><td>' + (p.ean || '-') + '</td></tr>';
+  }).join('');
+  if (rows.length > 100) {
+    tbody.innerHTML += '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:12px">... e mais ' + (rows.length - 100) + ' produtos</td></tr>';
+  }
+  document.getElementById('previewBox').style.display = 'block';
+  document.getElementById('btnImportar').disabled = false;
+  var bar = document.getElementById('infoBar');
+  bar.textContent = rows.length + ' produtos carregados. Clique em "Criar Inventario" para iniciar a contagem.';
+  bar.classList.add('show');
+}
+
+function limparPreview() {
+  produtos = [];
+  document.getElementById('previewBox').style.display = 'none';
+  document.getElementById('btnImportar').disabled = true;
+  document.getElementById('infoBar').classList.remove('show');
+  document.getElementById('fileInput').value = '';
+}
+
+function importar() {
+  if (!produtos.length) return;
+  var btn = document.getElementById('btnImportar');
+  btn.disabled = true;
+  btn.textContent = 'Criando inventario...';
+
+  fetch('/api/inventarios', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ empresa_id: user.empresa_id, gerador_id: user.id })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (!d.ok) throw new Error(d.error);
+    var invId = d.id;
+    btn.textContent = 'Enviando ' + produtos.length + ' produtos...';
+    return fetch('/api/produtos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventario_id: invId, produtos: produtos })
+    });
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (!d.ok) throw new Error(d.error);
+    toast('Inventario criado com ' + d.inseridos + ' produtos!');
+    limparPreview();
+    btn.textContent = 'Criar Inventario e Importar Produtos';
+    setTab(1);
+  })
+  .catch(function(e) {
+    toast('Erro: ' + e.message, true);
+    btn.disabled = false;
+    btn.textContent = 'Criar Inventario e Importar Produtos';
+  });
+}
+
+function fmtDate(iso) {
+  if (!iso) return '-';
+  var d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function badgeStatus(s) {
+  var m = { PENDENTE: 'pendente', EM_ANDAMENTO: 'andamento', FINALIZADO: 'finalizado' };
+  return '<span class="badge badge-' + (m[s] || 'pendente') + '">' + s.replace('_', ' ') + '</span>';
+}
+
+function carregarInventarios() {
+  var tb = document.getElementById('tbInventarios');
+  tb.innerHTML = '<tr><td colspan="6" class="empty">Carregando...</td></tr>';
+  fetch('/api/inventarios?empresa_id=' + user.empresa_id).then(function(r) { return r.json(); }).then(function(rows) {
+    var total = rows.length;
+    var andamento = rows.filter(function(r) { return r.status === 'EM_ANDAMENTO'; }).length;
+    var finalizado = rows.filter(function(r) { return r.status === 'FINALIZADO'; }).length;
+    document.getElementById('statsInv').innerHTML =
+      '<div class="stat-card"><div class="val">' + total + '</div><div class="lbl">Total</div></div>' +
+      '<div class="stat-card"><div class="val" style="color:var(--jc-green)">' + andamento + '</div><div class="lbl">Em Andamento</div></div>' +
+      '<div class="stat-card"><div class="val" style="color:var(--muted)">' + finalizado + '</div><div class="lbl">Finalizados</div></div>';
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Nenhum inventario criado ainda</td></tr>'; return; }
+    tb.innerHTML = rows.map(function(r) {
+      var canFinish = r.status === 'EM_ANDAMENTO';
+      return '<tr><td>#' + r.id + '</td><td>' + badgeStatus(r.status) + '</td><td>' +
+        fmtDate(r.data_importacao) + '</td><td>' + fmtDate(r.inicio_contagem) +
+        '</td><td><span style="color:var(--jc-green)">' + (r.total_coletados || 0) + '</span><span style="color:var(--muted)">/' + (r.total_produtos || 0) + '</span></td><td>' +
+        (canFinish ? '<button class="btn-finalizar" onclick="finalizar(' + r.id + ')">Finalizar</button>' : '') + '</td></tr>';
+    }).join('');
+  }).catch(function() { tb.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar</td></tr>'; });
+}
+
+function finalizar(id) {
+  if (!confirm('Finalizar este inventario? Os conferentes nao poderao mais registrar contagens.')) return;
+  fetch('/api/inventarios', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id, status: 'FINALIZADO', fim_contagem: new Date().toISOString() })
+  }).then(function() { toast('Inventario finalizado.'); carregarInventarios(); });
+}
+
+function logout() { sessionStorage.removeItem('jc_user'); location.href = '/'; }
+</script>
+</body>
+</html>

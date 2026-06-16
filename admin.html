@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel ADM - JC Sistema</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root { --jc-green:#359483; --jc-red:#C7353A; --bg:#000; --card:#0d0d0d; --card2:#1a1a1a; --border:#262626; --text:#fff; --muted:#a3a3a3; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+.header { background:rgba(0,0,0,0.9); border-bottom:1px solid var(--border); padding:14px 20px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; backdrop-filter:blur(16px); }
+.header h1 { font-size:16px; font-weight:700; flex:1; }
+.header h1 span { color:var(--jc-red); }
+.btn-logout { background:rgba(199,53,58,0.15); border:1px solid rgba(199,53,58,0.3); border-radius:8px; padding:7px 14px; color:var(--jc-red); font-size:12px; font-weight:600; cursor:pointer; }
+.user-info { font-size:12px; color:var(--muted); }
+.tabs { display:flex; gap:0; border-bottom:1px solid var(--border); background:var(--card); }
+.tab { flex:1; padding:14px; text-align:center; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); border-bottom:2px solid transparent; transition:all .2s; }
+.tab.active { color:var(--jc-green); border-bottom-color:var(--jc-green); }
+.tab:hover:not(.active) { color:var(--text); background:var(--card2); }
+.panel { display:none; padding:20px; max-width:960px; margin:0 auto; }
+.panel.active { display:block; }
+.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.section-header h2 { font-size:15px; font-weight:600; }
+.btn-add { background:var(--jc-green); border:none; border-radius:8px; padding:9px 16px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+.btn-add:hover { opacity:0.85; }
+.table-wrap { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead th { background:var(--card2); color:var(--muted); padding:11px 14px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--border); }
+tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:var(--card2); }
+td { padding:11px 14px; color:var(--text); vertical-align:middle; }
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-adm { background:rgba(199,53,58,0.2); color:var(--jc-red); }
+.badge-gerador { background:rgba(53,148,131,0.2); color:var(--jc-green); }
+.badge-conferente { background:rgba(255,255,255,0.08); color:var(--muted); }
+.badge-pendente { background:rgba(255,193,7,0.15); color:#ffc107; }
+.badge-andamento { background:rgba(53,148,131,0.2); color:var(--jc-green); }
+.badge-finalizado { background:rgba(255,255,255,0.08); color:var(--muted); }
+.btn-del { background:rgba(199,53,58,0.12); border:1px solid rgba(199,53,58,0.2); border-radius:6px; padding:5px 10px; color:var(--jc-red); font-size:11px; cursor:pointer; }
+.btn-del:hover { background:rgba(199,53,58,0.25); }
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:500; align-items:center; justify-content:center; padding:20px; }
+.modal-bg.show { display:flex; }
+.modal { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:24px; width:100%; max-width:400px; }
+.modal h3 { font-size:16px; font-weight:700; margin-bottom:20px; }
+.field { margin-bottom:14px; }
+.field label { display:block; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
+.field input, .field select { width:100%; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; color:var(--text); font-size:14px; outline:none; }
+.field input:focus, .field select:focus { border-color:var(--jc-green); }
+.field select option { background:var(--card2); }
+.modal-btns { display:flex; gap:10px; margin-top:20px; }
+.modal-btns button { flex:1; padding:12px; border-radius:8px; border:none; font-size:14px; font-weight:600; cursor:pointer; }
+.btn-confirm { background:var(--jc-green); color:#fff; }
+.btn-cancel { background:var(--card2); color:var(--muted); border:1px solid var(--border) !important; }
+.online-list { display:flex; flex-wrap:wrap; gap:8px; padding:16px; }
+.online-chip { background:rgba(53,148,131,0.15); border:1px solid rgba(53,148,131,0.3); border-radius:20px; padding:6px 14px; font-size:13px; color:var(--jc-green); }
+.stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:24px; }
+.stat-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.stat-card .val { font-size:28px; font-weight:800; margin-bottom:4px; }
+.stat-card .lbl { font-size:12px; color:var(--muted); }
+.empty { text-align:center; padding:40px; color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>JC <span>|</span> Painel ADM</h1>
+  <span class="user-info" id="headerUser"></span>
+  <button class="btn-logout" onclick="logout()">Sair</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="setTab(0)">Usuarios</div>
+  <div class="tab" onclick="setTab(1)">Empresas</div>
+  <div class="tab" onclick="setTab(2)">Inventarios</div>
+  <div class="tab" onclick="setTab(3)">Online</div>
+</div>
+
+<!-- USUARIOS -->
+<div class="panel active" id="panel-0">
+  <div class="stat-row" id="statsUsuarios"></div>
+  <div class="section-header">
+    <h2>Usuarios</h2>
+    <button class="btn-add" onclick="abrirModalUsuario()">+ Novo Usuario</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Login</th><th>Perfil</th><th>Empresa</th><th>Criado em</th><th></th></tr></thead>
+      <tbody id="tbUsuarios"><tr><td colspan="5" class="empty">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- EMPRESAS -->
+<div class="panel" id="panel-1">
+  <div class="section-header">
+    <h2>Empresas</h2>
+    <button class="btn-add" onclick="abrirModalEmpresa()">+ Nova Empresa</button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nome</th><th>Logo URL</th><th>Criada em</th><th></th></tr></thead>
+      <tbody id="tbEmpresas"><tr><td colspan="4" class="empty">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- INVENTARIOS -->
+<div class="panel" id="panel-2">
+  <div class="section-header"><h2>Historico de Inventarios</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Empresa</th><th>Gerador</th><th>Status</th><th>Importacao</th><th>Inicio</th><th>Fim</th></tr></thead>
+      <tbody id="tbInventarios"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ONLINE -->
+<div class="panel" id="panel-3">
+  <div class="section-header">
+    <h2>Usuarios Online</h2>
+    <button class="btn-add" onclick="carregarOnline()">Atualizar</button>
+  </div>
+  <div class="table-wrap">
+    <div class="online-list" id="onlineList"><span class="empty" style="padding:20px">Carregando...</span></div>
+  </div>
+</div>
+
+<!-- MODAL USUARIO -->
+<div class="modal-bg" id="modalUsuario">
+  <div class="modal">
+    <h3>Novo Usuario</h3>
+    <div class="field"><label>Login</label><input id="uLogin" placeholder="ex: joao.silva"></div>
+    <div class="field"><label>Senha</label><input id="uSenha" type="password" placeholder="senha"></div>
+    <div class="field"><label>Perfil</label>
+      <select id="uPerfil">
+        <option value="CONFERENTE">Conferente</option>
+        <option value="GERADOR">Gerador</option>
+        <option value="ADM">Administrador</option>
+      </select>
+    </div>
+    <div class="field"><label>Empresa</label><select id="uEmpresa"></select></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="salvarUsuario()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EMPRESA -->
+<div class="modal-bg" id="modalEmpresa">
+  <div class="modal">
+    <h3>Nova Empresa</h3>
+    <div class="field"><label>Nome</label><input id="eNome" placeholder="ex: Casa 505"></div>
+    <div class="field"><label>URL da Logo</label><input id="eLogo" placeholder="https://..."></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="salvarEmpresa()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var user = JSON.parse(sessionStorage.getItem('jc_user') || 'null');
+if (!user || user.perfil !== 'ADM') { location.href = '/'; }
+document.getElementById('headerUser').textContent = user ? user.login : '';
+
+var empresas = [];
+
+function setTab(i) {
+  document.querySelectorAll('.tab').forEach(function(t, j) { t.classList.toggle('active', i === j); });
+  document.querySelectorAll('.panel').forEach(function(p, j) { p.classList.toggle('active', i === j); });
+  if (i === 0) carregarUsuarios();
+  if (i === 1) carregarEmpresas();
+  if (i === 2) carregarInventarios();
+  if (i === 3) carregarOnline();
+}
+
+function fmtDate(iso) {
+  if (!iso) return '-';
+  var d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function badgePerfil(p) {
+  var m = { ADM: 'adm', GERADOR: 'gerador', CONFERENTE: 'conferente' };
+  return '<span class="badge badge-' + (m[p] || 'conferente') + '">' + p + '</span>';
+}
+
+function badgeStatus(s) {
+  var m = { PENDENTE: 'pendente', EM_ANDAMENTO: 'andamento', FINALIZADO: 'finalizado' };
+  return '<span class="badge badge-' + (m[s] || 'pendente') + '">' + s.replace('_', ' ') + '</span>';
+}
+
+function carregarUsuarios() {
+  var tb = document.getElementById('tbUsuarios');
+  fetch('/api/usuarios').then(function(r) { return r.json(); }).then(function(rows) {
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">Nenhum usuario cadastrado</td></tr>'; return; }
+    var adm = rows.filter(function(r) { return r.perfil === 'ADM'; }).length;
+    var ger = rows.filter(function(r) { return r.perfil === 'GERADOR'; }).length;
+    var conf = rows.filter(function(r) { return r.perfil === 'CONFERENTE'; }).length;
+    document.getElementById('statsUsuarios').innerHTML =
+      '<div class="stat-card"><div class="val">' + rows.length + '</div><div class="lbl">Total Usuarios</div></div>' +
+      '<div class="stat-card"><div class="val" style="color:var(--jc-red)">' + adm + '</div><div class="lbl">Administradores</div></div>' +
+      '<div class="stat-card"><div class="val" style="color:var(--jc-green)">' + ger + '</div><div class="lbl">Geradores</div></div>' +
+      '<div class="stat-card"><div class="val">' + conf + '</div><div class="lbl">Conferentes</div></div>';
+    tb.innerHTML = rows.map(function(r) {
+      return '<tr><td><strong>' + r.login + '</strong></td><td>' + badgePerfil(r.perfil) + '</td><td>' +
+        (r.empresa_nome || '-') + '</td><td>' + fmtDate(r.created_at) + '</td><td>' +
+        (r.login !== 'admin' ? '<button class="btn-del" onclick="deletarUsuario(' + r.id + ')">Excluir</button>' : '') + '</td></tr>';
+    }).join('');
+  }).catch(function() { tb.innerHTML = '<tr><td colspan="5" class="empty">Erro ao carregar</td></tr>'; });
+}
+
+function carregarEmpresas() {
+  var tb = document.getElementById('tbEmpresas');
+  fetch('/api/empresas').then(function(r) { return r.json(); }).then(function(rows) {
+    empresas = rows;
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">Nenhuma empresa cadastrada</td></tr>'; return; }
+    tb.innerHTML = rows.map(function(e) {
+      return '<tr><td><strong>' + e.nome + '</strong></td><td><span style="color:var(--muted);font-size:12px">' +
+        (e.logo_url || '-') + '</span></td><td>' + fmtDate(e.created_at) + '</td><td>' +
+        '<button class="btn-del" onclick="deletarEmpresa(' + e.id + ')">Excluir</button></td></tr>';
+    }).join('');
+  }).catch(function() { tb.innerHTML = '<tr><td colspan="4" class="empty">Erro ao carregar</td></tr>'; });
+}
+
+function carregarInventarios() {
+  var tb = document.getElementById('tbInventarios');
+  fetch('/api/inventarios').then(function(r) { return r.json(); }).then(function(rows) {
+    if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum inventario encontrado</td></tr>'; return; }
+    tb.innerHTML = rows.map(function(r) {
+      return '<tr><td>#' + r.id + '</td><td>' + (r.empresa_id || '-') + '</td><td>' + (r.gerador_login || '-') +
+        '</td><td>' + badgeStatus(r.status) + '</td><td>' + fmtDate(r.data_importacao) +
+        '</td><td>' + fmtDate(r.inicio_contagem) + '</td><td>' + fmtDate(r.fim_contagem) + '</td></tr>';
+    }).join('');
+  }).catch(function() { tb.innerHTML = '<tr><td colspan="7" class="empty">Erro ao carregar</td></tr>'; });
+}
+
+function carregarOnline() {
+  var el = document.getElementById('onlineList');
+  fetch('/api/online').then(function(r) { return r.json(); }).then(function(data) {
+    if (!data.usuarios || !data.usuarios.length) {
+      el.innerHTML = '<span style="padding:20px;color:var(--muted)">Nenhum usuario online</span>';
+      return;
+    }
+    el.innerHTML = data.usuarios.map(function(n) {
+      return '<div class="online-chip">&#x1F7E2; ' + n + '</div>';
+    }).join('');
+  }).catch(function() { el.innerHTML = '<span style="padding:20px;color:var(--muted)">Erro ao carregar</span>'; });
+}
+
+function abrirModalUsuario() {
+  var sel = document.getElementById('uEmpresa');
+  sel.innerHTML = '<option value="">Selecionar empresa</option>' +
+    empresas.map(function(e) { return '<option value="' + e.id + '">' + e.nome + '</option>'; }).join('');
+  document.getElementById('modalUsuario').classList.add('show');
+}
+
+function abrirModalEmpresa() { document.getElementById('modalEmpresa').classList.add('show'); }
+function fecharModal() { document.querySelectorAll('.modal-bg').forEach(function(m) { m.classList.remove('show'); }); }
+
+function salvarUsuario() {
+  var login = document.getElementById('uLogin').value.trim();
+  var senha = document.getElementById('uSenha').value;
+  var perfil = document.getElementById('uPerfil').value;
+  var empresa_id = document.getElementById('uEmpresa').value || null;
+  if (!login || !senha) { alert('Login e senha sao obrigatorios.'); return; }
+  fetch('/api/usuarios', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ login: login, senha: senha, perfil: perfil, empresa_id: empresa_id }) })
+  .then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) { fecharModal(); carregarUsuarios(); }
+    else alert('Erro: ' + d.error);
+  });
+}
+
+function salvarEmpresa() {
+  var nome = document.getElementById('eNome').value.trim();
+  var logo_url = document.getElementById('eLogo').value.trim();
+  if (!nome) { alert('Nome e obrigatorio.'); return; }
+  fetch('/api/empresas', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nome: nome, logo_url: logo_url }) })
+  .then(function(r) { return r.json(); }).then(function(d) {
+    if (d.ok) { fecharModal(); carregarEmpresas(); }
+    else alert('Erro: ' + d.error);
+  });
+}
+
+function deletarUsuario(id) {
+  if (!confirm('Excluir usuario?')) return;
+  fetch('/api/usuarios?id=' + id, { method: 'DELETE' }).then(function() { carregarUsuarios(); });
+}
+
+function deletarEmpresa(id) {
+  if (!confirm('Excluir empresa? Todos os usuarios vinculados serao desvinculados.')) return;
+  fetch('/api/empresas?id=' + id, { method: 'DELETE' }).then(function() { carregarEmpresas(); });
+}
+
+function logout() { sessionStorage.removeItem('jc_user'); location.href = '/'; }
+
+carregarEmpresas();
+carregarUsuarios();
+</script>
+</body>
+</html>

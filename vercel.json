@@ -1,5 +1,16 @@
 {
   "version": 2,
-  "builds": [{ "src": "server.js", "use": "@vercel/node" }],
-  "routes": [{ "src": "/(.*)", "dest": "server.js" }]
+  "builds": [
+    { "src": "api/*.js", "use": "@vercel/node" },
+    { "src": "server.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/admin", "dest": "/admin.html" },
+    { "src": "/gerador", "dest": "/gerador.html" },
+    { "src": "/coletor", "dest": "/coletor.html" },
+    { "src": "/login", "dest": "/index.html" },
+    { "src": "/(.*\\.html)", "dest": "/$1" },
+    { "src": "/(.*)", "dest": "/server.js" }
+  ]
 }
