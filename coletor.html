@@ -312,6 +312,15 @@ td.qtd  { text-align: center; }
   <button class="scan-close-btn" onclick="closeScanner()">✕ Fechar</button>
 </div>
 
+<!-- SELETOR DE INVENTÁRIO (conferente com múltiplos ativos) -->
+<div id="invSelector" style="display:none;position:fixed;inset:0;background:#000;z-index:9998;flex-direction:column;padding:24px 16px;overflow-y:auto">
+  <div style="margin-bottom:24px">
+    <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px">Selecione o Inventário</div>
+    <div style="font-size:13px;color:var(--text-muted)">Há múltiplos inventários ativos na sua empresa. Escolha qual deseja contar.</div>
+  </div>
+  <div id="invSelectorList"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 <div id="conflictsPanel"></div>
 
@@ -980,27 +989,62 @@ async function finalizarContagem() {
 }
 
 let currentInventarioId = null;
+
+async function carregarProdutosInventario(invId) {
+  currentInventarioId = invId;
+  const prodRes = await fetch('/api/produtos?inventario_id=' + invId);
+  const lista = await prodRes.json();
+  products.length = 0;
+  byCode = {}; byEan = {};
+  lista.forEach((p, i) => {
+    const item = { id: i + 1, db_id: p.id, codigo: p.codigo, nome: p.descricao,
+      un: p.unidade || 'PC', ean: p.ean || '', qtd: p.quantidade_coletada || 0 };
+    products.push(item);
+    byCode[item.codigo] = item;
+    if (item.ean) byEan[item.ean] = item;
+  });
+  renderTable();
+  showToast('📦 ' + products.length.toLocaleString('pt-BR') + ' produtos carregados');
+}
+
+function mostrarSeletorInventario(ativos) {
+  const sel = document.getElementById('invSelector');
+  const list = document.getElementById('invSelectorList');
+  list.innerHTML = ativos.map(inv => {
+    const pct = inv.total_produtos > 0 ? Math.round((inv.total_coletados / inv.total_produtos) * 100) : 0;
+    return `
+    <div onclick="selecionarInventario(${inv.id})" style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:12px;cursor:pointer;active:opacity(.8)">
+      <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px">${inv.nome || 'Inventário #' + inv.id}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${inv.total_coletados || 0}/${inv.total_produtos || 0} produtos contados · ${pct}%</div>
+      <div style="background:var(--border);border-radius:4px;height:5px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:var(--jc-green);border-radius:4px"></div>
+      </div>
+    </div>`;
+  }).join('');
+  sel.style.display = 'flex';
+}
+
+async function selecionarInventario(invId) {
+  document.getElementById('invSelector').style.display = 'none';
+  try {
+    await carregarProdutosInventario(invId);
+  } catch(e) {
+    showToast('⚠️ Erro ao carregar inventário');
+  }
+}
+
 async function loadInventario() {
   if (!sessionUser || !sessionUser.empresa_id) return;
   try {
     const invRes = await fetch('/api/inventarios?empresa_id=' + sessionUser.empresa_id);
     const inventarios = await invRes.json();
-    const inv = inventarios.find(i => i.status === 'EM_ANDAMENTO') || inventarios[0];
-    if (!inv) { showToast('⚠️ Nenhum inventario ativo. Aguarde o Gerador.'); return; }
-    currentInventarioId = inv.id;
-    const prodRes = await fetch('/api/produtos?inventario_id=' + inv.id);
-    const lista = await prodRes.json();
-    products.length = 0;
-    byCode = {}; byEan = {};
-    lista.forEach((p, i) => {
-      const item = { id: i + 1, db_id: p.id, codigo: p.codigo, nome: p.descricao,
-        un: p.unidade || 'PC', ean: p.ean || '', qtd: p.quantidade_coletada || 0 };
-      products.push(item);
-      byCode[item.codigo] = item;
-      if (item.ean) byEan[item.ean] = item;
-    });
-    renderTable();
-    showToast('📦 ' + products.length.toLocaleString('pt-BR') + ' produtos carregados');
+    const ativos = inventarios.filter(i => i.status === 'EM_ANDAMENTO');
+    if (!ativos.length) { showToast('⚠️ Nenhum inventário ativo. Aguarde o Gerador.'); return; }
+    if (sessionUser.perfil === 'CONFERENTE' && ativos.length > 1) {
+      mostrarSeletorInventario(ativos);
+      return;
+    }
+    await carregarProdutosInventario(ativos[0].id);
   } catch(e) {
     console.error('loadInventario:', e);
     showToast('⚠️ Erro ao carregar produtos da API');

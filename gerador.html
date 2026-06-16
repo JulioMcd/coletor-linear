@@ -127,12 +127,8 @@ td { padding:9px 12px; }
 
 <!-- CONTAGEM -->
 <div class="panel" id="panel-2">
-  <div class="section-header"><h2>Acesso a Contagem</h2></div>
-  <p style="color:var(--muted);font-size:13px;margin-bottom:24px">Entre na tela de contagem para registrar quantidades dos produtos do inventario ativo.</p>
-  <div id="contagemInfoGer" style="margin-bottom:24px"></div>
-  <a href="/coletor" style="display:block;background:var(--jc-green);border-radius:12px;padding:22px;text-align:center;color:#fff;font-size:16px;font-weight:700;text-decoration:none;max-width:420px;margin:0 auto;letter-spacing:0.3px">
-    &#x1F4E6; Entrar na Tela de Contagem
-  </a>
+  <div class="section-header"><h2>Contagem</h2></div>
+  <div id="contagemInfoGer"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -153,21 +149,38 @@ function setTab(i) {
 
 function carregarContagemInfoGer() {
   var el = document.getElementById('contagemInfoGer');
-  el.innerHTML = '';
+  el.innerHTML = '<div class="empty">Carregando...</div>';
   fetch('/api/inventarios?empresa_id=' + user.empresa_id)
     .then(function(r) { return r.json(); })
     .then(function(rows) {
-      var inv = rows.find(function(r) { return r.status === 'EM_ANDAMENTO'; }) || rows[0];
-      if (!inv) { el.innerHTML = '<div class="empty">Nenhum inventario ativo no momento. Importe uma lista primeiro.</div>'; return; }
-      var pct = inv.total_produtos > 0 ? Math.round((inv.total_coletados / inv.total_produtos) * 100) : 0;
-      el.innerHTML =
-        '<div class="stat-row">' +
-        '<div class="stat-card"><div class="val" style="color:var(--jc-green)">' + (inv.total_coletados || 0) + '</div><div class="lbl">Contados</div></div>' +
-        '<div class="stat-card"><div class="val">' + (inv.total_produtos || 0) + '</div><div class="lbl">Total</div></div>' +
-        '<div class="stat-card"><div class="val">' + pct + '%</div><div class="lbl">Progresso</div></div>' +
-        '</div>';
+      var ativos = rows.filter(function(r) { return r.status === 'EM_ANDAMENTO'; });
+      if (!ativos.length) {
+        el.innerHTML = '<div class="empty">Nenhum inventario ativo no momento. Importe uma lista primeiro.</div>';
+        return;
+      }
+      el.innerHTML = ativos.map(function(inv) {
+        var pct = inv.total_produtos > 0 ? Math.round((inv.total_coletados / inv.total_produtos) * 100) : 0;
+        var barColor = pct >= 100 ? 'var(--jc-green)' : 'var(--jc-red)';
+        return '<div class="table-wrap" style="padding:16px;margin-bottom:16px">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +
+          '<div>' +
+          '<div style="font-size:15px;font-weight:700;color:#fff">' + (inv.nome || 'Inventario #' + inv.id) + '</div>' +
+          '<div style="font-size:12px;color:var(--muted);margin-top:2px">EM ANDAMENTO</div>' +
+          '</div>' +
+          '<a href="/coletor" style="background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:8px;padding:8px 14px;color:var(--jc-green);font-size:12px;font-weight:600;text-decoration:none">&#x1F50D; Auditar</a>' +
+          '</div>' +
+          '<div class="stat-row" style="margin-bottom:12px">' +
+          '<div class="stat-card"><div class="val" style="color:var(--jc-green)">' + (inv.total_coletados || 0) + '</div><div class="lbl">Contados</div></div>' +
+          '<div class="stat-card"><div class="val">' + (inv.total_produtos || 0) + '</div><div class="lbl">Total</div></div>' +
+          '<div class="stat-card"><div class="val">' + pct + '%</div><div class="lbl">Progresso</div></div>' +
+          '</div>' +
+          '<div style="background:var(--card2);border-radius:4px;height:6px;overflow:hidden">' +
+          '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:4px;transition:width .4s"></div>' +
+          '</div>' +
+          '</div>';
+      }).join('');
     })
-    .catch(function() {});
+    .catch(function() { el.innerHTML = '<div class="empty">Erro ao carregar</div>'; });
 }
 
 function toast(msg, err) {
