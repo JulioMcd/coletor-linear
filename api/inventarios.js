@@ -49,6 +49,13 @@ module.exports = async function handler(req, res) {
       if (error) throw error;
       return res.status(200).json({ ok: true });
     }
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      if (!id) return res.status(400).json({ error: 'id obrigatorio.' });
+      const { error } = await sb.from('inventarios').delete().eq('id', id).eq('status', 'FINALIZADO');
+      if (error) throw error;
+      return res.status(200).json({ ok: true });
+    }
     return res.status(405).json({ error: 'Method Not Allowed' });
   } catch (e) {
     return res.status(500).json({ error: e.message });

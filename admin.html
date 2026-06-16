@@ -306,6 +306,8 @@ function carregarInventarios() {
     tb.innerHTML = rows.map(function(r) {
       var btnAuditar = r.status === 'EM_ANDAMENTO'
         ? '<a href="/coletor" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none;">&#x1F50D; Auditar</a>'
+        : r.status === 'FINALIZADO'
+        ? '<button class="btn-del" onclick="excluirInventario(' + r.id + ')">Excluir</button>'
         : '';
       return '<tr>' +
         '<td>#' + r.id + '</td>' +
@@ -536,6 +538,16 @@ function criarInventarioAdm() {
     btn.disabled = false;
     btn.textContent = 'Criar e Importar';
   });
+}
+
+function excluirInventario(id) {
+  if (!confirm('Excluir este inventario? Todos os produtos serão apagados permanentemente.')) return;
+  fetch('/api/inventarios?id=' + id, { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) carregarInventarios();
+      else alert('Erro: ' + (d.error || 'Nao foi possivel excluir'));
+    });
 }
 
 function admEnviarLotes(invId, lista, btn) {

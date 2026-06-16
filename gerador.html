@@ -392,6 +392,8 @@ function carregarInventarios() {
     tb.innerHTML = rows.map(function(r) {
       var btnAcao = r.status === 'EM_ANDAMENTO'
         ? '<a href="/coletor" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none">&#x1F50D; Auditar</a>'
+        : r.status === 'FINALIZADO'
+        ? '<button class="btn-danger" onclick="excluirInventario(' + r.id + ')" style="font-size:11px;padding:5px 10px">Excluir</button>'
         : '';
       return '<tr><td>#' + r.id + '</td><td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.nome || '<span style="color:var(--muted)">—</span>') + '</td><td>' + badgeStatus(r.status) + '</td><td>' +
         fmtDate(r.data_importacao) + '</td><td>' + fmtDate(r.inicio_contagem) +
@@ -408,6 +410,16 @@ function finalizar(id) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id: id, status: 'FINALIZADO', fim_contagem: new Date().toISOString() })
   }).then(function() { toast('Inventario finalizado.'); carregarInventarios(); });
+}
+
+function excluirInventario(id) {
+  if (!confirm('Excluir este inventario? Todos os produtos serao apagados permanentemente.')) return;
+  fetch('/api/inventarios?id=' + id, { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) carregarInventarios();
+      else toast('Erro: ' + (d.error || 'Nao foi possivel excluir'), true);
+    });
 }
 
 function logout() { sessionStorage.removeItem('jc_user'); location.href = '/'; }
