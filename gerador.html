@@ -162,12 +162,9 @@ function carregarContagemInfoGer() {
         var pct = inv.total_produtos > 0 ? Math.round((inv.total_coletados / inv.total_produtos) * 100) : 0;
         var barColor = pct >= 100 ? 'var(--jc-green)' : 'var(--jc-red)';
         return '<div class="table-wrap" style="padding:16px;margin-bottom:16px">' +
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +
-          '<div>' +
+          '<div style="margin-bottom:14px">' +
           '<div style="font-size:15px;font-weight:700;color:#fff">' + (inv.nome || 'Inventario #' + inv.id) + '</div>' +
           '<div style="font-size:12px;color:var(--muted);margin-top:2px">EM ANDAMENTO</div>' +
-          '</div>' +
-          '<a href="/coletor" style="background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:8px;padding:8px 14px;color:var(--jc-green);font-size:12px;font-weight:600;text-decoration:none">&#x1F50D; Auditar</a>' +
           '</div>' +
           '<div class="stat-row" style="margin-bottom:12px">' +
           '<div class="stat-card"><div class="val" style="color:var(--jc-green)">' + (inv.total_coletados || 0) + '</div><div class="lbl">Contados</div></div>' +
@@ -376,11 +373,13 @@ function carregarInventarios() {
       '<div class="stat-card"><div class="val" style="color:var(--muted)">' + finalizado + '</div><div class="lbl">Finalizados</div></div>';
     if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum inventario criado ainda</td></tr>'; return; }
     tb.innerHTML = rows.map(function(r) {
-      var canFinish = r.status === 'EM_ANDAMENTO';
+      var btnAcao = r.status === 'EM_ANDAMENTO'
+        ? '<a href="/coletor" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none">&#x1F50D; Auditar</a>'
+        : '';
       return '<tr><td>#' + r.id + '</td><td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.nome || '<span style="color:var(--muted)">—</span>') + '</td><td>' + badgeStatus(r.status) + '</td><td>' +
         fmtDate(r.data_importacao) + '</td><td>' + fmtDate(r.inicio_contagem) +
         '</td><td><span style="color:var(--jc-green)">' + (r.total_coletados || 0) + '</span><span style="color:var(--muted)">/' + (r.total_produtos || 0) + '</span></td><td>' +
-        (canFinish ? '<button class="btn-finalizar" onclick="finalizar(' + r.id + ')">Finalizar</button>' : '') + '</td></tr>';
+        btnAcao + '</td></tr>';
     }).join('');
   }).catch(function() { tb.innerHTML = '<tr><td colspan="6" class="empty">Erro ao carregar</td></tr>'; });
 }
