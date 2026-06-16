@@ -304,11 +304,10 @@ function carregarInventarios() {
   fetch('/api/inventarios').then(function(r) { return r.json(); }).then(function(rows) {
     if (!rows.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Nenhum inventario encontrado</td></tr>'; return; }
     tb.innerHTML = rows.map(function(r) {
+      var btnDel = '<button class="btn-del" onclick="excluirInventario(' + r.id + ')" style="margin-left:4px">Excluir</button>';
       var btnAuditar = r.status === 'EM_ANDAMENTO'
-        ? '<a href="/coletor" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none;">&#x1F50D; Auditar</a>'
-        : r.status === 'FINALIZADO'
-        ? '<button class="btn-del" onclick="excluirInventario(' + r.id + ')">Excluir</button>'
-        : '';
+        ? '<a href="/coletor" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none;">&#x1F50D; Auditar</a>' + btnDel
+        : btnDel;
       return '<tr>' +
         '<td>#' + r.id + '</td>' +
         '<td style="font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.nome || '<span style="color:var(--muted)">—</span>') + '</td>' +

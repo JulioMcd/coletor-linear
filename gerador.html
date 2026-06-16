@@ -390,11 +390,10 @@ function carregarInventarios() {
       '<div class="stat-card"><div class="val" style="color:var(--muted)">' + finalizado + '</div><div class="lbl">Finalizados</div></div>';
     if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum inventario criado ainda</td></tr>'; return; }
     tb.innerHTML = rows.map(function(r) {
+      var btnDel = '<button class="btn-danger" onclick="excluirInventario(' + r.id + ')" style="font-size:11px;padding:5px 10px;margin-left:4px">Excluir</button>';
       var btnAcao = r.status === 'EM_ANDAMENTO'
-        ? '<a href="/coletor" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none">&#x1F50D; Auditar</a>'
-        : r.status === 'FINALIZADO'
-        ? '<button class="btn-danger" onclick="excluirInventario(' + r.id + ')" style="font-size:11px;padding:5px 10px">Excluir</button>'
-        : '';
+        ? '<a href="/coletor" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none">&#x1F50D; Auditar</a>' + btnDel
+        : btnDel;
       return '<tr><td>#' + r.id + '</td><td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.nome || '<span style="color:var(--muted)">—</span>') + '</td><td>' + badgeStatus(r.status) + '</td><td>' +
         fmtDate(r.data_importacao) + '</td><td>' + fmtDate(r.inicio_contagem) +
         '</td><td><span style="color:var(--jc-green)">' + (r.total_coletados || 0) + '</span><span style="color:var(--muted)">/' + (r.total_produtos || 0) + '</span></td><td>' +

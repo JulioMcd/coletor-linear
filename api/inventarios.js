@@ -52,7 +52,7 @@ module.exports = async function handler(req, res) {
     if (req.method === 'DELETE') {
       const { id } = req.query;
       if (!id) return res.status(400).json({ error: 'id obrigatorio.' });
-      const { error } = await sb.from('inventarios').delete().eq('id', id).eq('status', 'FINALIZADO');
+      const { error } = await sb.from('inventarios').delete().eq('id', id);
       if (error) throw error;
       return res.status(200).json({ ok: true });
     }
