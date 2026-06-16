@@ -45,6 +45,12 @@ ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;
 -- Migração: adiciona nome ao inventario
 ALTER TABLE inventarios ADD COLUMN IF NOT EXISTS nome TEXT;
 
+-- Migração: amplia limites de colunas de produtos
+ALTER TABLE produtos ALTER COLUMN unidade TYPE VARCHAR(50);
+ALTER TABLE produtos ALTER COLUMN codigo TYPE VARCHAR(150);
+ALTER TABLE produtos ALTER COLUMN descricao TYPE VARCHAR(500);
+ALTER TABLE produtos ALTER COLUMN ean TYPE VARCHAR(150);
+
 -- 4. Tabela de Produtos
 CREATE TABLE IF NOT EXISTS produtos (
     id SERIAL PRIMARY KEY,

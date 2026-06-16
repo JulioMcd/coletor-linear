@@ -15,10 +15,10 @@ module.exports = async function handler(req, res) {
       if (!inventario_id || !Array.isArray(produtos)) return res.status(400).json({ error: 'inventario_id e produtos[] obrigatorios.' });
       const rows = produtos.map(p => ({
         inventario_id,
-        codigo: p.codigo || '',
-        descricao: p.descricao || p.nome || '',
-        unidade: p.unidade || p.un || 'PC',
-        ean: p.ean || '',
+        codigo: (p.codigo || '').toString().slice(0, 100),
+        descricao: (p.descricao || p.nome || '').toString().slice(0, 255),
+        unidade: (p.unidade || p.un || 'PC').toString().slice(0, 20),
+        ean: (p.ean || '').toString().slice(0, 100),
         quantidade_esperada: p.quantidade_esperada || 0
       }));
       const { error } = await sb.from('produtos').insert(rows);
