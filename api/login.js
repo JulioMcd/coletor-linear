@@ -21,6 +21,6 @@ module.exports = async function handler(req, res) {
     });
   } catch (e) {
     console.error('login:', e.message);
-    return res.status(500).json({ error: 'Erro interno.' });
+    return res.status(500).json({ error: e.message });
   }
 };
