@@ -588,131 +588,48 @@ function zerarTudo() {
     .catch(() => showToast('⚠️ Falha ao zerar no servidor'));
 }
 
-// ── SYNC OPCIONAL COM SERVIDOR (mesmo padrão do coletor antigo) ─
+// ── SYNC COM SERVIDOR ────────────────────────────────────────
 function sendToServer(codigo, qtd) {
-  fetch('/api/inventario', {
+  const p = byCode[codigo];
+  if (!p || !p.db_id || !sessionUser || !sessionUser.id) return;
+  fetch('/api/coleta', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ codigo, qtd, user: myName })
-  }).catch(() => {});
-  // persiste no novo banco de dados
-  const p = byCode[codigo];
-  if (p && p.db_id && sessionUser && sessionUser.id) {
-    fetch('/api/coleta', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ produto_id: p.db_id, quantidade: qtd, conferente_id: sessionUser.id })
-    }).catch(() => {});
-  }
+    body: JSON.stringify({ produto_id: p.db_id, quantidade: qtd, conferente_id: sessionUser.id })
+  }).catch(() => showToast('⚠️ Falha ao salvar no servidor'));
 }
-function pushLocalToServer() {
-  const d = {};
-  products.forEach(p => { if (p.qtd > 0) d[p.codigo] = p.qtd; });
-  if (!Object.keys(d).length) return;
-  fetch('/api/inventario', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ bulk: true, data: d, user: myName })
-  }).catch(() => {});
-}
-let lastPoll = '';
-let lastConflitos = '';
-let zeroGuardUntil = 0;
+
+let lastPollMap = {};
 function pollServer() {
-  fetch('/api/inventario').then(r => r.json()).then(data => {
-    const zeroed_at = data._zeroed_at || null;
-    delete data._zeroed_at;
-
-    // sincroniza o zero conhecido localmente com o do servidor
-    let zeroedAt = localStorage.getItem('zeroedAt') || '1970-01-01T00:00:00.000Z';
-    if (zeroed_at && zeroed_at > zeroedAt) {
-      zeroedAt = zeroed_at;
-      localStorage.setItem('zeroedAt', zeroedAt);
-    }
-
-    const prevData = lastPoll ? JSON.parse(lastPoll) : {};
-
-    // reconstrói mapa de coletores (zera para não deixar nome fantasma)
-    serverUserData = {};
-    Object.keys(data).forEach(c => {
-      if (typeof data[c] === 'object') serverUserData[c] = data[c];
-    });
-
-    // ── ZERO PROPAGADO: se há um zero mais novo do que já apliquei, limpo TUDO ──
-    // determinístico, não depende de relógio sincronizado entre aparelhos
-    let pruned = false;
-    const processedZero = localStorage.getItem('processedZero') || '1970-01-01T00:00:00.000Z';
-    if (zeroedAt > processedZero) {
-      products.forEach(p => { if (p.qtd > 0) p.qtd = 0; });
-      itemDates = {};
-      localStorage.setItem('processedZero', zeroedAt);
-      pruned = true;
-      saveLocal();
-    }
-
-    // guarda pós-zero: ignora merge/reenvio por alguns segundos (corrida com o DELETE)
-    if (Date.now() < zeroGuardUntil) { renderTable(); lastPoll = JSON.stringify(data); return; }
-
-    const str = JSON.stringify(data);
-    if (str === lastPoll && !pruned) { renderTable(); return; }
-    lastPoll = str;
-
-    const keys = Object.keys(data);
-    const localCount = products.filter(p => p.qtd > 0).length;
-    if (!keys.length && localCount > 0) {
-      // só reenvia se a última contagem foi DEPOIS do último zero
-      const lastAct = localStorage.getItem("lastActivity") || "1970-01-01T00:00:00.000Z";
-      if (lastAct > zeroedAt) { pushLocalToServer(); }
-      renderTable();
-      return;
-    }
-
-    let changed = pruned;
-    keys.forEach(c => {
-      const p = byCode[c];
-      if (!p) return;
-      const entry = data[c];
-      const sv = (typeof entry === 'object') ? (entry.qtd || 0) : entry;
-      const svUser = (typeof entry === 'object') ? (entry.usuario || '') : '';
-      const svData = (typeof entry === 'object') ? entry.atualizado : null;
-
-      // notifica quando outro usuário coleta algo
-      if (svUser && svUser !== myName) {
-        const prev = prevData[c];
-        const prevQtd = prev ? ((typeof prev === 'object') ? (prev.qtd || 0) : prev) : 0;
-        if (sv > 0 && sv !== prevQtd) {
-          showToast(`📦 ${svUser} coletou ${p.codigo} (${fmt(sv)})`);
+  if (!currentInventarioId) return;
+  fetch('/api/coleta?inventario_id=' + currentInventarioId)
+    .then(r => r.json())
+    .then(data => {
+      if (!Array.isArray(data)) return;
+      let changed = false;
+      const currentMap = {};
+      data.forEach(row => {
+        currentMap[row.codigo] = row.quantidade_coletada || 0;
+        const p = byCode[row.codigo];
+        if (!p) return;
+        const newQtd = row.quantidade_coletada || 0;
+        if (p.qtd !== newQtd) {
+          if (newQtd > 0 && p.qtd === 0) showToast('📦 ' + p.nome + ' atualizado por outro usuário');
+          p.qtd = newQtd;
+          changed = true;
         }
-      }
-
-      // só adota o servidor se localmente ainda não houver contagem
-      if (p.qtd === 0 && sv > 0) {
-        p.qtd = sv;
-        if (svData) itemDates[c] = svData;
-        changed = true;
-      }
-    });
-
-    if (changed) saveLocal();
-    renderTable();
-  }).catch(() => {});
-
-  // verifica conflitos a cada poll
-  fetch('/api/conflitos').then(r => r.json()).then(conf => {
-    const str = JSON.stringify(conf);
-    if (str === lastConflitos) return;
-    lastConflitos = str;
-    const panel = document.getElementById('conflictsPanel');
-    const keys = Object.keys(conf);
-    if (!keys.length) { panel.style.display = 'none'; return; }
-    panel.style.display = 'block';
-    panel.innerHTML = `<div class="conf-title">⚠️ Conflito: ${keys.length} produto(s) coletado(s) por mais de um usuário</div>` +
-      keys.map(cod => {
-        const p = byCode[cod];
-        const nome = p ? p.nome : cod;
-        const lista = conf[cod].map(c => `<strong>${c.usuario}</strong>: ${fmt(c.qtd)}`).join(' · ');
-        return `<div>📦 ${cod} ${nome} — ${lista}</div>`;
-      }).join('');
-  }).catch(() => {});
+      });
+      // produtos que zeraram desde o último poll
+      Object.keys(lastPollMap).forEach(cod => {
+        if (!currentMap[cod]) {
+          const p = byCode[cod];
+          if (p && p.qtd > 0) { p.qtd = 0; changed = true; }
+        }
+      });
+      lastPollMap = currentMap;
+      if (changed) { saveLocal(); renderTable(); }
+    })
+    .catch(() => {});
 }
 
 // ── EXPORTAR ─────────────────────────────────────────────────
