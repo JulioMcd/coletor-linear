@@ -58,6 +58,24 @@ td { padding:9px 12px; }
 .stat-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; }
 .stat-card .val { font-size:24px; font-weight:800; margin-bottom:4px; }
 .stat-card .lbl { font-size:11px; color:var(--muted); }
+.modal-ver-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:700; flex-direction:column; }
+.modal-ver-bg.show { display:flex; }
+.modal-ver-header { background:var(--card); border-bottom:1px solid var(--border); padding:16px 20px; display:flex; align-items:center; gap:12px; flex-shrink:0; flex-wrap:wrap; }
+.modal-ver-header h2 { font-size:15px; font-weight:700; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.modal-ver-stats { display:flex; gap:14px; font-size:12px; color:var(--muted); flex-shrink:0; }
+.modal-ver-stats span strong { color:var(--text); }
+.btn-export { background:var(--jc-green); border:none; border-radius:8px; padding:8px 14px; color:#fff; font-size:12px; font-weight:600; cursor:pointer; }
+.btn-export:hover { opacity:.85; }
+.btn-fechar-ver { background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:8px 14px; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; }
+.modal-ver-body { flex:1; overflow-y:auto; padding:20px; }
+.modal-ver-body table { width:100%; border-collapse:collapse; font-size:13px; }
+.modal-ver-body thead th { background:var(--card); color:var(--muted); padding:10px 14px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); position:sticky; top:0; }
+.modal-ver-body tbody tr { border-bottom:1px solid var(--border); }
+.modal-ver-body tbody tr:hover { background:var(--card2); }
+.modal-ver-body td { padding:10px 14px; }
+.qtd-badge { display:inline-block; background:rgba(53,148,131,0.2); color:var(--jc-green); border-radius:6px; padding:2px 10px; font-weight:700; font-size:13px; }
+.btn-ver { background:rgba(53,148,131,0.12); border:1px solid rgba(53,148,131,0.25); border-radius:6px; padding:5px 10px; color:var(--jc-green); font-size:11px; font-weight:600; cursor:pointer; margin-right:4px; }
+.btn-ver:hover { background:rgba(53,148,131,0.25); }
 </style>
 </head>
 <body>
@@ -391,9 +409,11 @@ function carregarInventarios() {
     if (!rows.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Nenhum inventario criado ainda</td></tr>'; return; }
     tb.innerHTML = rows.map(function(r) {
       var btnDel = '<button class="btn-danger" onclick="excluirInventario(' + r.id + ')" style="font-size:11px;padding:5px 10px;margin-left:4px">Excluir</button>';
+      var nomeEsc = (r.nome || 'Inventario_' + r.id).replace(/'/g, "\\'");
+      var btnVer = '<button class="btn-ver" onclick="verInventario(' + r.id + ',\'' + nomeEsc + '\')">📊 Ver</button>';
       var btnAcao = r.status === 'EM_ANDAMENTO'
         ? '<a href="/coletor" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none">&#x1F50D; Auditar</a>' + btnDel
-        : btnDel;
+        : (r.status === 'FINALIZADO' ? btnVer : '') + btnDel;
       return '<tr><td>#' + r.id + '</td><td style="font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (r.nome || '<span style="color:var(--muted)">—</span>') + '</td><td>' + badgeStatus(r.status) + '</td><td>' +
         fmtDate(r.data_importacao) + '</td><td>' + fmtDate(r.inicio_contagem) +
         '</td><td><span style="color:var(--jc-green)">' + (r.total_coletados || 0) + '</span><span style="color:var(--muted)">/' + (r.total_produtos || 0) + '</span></td><td>' +
@@ -422,6 +442,80 @@ function excluirInventario(id) {
 }
 
 function logout() { sessionStorage.removeItem('jc_user'); location.href = '/'; }
+
+// ── VER INVENTÁRIO ────────────────────────────────────────────
+var verProdutos = [];
+var verInvNome = '';
+
+async function verInventario(id, nome) {
+  verProdutos = [];
+  verInvNome = nome;
+  var bg = document.getElementById('modalVerBg');
+  document.getElementById('verTitulo').textContent = nome;
+  document.getElementById('verStats').innerHTML = 'Carregando...';
+  document.getElementById('verTbody').innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--muted)">⏳ Carregando produtos...</td></tr>';
+  bg.classList.add('show');
+  var PAGE = 1000, offset = 0;
+  while (true) {
+    var r = await fetch('/api/produtos?inventario_id=' + id + '&offset=' + offset + '&limit=' + PAGE);
+    var pagina = await r.json();
+    if (!Array.isArray(pagina) || pagina.length === 0) break;
+    verProdutos = verProdutos.concat(pagina);
+    if (pagina.length < PAGE) break;
+    offset += PAGE;
+    document.getElementById('verStats').innerHTML = 'Carregando ' + verProdutos.length + '...';
+  }
+  var contados = verProdutos.filter(function(p) { return p.quantidade_coletada > 0; });
+  var totalUnid = contados.reduce(function(s, p) { return s + (p.quantidade_coletada || 0); }, 0);
+  document.getElementById('verStats').innerHTML =
+    '<span><strong>' + contados.length + '</strong> itens contados</span>' +
+    '<span><strong>' + totalUnid.toLocaleString('pt-BR') + '</strong> unidades</span>' +
+    '<span>(' + verProdutos.length + ' total)</span>';
+  var tbody = document.getElementById('verTbody');
+  if (!contados.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--muted)">Nenhum item contado</td></tr>';
+    return;
+  }
+  tbody.innerHTML = contados.map(function(p) {
+    return '<tr><td style="font-family:monospace;font-size:11px;color:var(--muted)">' + (p.codigo || '') + '</td>' +
+      '<td style="font-weight:600">' + (p.descricao || '') + '</td>' +
+      '<td style="color:var(--muted);font-size:12px">' + (p.unidade || '') + '</td>' +
+      '<td><span class="qtd-badge">' + p.quantidade_coletada + '</span></td></tr>';
+  }).join('');
+}
+
+function fecharVerModal() {
+  document.getElementById('modalVerBg').classList.remove('show');
+}
+
+function exportarContagem() {
+  var contados = verProdutos.filter(function(p) { return p.quantidade_coletada > 0; });
+  if (!contados.length) { toast('Nenhum item contado para exportar.', true); return; }
+  var csv = 'Codigo;Descricao;Unidade;Quantidade\r\n';
+  contados.forEach(function(p) {
+    csv += [p.codigo, p.descricao, p.unidade, p.quantidade_coletada].join(';') + '\r\n';
+  });
+  var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'contagem_' + verInvNome.replace(/[^a-z0-9]/gi, '_') + '.csv';
+  a.click();
+}
 </script>
+
+<div class="modal-ver-bg" id="modalVerBg">
+  <div class="modal-ver-header">
+    <h2 id="verTitulo"></h2>
+    <div class="modal-ver-stats" id="verStats"></div>
+    <button class="btn-export" onclick="exportarContagem()">⬇ Exportar CSV</button>
+    <button class="btn-fechar-ver" onclick="fecharVerModal()">✕ Fechar</button>
+  </div>
+  <div class="modal-ver-body">
+    <table>
+      <thead><tr><th>Código</th><th>Produto</th><th>UN</th><th>Qtd</th></tr></thead>
+      <tbody id="verTbody"></tbody>
+    </table>
+  </div>
+</div>
 </body>
 </html>
