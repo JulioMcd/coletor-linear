@@ -399,9 +399,7 @@ function getFiltered() {
   let list;
   if (searchTerm) {
     const t = searchTerm.toLowerCase();
-    list = products.filter(p =>
-      p.nome.toLowerCase().includes(t) || p.codigo.includes(t) || (p.ean && p.ean.includes(t))
-    );
+    list = products.filter(p => p._s.includes(t));
     if (filterMode === 'counted') list = list.filter(p => p.qtd > 0);
     return list;
   }
@@ -433,7 +431,8 @@ function renderTable() {
   }
   empty.style.display = 'none';
 
-  tbody.innerHTML = list.map(p => {
+  const render = searchTerm ? list.slice(0, 200) : list;
+  tbody.innerHTML = render.map(p => {
     const sv = serverUserData[p.codigo];
     const coletor = sv ? sv.usuario : '';
     const conflito = sv && sv.conflito;
@@ -456,7 +455,10 @@ function renderTable() {
   // aviso de resultados limitados
   if (searchTerm) {
     note.style.display = list.length > 0 ? 'block' : 'none';
-    if (list.length > 0) note.textContent = `${list.length.toLocaleString('pt-BR')} resultado${list.length !== 1 ? 's' : ''} encontrado${list.length !== 1 ? 's' : ''}.`;
+    if (list.length > 200)
+      note.textContent = `Mostrando 200 de ${list.length.toLocaleString('pt-BR')} resultados — refine a busca.`;
+    else if (list.length > 0)
+      note.textContent = `${list.length.toLocaleString('pt-BR')} resultado${list.length !== 1 ? 's' : ''} encontrado${list.length !== 1 ? 's' : ''}.`;
   } else if (filterMode === 'all') {
     note.style.display = 'block';
     note.textContent = `Mostrando ${list.length} de ${products.length.toLocaleString('pt-BR')} produtos — use a busca para localizar.`;
@@ -1006,6 +1008,7 @@ async function carregarProdutosInventario(invId) {
     pagina.forEach(p => {
       const item = { id: products.length + 1, db_id: p.id, codigo: p.codigo, nome: p.descricao,
         un: p.unidade || 'PC', ean: p.ean || '', qtd: p.quantidade_coletada || 0 };
+      item._s = (item.nome + ' ' + item.codigo + ' ' + item.ean).toLowerCase();
       products.push(item);
       byCode[item.codigo] = item;
       if (item.ean) byEan[item.ean] = item;
