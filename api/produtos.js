@@ -4,15 +4,17 @@ module.exports = async function handler(req, res) {
   const sb = getClient();
   try {
     if (req.method === 'GET') {
-      const { inventario_id, offset, limit } = req.query;
+      const { inventario_id, offset, limit, somente_contados } = req.query;
       if (!inventario_id) return res.status(400).json({ error: 'inventario_id obrigatorio.' });
       const from = parseInt(offset) || 0;
       const size = Math.min(parseInt(limit) || 1000, 1000);
-      const { data, error } = await sb.from('produtos')
+      let q = sb.from('produtos')
         .select('*, usuarios(login)')
         .eq('inventario_id', inventario_id)
         .order('descricao')
         .range(from, from + size - 1);
+      if (somente_contados === 'true') q = q.gt('quantidade_coletada', 0);
+      const { data, error } = await q;
       if (error) throw error;
       return res.status(200).json((data || []).map(p => ({ ...p, conferente_login: p.usuarios?.login || null, usuarios: undefined })));
     }

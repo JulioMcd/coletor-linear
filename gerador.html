@@ -457,7 +457,7 @@ async function verInventario(id, nome) {
   bg.classList.add('show');
   var PAGE = 1000, offset = 0;
   while (true) {
-    var r = await fetch('/api/produtos?inventario_id=' + id + '&offset=' + offset + '&limit=' + PAGE);
+    var r = await fetch('/api/produtos?inventario_id=' + id + '&offset=' + offset + '&limit=' + PAGE + '&somente_contados=true');
     var pagina = await r.json();
     if (!Array.isArray(pagina) || pagina.length === 0) break;
     verProdutos = verProdutos.concat(pagina);
