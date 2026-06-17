@@ -326,7 +326,7 @@ function carregarInventarios() {
       var nomeEsc = (r.nome || 'Inventario_' + r.id).replace(/'/g, "\\'");
       var btnVer = '<button class="btn-ver" onclick="verInventario(' + r.id + ',\'' + nomeEsc + '\')" style="margin-right:4px">📊 Ver</button>';
       var btnAuditar = r.status === 'EM_ANDAMENTO'
-        ? '<a href="/coletor" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none;">&#x1F50D; Auditar</a>' + btnDel
+        ? '<a href="/coletor?inv=' + r.id + '" style="display:inline-block;background:rgba(53,148,131,0.15);border:1px solid rgba(53,148,131,0.35);border-radius:6px;padding:5px 12px;color:var(--jc-green);font-size:11px;font-weight:600;text-decoration:none;">&#x1F50D; Auditar</a>' + btnDel
         : (r.status === 'FINALIZADO' ? btnVer : '') + btnDel;
       return '<tr>' +
         '<td>#' + r.id + '</td>' +

@@ -1041,13 +1041,24 @@ async function selecionarInventario(invId) {
 }
 
 async function loadInventario() {
-  if (!sessionUser || !sessionUser.empresa_id) return;
+  if (!sessionUser) return;
   try {
-    const invRes = await fetch('/api/inventarios?empresa_id=' + sessionUser.empresa_id);
+    // ADM com ?inv=ID na URL: carrega inventário específico diretamente
+    const params = new URLSearchParams(window.location.search);
+    const invParam = params.get('inv');
+    if (invParam) {
+      await carregarProdutosInventario(parseInt(invParam));
+      return;
+    }
+    // ADM sem parâmetro: busca todos os inventários de todas as empresas
+    const url = sessionUser.perfil === 'ADM'
+      ? '/api/inventarios'
+      : '/api/inventarios?empresa_id=' + sessionUser.empresa_id;
+    const invRes = await fetch(url);
     const inventarios = await invRes.json();
     const ativos = inventarios.filter(i => i.status === 'EM_ANDAMENTO');
-    if (!ativos.length) { showToast('⚠️ Nenhum inventário ativo. Aguarde o Gerador.'); return; }
-    if (sessionUser.perfil === 'CONFERENTE' && ativos.length > 1) {
+    if (!ativos.length) { showToast('⚠️ Nenhum inventário ativo.'); return; }
+    if (ativos.length > 1) {
       mostrarSeletorInventario(ativos);
       return;
     }
