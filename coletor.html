@@ -465,7 +465,11 @@ function renderTable() {
   }
 }
 
-function onSearch(v) { searchTerm = v.trim(); renderTable(); }
+let _searchTimer = null;
+function onSearch(v) {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => { searchTerm = v.trim(); renderTable(); }, 250);
+}
 function setFilter(m) {
   filterMode = m;
   ['counted','all'].forEach(k =>
