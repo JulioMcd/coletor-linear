@@ -832,11 +832,12 @@ function salvarCadastro() {
   fetch('/api/produtos', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ codigo, ean, nome, un, usuario: myName })
+    body: JSON.stringify({ inventario_id: currentInventarioId, produtos: [{ codigo, descricao: nome, unidade: un, ean }] })
   }).then(r => r.json()).then(res => {
     if (!res.ok) { showToast('❌ ' + (res.error || 'Erro ao salvar')); return; }
     const id = products.length + 1;
-    const novo = { id, codigo, ean, nome, un, qtd: 0 };
+    const novo = { id, db_id: null, codigo, ean: ean || '', nome, un, qtd: 0 };
+    novo._s = (nome + ' ' + codigo + ' ' + (ean || '')).toLowerCase();
     products.push(novo);
     byCode[codigo] = novo;
     if (ean) byEan[ean] = novo;
