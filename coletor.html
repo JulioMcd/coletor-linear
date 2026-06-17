@@ -990,17 +990,26 @@ let currentInventarioId = null;
 
 async function carregarProdutosInventario(invId) {
   currentInventarioId = invId;
-  const prodRes = await fetch('/api/produtos?inventario_id=' + invId);
-  const lista = await prodRes.json();
   products.length = 0;
   byCode = {}; byEan = {};
-  lista.forEach((p, i) => {
-    const item = { id: i + 1, db_id: p.id, codigo: p.codigo, nome: p.descricao,
-      un: p.unidade || 'PC', ean: p.ean || '', qtd: p.quantidade_coletada || 0 };
-    products.push(item);
-    byCode[item.codigo] = item;
-    if (item.ean) byEan[item.ean] = item;
-  });
+  const PAGE = 1000;
+  let offset = 0;
+  showToast('⏳ Carregando produtos...');
+  while (true) {
+    const r = await fetch('/api/produtos?inventario_id=' + invId + '&offset=' + offset + '&limit=' + PAGE);
+    const pagina = await r.json();
+    if (!Array.isArray(pagina) || pagina.length === 0) break;
+    pagina.forEach(p => {
+      const item = { id: products.length + 1, db_id: p.id, codigo: p.codigo, nome: p.descricao,
+        un: p.unidade || 'PC', ean: p.ean || '', qtd: p.quantidade_coletada || 0 };
+      products.push(item);
+      byCode[item.codigo] = item;
+      if (item.ean) byEan[item.ean] = item;
+    });
+    if (pagina.length < PAGE) break;
+    offset += PAGE;
+    showToast('⏳ ' + products.length.toLocaleString('pt-BR') + ' produtos...');
+  }
   renderTable();
   showToast('📦 ' + products.length.toLocaleString('pt-BR') + ' produtos carregados');
 }
